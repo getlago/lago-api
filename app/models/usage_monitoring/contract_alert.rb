@@ -5,13 +5,13 @@ module UsageMonitoring
     include Discard::Model
     include ThresholdEvaluation
 
-    self.discard_column = :deleted_at
-    self.inheritance_column = :alert_type
-
     STI_MAPPING = {
       "usage_amount" => "UsageMonitoring::ContractUsageAmountAlert",
       "usage_units" => "UsageMonitoring::ContractUsageUnitsAlert"
     }.freeze
+
+    self.discard_column = :deleted_at
+    self.inheritance_column = :alert_type
 
     enum :direction, Alert::DIRECTIONS, validate: true
 
@@ -32,14 +32,14 @@ module UsageMonitoring
       class_name: "UsageMonitoring::ContractTriggeredAlert",
       inverse_of: :alert
 
+    default_scope -> { kept }
+
     validates :alert_type, presence: true, inclusion: {in: STI_MAPPING.keys}
     validates :code, presence: true
     validates :contract_external_id, presence: true
     validates :product, presence: true, if: :need_product?
     validate :validate_product_filter_belongs_to_product
     validate :validate_with_product_filters
-
-    default_scope -> { kept }
 
     def self.find_sti_class(type_name)
       STI_MAPPING.fetch(type_name).constantize

@@ -8,8 +8,6 @@ class Organization < ApplicationRecord
   include HasFeatureFlags
   include Organizations::Sluggable
 
-  self.ignored_columns += [:clickhouse_aggregation, :pre_filter_events, :clickhouse_deduplication_enabled]
-
   EMAIL_SETTINGS = [
     "invoice.finalized",
     "credit_note.created",
@@ -112,6 +110,8 @@ class Organization < ApplicationRecord
 
   INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
 
+  self.ignored_columns += [:clickhouse_aggregation, :pre_filter_events, :clickhouse_deduplication_enabled]
+
   # Declared, so the model loads in older migrations that run before the columns exist. Saving still fails there:
   # the validations read `self_serve` and `production_organization_id`, which do not exist yet either.
   attribute :environment, :string
@@ -120,6 +120,8 @@ class Organization < ApplicationRecord
   enum :document_numbering, DOCUMENT_NUMBERINGS, validate: true
   enum :environment, ENVIRONMENTS, validate: true
   enum :activation_status, ACTIVATION_STATUSES, prefix: true, validate: true
+
+  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
   has_many :activity_logs, class_name: "Clickhouse::ActivityLog"
   has_many :ai_conversations
@@ -239,7 +241,15 @@ class Organization < ApplicationRecord
 
   has_one_attached :logo
 
-  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
+  scope :with_any_premium_integrations, ->(names) { where("premium_integrations && ARRAY[?]::varchar[]", Array.wrap(names)) }
+
+  PREMIUM_INTEGRATIONS.each do |premium_integration|
+    scope "with_#{premium_integration}_support", -> { where("? = ANY(premium_integrations)", premium_integration) }
+
+    define_method("#{premium_integration}_enabled?") do
+      License.premium? && premium_integrations.include?(premium_integration)
+    end
+  end
 
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :default_currency, inclusion: {in: currency_list}
@@ -275,16 +285,6 @@ class Organization < ApplicationRecord
   validate :validate_environment_link,
     if: -> { will_save_change_to_production_organization_id? || will_save_change_to_environment? }
   validate :validate_activation_status, if: :activation_status_pending_payment_method?
-
-  scope :with_any_premium_integrations, ->(names) { where("premium_integrations && ARRAY[?]::varchar[]", Array.wrap(names)) }
-
-  PREMIUM_INTEGRATIONS.each do |premium_integration|
-    scope "with_#{premium_integration}_support", -> { where("? = ANY(premium_integrations)", premium_integration) }
-
-    define_method("#{premium_integration}_enabled?") do
-      License.premium? && premium_integrations.include?(premium_integration)
-    end
-  end
 
   before_create :set_hmac_key
   after_create :generate_document_number_prefix

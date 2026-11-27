@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 class CreditNoteItem < ApplicationRecord
+  monetize :amount_cents
+
   belongs_to :credit_note
   belongs_to :fee
   belongs_to :organization
-
-  monetize :amount_cents
 
   validates :amount_cents, numericality: {greater_than_or_equal_to: 0}
 

@@ -18,6 +18,11 @@ class Quote < ApplicationRecord
     instance_methods: false,
     validate: true
 
+  sequenced(
+    scope: ->(quote) { quote.organization.quotes },
+    lock_key: ->(quote) { quote.organization_id }
+  )
+
   belongs_to :organization
   belongs_to :customer
   belongs_to :subscription, optional: true
@@ -37,11 +42,6 @@ class Quote < ApplicationRecord
     as: :resource
 
   has_many_attached :images
-
-  sequenced(
-    scope: ->(quote) { quote.organization.quotes },
-    lock_key: ->(quote) { quote.organization_id }
-  )
 
   validates :subscription_id,
     presence: true,

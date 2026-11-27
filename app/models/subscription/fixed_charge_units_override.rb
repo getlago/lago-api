@@ -11,9 +11,9 @@ class Subscription::FixedChargeUnitsOverride < ApplicationRecord
   belongs_to :subscription
   belongs_to :fixed_charge
 
-  validates :units, presence: true, numericality: {greater_than_or_equal_to: 0}
-
   default_scope -> { kept }
+
+  validates :units, presence: true, numericality: {greater_than_or_equal_to: 0}
 
   # Returns a {fixed_charge_id => units} map for the given subscription and
   # fixed_charges in one query. Lets collection callers (REST index, GraphQL

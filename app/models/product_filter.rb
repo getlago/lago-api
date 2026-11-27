@@ -20,12 +20,12 @@ class ProductFilter < ApplicationRecord
 
   delegate :attached_to_plan_or_subscription?, to: :product
 
+  default_scope -> { kept.order(created_at: :asc) }
+
   validates :name, presence: true
   validates :code,
     presence: true,
     uniqueness: {scope: :product_id, conditions: -> { where(deleted_at: nil) }}
-
-  default_scope -> { kept.order(created_at: :asc) }
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]

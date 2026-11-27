@@ -12,11 +12,6 @@ module Integrations
     settings_accessors :client_id, :domain, :tenant_id, :host
     secrets_accessors :client_secret
 
-    validates :client_secret, :client_id, :domain, :tenant_id, presence: true
-    validate :domain_uniqueness
-    validate :additional_domains_format
-    validate :tenant_id_and_host_format
-
     # Integrations claiming an email domain, as the primary `domain` or as one of the
     # `additional_domains`. Domains are compared case-insensitively.
     scope :with_domain, ->(email_domain) do
@@ -25,6 +20,11 @@ module Integrations
       where("LOWER(settings->>'domain') = :email_domain", email_domain:)
         .or(where("settings->'additional_domains' @> jsonb_build_array(CAST(:email_domain AS text))", email_domain:))
     end
+
+    validates :client_secret, :client_id, :domain, :tenant_id, presence: true
+    validate :domain_uniqueness
+    validate :additional_domains_format
+    validate :tenant_id_and_host_format
 
     def host
       get_from_settings("host").presence || "login.microsoftonline.com"

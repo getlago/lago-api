@@ -6,8 +6,6 @@ class RateCardRate < ApplicationRecord
   include Discard::Model
   include CatalogCodeFormat
 
-  self.discard_column = :deleted_at
-
   RATE_MODELS = {
     standard: "standard",
     graduated: "graduated",
@@ -32,6 +30,8 @@ class RateCardRate < ApplicationRecord
     terminated: "terminated"
   }.freeze
 
+  self.discard_column = :deleted_at
+
   # allow_nil here only keeps a missing value on the presence error
   # (value_is_mandatory) instead of also failing inclusion (value_is_invalid)
   enum :rate_model, RATE_MODELS, validate: {allow_nil: true}
@@ -41,6 +41,11 @@ class RateCardRate < ApplicationRecord
   belongs_to :rate_card, -> { with_discarded }
 
   has_many :fees
+
+  default_scope -> { kept }
+
+  scope :pending, -> { where("effective_from > ?", Time.current) }
+  scope :effective, -> { where(effective_from: ..Time.current) }
 
   validates :code, presence: true
   validates :code, uniqueness: {scope: :rate_card_id, conditions: -> { where(deleted_at: nil) }}
@@ -57,11 +62,6 @@ class RateCardRate < ApplicationRecord
   validate :validate_rate_model_compatibility
   validate :validate_min_amount_timing
   validate :validate_properties
-
-  default_scope -> { kept }
-
-  scope :pending, -> { where("effective_from > ?", Time.current) }
-  scope :effective, -> { where(effective_from: ..Time.current) }
 
   before_validation :normalize_effective_from
 

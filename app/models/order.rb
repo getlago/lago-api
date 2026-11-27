@@ -35,6 +35,11 @@ class Order < ApplicationRecord
     instance_methods: false,
     validate: {allow_nil: true}
 
+  sequenced(
+    scope: ->(order) { order.organization.orders },
+    lock_key: ->(order) { order.organization_id }
+  )
+
   belongs_to :organization
   belongs_to :customer
   belongs_to :order_form
@@ -46,17 +51,12 @@ class Order < ApplicationRecord
     class_name: "Clickhouse::ActivityLog",
     as: :resource
 
-  sequenced(
-    scope: ->(order) { order.organization.orders },
-    lock_key: ->(order) { order.organization_id }
-  )
-
-  validates :execution_mode, presence: true, if: -> { executed? || execute_at.present? }
-
   scope :executable, -> { created.where(execute_at: ..Time.current) }
 
   delegate :order_type, to: :quote
   delegate :currency, to: :quote_version
+
+  validates :execution_mode, presence: true, if: -> { executed? || execute_at.present? }
 
   before_save :ensure_number
 

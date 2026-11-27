@@ -8,6 +8,8 @@ class AddOn < ApplicationRecord
 
   self.discard_column = :deleted_at
 
+  monetize :amount_cents
+
   belongs_to :organization
 
   has_many :applied_add_ons
@@ -18,7 +20,7 @@ class AddOn < ApplicationRecord
   has_many :applied_taxes, class_name: "AddOn::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
-  monetize :amount_cents
+  default_scope -> { kept }
 
   validates :name, presence: true
   validates :code,
@@ -27,8 +29,6 @@ class AddOn < ApplicationRecord
 
   validates :amount_cents, numericality: {greater_than: 0}
   validates :amount_currency, inclusion: {in: currency_list}
-
-  default_scope -> { kept }
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]

@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 class Subscription::ActivationRule < ApplicationRecord
-  self.table_name = "subscription_activation_rules"
-
   STI_MAPPING = {
     "payment" => "Subscription::ActivationRule::Payment"
   }.freeze
@@ -24,17 +22,19 @@ class Subscription::ActivationRule < ApplicationRecord
     payment: "payment"
   }.freeze
 
+  self.table_name = "subscription_activation_rules"
+
   enum :status, STATUSES, validate: true
   enum :type, TYPES, validate: true
 
   belongs_to :subscription
   belongs_to :organization
 
-  validates :type, presence: true, inclusion: {in: STI_MAPPING.keys}
-
   scope :expirable, -> { pending.where("expires_at <= ?", Time.current) }
   scope :rejected, -> { where(status: REJECTED_STATUSES) }
   scope :fulfilled, -> { where(status: FULFILLED_STATUSES) }
+
+  validates :type, presence: true, inclusion: {in: STI_MAPPING.keys}
 
   def self.find_sti_class(type_name)
     STI_MAPPING.fetch(type_name).constantize

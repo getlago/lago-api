@@ -11,10 +11,10 @@ class Invite < ApplicationRecord
 
   enum :status, INVITE_STATUS
 
+  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
+
   belongs_to :organization
   belongs_to :recipient, class_name: "Membership", foreign_key: :membership_id, optional: true
-
-  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
   validates :email, email: true
   validates :token, uniqueness: true

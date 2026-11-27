@@ -2,18 +2,18 @@
 
 module Agents
   class Registration < ApplicationRecord
-    self.table_name = "agent_registrations"
-
     STATUSES = {active: "active", revoked: "revoked"}.freeze
     WALLET_CODE = "agent_credits"
 
+    self.table_name = "agent_registrations"
+
     enum :status, STATUSES, validate: true
+
+    attr_readonly :key_id, :public_key
 
     belongs_to :organization
     belongs_to :storefront, class_name: "Integrations::AgentStorefrontIntegration", foreign_key: :integration_id
     has_many :claims, class_name: "Agents::Claim", dependent: :delete_all
-
-    attr_readonly :key_id, :public_key
 
     validates :key_id, :public_key, presence: true
 

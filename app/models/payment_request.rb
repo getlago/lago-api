@@ -7,6 +7,14 @@ class PaymentRequest < ApplicationRecord
 
   enum :payment_status, PAYMENT_STATUS, prefix: :payment
 
+  alias_attribute :total_amount_cents, :amount_cents
+  alias_attribute :currency, :amount_currency
+
+  monetize :amount_cents
+  monetize :total_due_amount_cents, with_model_currency: :currency, allow_nil: true
+
+  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
+
   has_many :applied_invoices, class_name: "PaymentRequest::AppliedInvoice"
   has_many :invoices, through: :applied_invoices
   has_many :payments, as: :payable
@@ -16,14 +24,6 @@ class PaymentRequest < ApplicationRecord
   belongs_to :dunning_campaign, -> { with_discarded }, optional: true
 
   delegate :billing_entity, to: :customer
-
-  alias_attribute :total_amount_cents, :amount_cents
-  alias_attribute :currency, :amount_currency
-
-  monetize :amount_cents
-  monetize :total_due_amount_cents, with_model_currency: :currency, allow_nil: true
-
-  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
   validates :amount_cents, presence: true
   validates :amount_currency, presence: true

@@ -2,12 +2,12 @@
 
 module Integrations
   class AvalaraIntegration < BaseIntegration
+    settings_accessors :account_id, :company_code, :company_id
+    secrets_accessors :connection_id, :license_key
+
     has_many :error_details, -> { where({error_details: {error_code: "tax_error"}}) },
       primary_key: :organization_id,
       foreign_key: :organization_id
-
-    settings_accessors :account_id, :company_code, :company_id
-    secrets_accessors :connection_id, :license_key
 
     validates :company_code, :connection_id, :account_id, :license_key, presence: true
   end

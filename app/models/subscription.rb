@@ -8,8 +8,6 @@ class Subscription < ApplicationRecord
   include Terminatable
   include ConnectionResolvable
 
-  self.ignored_columns += %w[incompleted_at cancelation_reason]
-
   STATUSES = [
     :pending,
     :active,
@@ -27,6 +25,8 @@ class Subscription < ApplicationRecord
 
   ON_TERMINATION_CREDIT_NOTES = {credit: "credit", skip: "skip", refund: "refund", offset: "offset"}.freeze
   ON_TERMINATION_INVOICES = {generate: "generate", skip: "skip"}.freeze
+
+  self.ignored_columns += %w[incompleted_at cancelation_reason]
 
   enum :status, STATUSES
   enum :billing_time, BILLING_TIME
@@ -76,12 +76,6 @@ class Subscription < ApplicationRecord
 
   delegate :amount_currency, to: :plan, prefix: true
 
-  validates :external_id, :billing_time, presence: true
-  validate :validate_external_id, on: [:create, :update], if: -> { status_changed? }
-
-  validates :on_termination_credit_note, absence: true, if: -> { plan&.pay_in_arrears? }
-  validates :started_at, presence: true, if: -> { incomplete? }
-
   scope :starting_in_the_future, -> { pending.where(previous_subscription: nil) }
   scope :expirable, -> { incomplete.joins(:activation_rules).merge(Subscription::ActivationRule.expirable) }
   scope :without_fixed_charge_units_override_for, ->(fixed_charge) {
@@ -90,6 +84,12 @@ class Subscription < ApplicationRecord
       .where("subscription_fixed_charge_units_overrides.subscription_id = subscriptions.id")
     where.not(overrides.arel.exists)
   }
+
+  validates :external_id, :billing_time, presence: true
+  validate :validate_external_id, on: [:create, :update], if: -> { status_changed? }
+
+  validates :on_termination_credit_note, absence: true, if: -> { plan&.pay_in_arrears? }
+  validates :started_at, presence: true, if: -> { incomplete? }
 
   # NOTE: SQL query to get subscription_at into customer timezone
   def self.subscription_at_in_timezone_sql

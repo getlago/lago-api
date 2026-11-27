@@ -5,8 +5,6 @@ class BillableMetric < ApplicationRecord
   include Discard::Model
   include IntegrationMappable
 
-  self.discard_column = :deleted_at
-
   AGGREGATION_TYPES = {
     count_agg: 0,
     sum_agg: 1,
@@ -25,6 +23,8 @@ class BillableMetric < ApplicationRecord
   UNIQUE_COUNT_OPERATION_TYPES = %w[add remove].freeze
 
   WEIGHTED_INTERVAL = {seconds: "seconds"}.freeze
+
+  self.discard_column = :deleted_at
 
   enum :aggregation_type, AGGREGATION_TYPES
   enum :rounding_function, ROUNDING_FUNCTIONS
@@ -49,6 +49,10 @@ class BillableMetric < ApplicationRecord
     class_name: "Clickhouse::ActivityLog",
     as: :resource
 
+  default_scope -> { kept }
+
+  scope :with_expression, -> { where("expression IS NOT NULL AND expression <> ''") }
+
   validate :validate_recurring
   validate :validate_expression
 
@@ -63,10 +67,6 @@ class BillableMetric < ApplicationRecord
     if: :weighted_sum_agg?
   validates :custom_aggregator, presence: true, if: :custom_agg?
   validates :rounding_function, inclusion: {in: ROUNDING_FUNCTIONS.values}, allow_nil: true
-
-  default_scope -> { kept }
-
-  scope :with_expression, -> { where("expression IS NOT NULL AND expression <> ''") }
 
   before_validation :reset_field_name_for_count_agg
 

@@ -4,8 +4,6 @@ class PaymentMethod < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
 
-  self.discard_column = :deleted_at
-
   PAYMENT_METHOD_TYPES = {
     provider: "provider",
     manual: "manual"
@@ -13,17 +11,19 @@ class PaymentMethod < ApplicationRecord
 
   SHARED_PAYMENT_TOKEN_FORMAT = /\Aspt_[A-Za-z0-9_]+\z/
 
+  self.discard_column = :deleted_at
+
   belongs_to :organization
   belongs_to :customer, -> { with_discarded }
   belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
   belongs_to :payment_provider_customer, optional: true, class_name: "PaymentProviderCustomers::BaseCustomer"
 
-  validates :provider_method_id, presence: true
-  validates :is_default, inclusion: {in: [true, false]}
-
   default_scope -> { kept }
 
   scope :default, -> { where(is_default: true) }
+
+  validates :provider_method_id, presence: true
+  validates :is_default, inclusion: {in: [true, false]}
 
   def payment_provider_type
     payment_provider&.payment_type

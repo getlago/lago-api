@@ -2,11 +2,11 @@
 
 module Integrations
   class AnrokIntegration < BaseIntegration
+    secrets_accessors :connection_id, :api_key
+
     has_many :error_details, -> { where({error_details: {error_code: "tax_error"}}) },
       primary_key: :organization_id,
       foreign_key: :organization_id
-
-    secrets_accessors :connection_id, :api_key
 
     validates :connection_id, :api_key, presence: true
   end

@@ -12,6 +12,8 @@ class RatePhase < ApplicationRecord
   belongs_to :contract_rate_card, optional: true
   belongs_to :rate_override, optional: true
 
+  default_scope -> { kept }
+
   validates :code, presence: true
   validates :code,
     uniqueness: {scope: :plan_rate_card_id, conditions: -> { where(deleted_at: nil) }},
@@ -25,8 +27,6 @@ class RatePhase < ApplicationRecord
   validates :rate_override_id, uniqueness: {conditions: -> { where(deleted_at: nil) }}, allow_nil: true
 
   validates_with ParentPresenceValidator, parents: %i[plan_rate_card contract_rate_card], error: :exactly_one_parent_required
-
-  default_scope -> { kept }
 
   # Positions arrive as integers (GraphQL, JSON numbers) or strings (REST). A
   # boolean, a decimal or a stray word is not a position: nil, never coerced.

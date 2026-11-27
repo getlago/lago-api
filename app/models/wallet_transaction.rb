@@ -65,6 +65,17 @@ class WalletTransaction < ApplicationRecord
     through: :applied_invoice_custom_sections,
     source: :invoice_custom_section
 
+  scope :pending, -> { where(status: :pending) }
+  scope :available_inbound, -> { inbound.settled.where("remaining_amount_cents > 0") }
+  scope :in_consumption_order, -> {
+    granted_status = transaction_statuses[:granted]
+    order(
+      :priority,
+      Arel.sql("CASE WHEN transaction_status = #{granted_status} THEN 0 ELSE 1 END") => :asc,
+      :created_at => :asc
+    )
+  }
+
   validates :status, :transaction_type, :source, :transaction_status, presence: true
   validates :priority, presence: true, inclusion: {in: 1..50}
   validates :name, length: {minimum: 1, maximum: 255}, allow_nil: true
@@ -76,17 +87,6 @@ class WalletTransaction < ApplicationRecord
   validates :remaining_amount_cents, absence: true, if: :outbound?
 
   delegate :customer, to: :wallet
-
-  scope :pending, -> { where(status: :pending) }
-  scope :available_inbound, -> { inbound.settled.where("remaining_amount_cents > 0") }
-  scope :in_consumption_order, -> {
-    granted_status = transaction_statuses[:granted]
-    order(
-      :priority,
-      Arel.sql("CASE WHEN transaction_status = #{granted_status} THEN 0 ELSE 1 END") => :asc,
-      :created_at => :asc
-    )
-  }
 
   def self.order_by_priority
     order(:priority)

@@ -6,9 +6,9 @@ class ChargeFilter < ApplicationRecord
   include ChargePropertiesValidation
   include FilterPrecedence
 
-  self.discard_column = :deleted_at
-
   CODE_SLUG_LIMIT = 200
+
+  self.discard_column = :deleted_at
 
   belongs_to :charge, -> { with_discarded }, touch: true
   belongs_to :organization
@@ -19,10 +19,10 @@ class ChargeFilter < ApplicationRecord
 
   has_one :billable_metric, through: :charge
 
-  validate :validate_properties
-
   # NOTE: Ensure filters are keeping the initial ordering
   default_scope -> { kept.order(updated_at: :asc) }
+
+  validate :validate_properties
 
   # A name for a filter. Removing a value from a billable metric trims it out of every filter using it,
   # so two filters can collapse onto the same values and stop being distinguishable:

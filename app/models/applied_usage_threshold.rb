@@ -1,16 +1,16 @@
 # frozen_string_literal: true
 
 class AppliedUsageThreshold < ApplicationRecord
-  belongs_to :usage_threshold, -> { with_discarded }
-  belongs_to :invoice
-  belongs_to :organization
-
   monetize :lifetime_usage_amount_cents,
     with_currency: ->(applied_usage_threshold) { applied_usage_threshold.invoice.currency }
 
   monetize :passed_threshold_amount_cents,
     disable_validation: true,
     with_currency: ->(applied_usage_threshold) { applied_usage_threshold.invoice.currency }
+
+  belongs_to :usage_threshold, -> { with_discarded }
+  belongs_to :invoice
+  belongs_to :organization
 
   validates :usage_threshold_id, uniqueness: {scope: :invoice_id}
 

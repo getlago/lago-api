@@ -23,6 +23,7 @@ require:
   - ./dev/cops/stub_perform_all_later_cop.rb
   - ./dev/cops/no_expect_receive_on_job_cop.rb
   - ./dev/cops/v2_timestamp_format_cop.rb
+  - ./dev/cops/model_settings_after_constants_cop.rb
 
 inherit_gem:
   standard: config/base.yml
@@ -50,6 +51,10 @@ Lago/NoExpectReceiveOnJob:
 Lago/V2TimestampFormat:
   Include:
     - "app/serializers/v2/**/*.rb"
+
+Lago/ModelSettingsAfterConstants:
+  Include:
+    - "app/models/**/*.rb"
 
 Lago/NoDropColumnOrTable:
   Include:
@@ -220,7 +225,8 @@ ThreadSafety/DirChdir:
     - "spec/**/*"
 
 # Declarative macros stay grouped at the top of a model, in this order.
-# Settings such as `self.table_name =` and calls without a category are not checked.
+# Settings such as `self.table_name =` come right after the constants (cop `Lago/ModelSettingsAfterConstants`).
+# Calls without a category are not checked.
 Layout/ClassStructure:
   Enabled: true
   Include:
@@ -296,12 +302,12 @@ Layout/ClassStructure:
     - constants
     - attribute_types
     - enums
-    - associations
     - attributes
-    - validations
+    - associations
     - scopes
-    - callbacks
     - aggregations
+    - validations
+    - callbacks
     - public_class_methods
     - class_singleton
     - initializer

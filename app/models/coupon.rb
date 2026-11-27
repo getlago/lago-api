@@ -5,8 +5,6 @@ class Coupon < ApplicationRecord
   include Currencies
   include Discard::Model
 
-  self.discard_column = :deleted_at
-
   STATUSES = [
     :active,
     :terminated
@@ -28,10 +26,14 @@ class Coupon < ApplicationRecord
     :forever
   ].freeze
 
+  self.discard_column = :deleted_at
+
   enum :status, STATUSES, validate: true
   enum :expiration, EXPIRATION_TYPES, validate: true
   enum :coupon_type, COUPON_TYPES, validate: true
   enum :frequency, FREQUENCIES, validate: true
+
+  monetize :amount_cents, disable_validation: true, allow_nil: true
 
   belongs_to :organization
 
@@ -46,23 +48,6 @@ class Coupon < ApplicationRecord
     -> { order(logged_at: :desc) },
     class_name: "Clickhouse::ActivityLog",
     as: :resource
-
-  monetize :amount_cents, disable_validation: true, allow_nil: true
-
-  validates :name, presence: true
-  validates :code, presence: true, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id}
-
-  validates :amount_cents, presence: true, if: :fixed_amount?
-  validates :amount_cents, numericality: {greater_than: 0}, allow_nil: true
-
-  validates :amount_currency, presence: true, if: :fixed_amount?
-  validates :amount_currency, inclusion: {in: currency_list}, allow_nil: true
-
-  validates :percentage_rate, presence: true, if: :percentage?
-
-  validates :frequency_duration, presence: true, numericality: {greater_than: 0}, if: :recurring?
-
-  validates :reusable, exclusion: [nil]
 
   default_scope -> { kept }
   scope :order_by_status_and_expiration,
@@ -79,6 +64,21 @@ class Coupon < ApplicationRecord
     }
 
   scope :expired, -> { where("coupons.expiration_at::timestamp(0) < ?", Time.current) }
+
+  validates :name, presence: true
+  validates :code, presence: true, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id}
+
+  validates :amount_cents, presence: true, if: :fixed_amount?
+  validates :amount_cents, numericality: {greater_than: 0}, allow_nil: true
+
+  validates :amount_currency, presence: true, if: :fixed_amount?
+  validates :amount_currency, inclusion: {in: currency_list}, allow_nil: true
+
+  validates :percentage_rate, presence: true, if: :percentage?
+
+  validates :frequency_duration, presence: true, numericality: {greater_than: 0}, if: :recurring?
+
+  validates :reusable, exclusion: [nil]
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]

@@ -4,9 +4,9 @@ module Agents
   # The free credits a storefront's plan offers, collected once per owner mailbox at that storefront. The unique index
   # on the storefront and the mailbox digest is the once-only guard.
   class FreeCreditGrant < ApplicationRecord
-    self.table_name = "agent_free_credit_grants"
-
     UNIQUE_INDEX = "index_agent_free_credit_grants_on_integration_and_email_hash"
+
+    self.table_name = "agent_free_credit_grants"
 
     belongs_to :organization
     belongs_to :storefront, class_name: "Integrations::AgentStorefrontIntegration", foreign_key: :integration_id

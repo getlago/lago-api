@@ -2,9 +2,9 @@
 
 class Plan
   class AppliedTax < ApplicationRecord
-    self.table_name = "plans_taxes"
-
     include PaperTrailTraceable
+
+    self.table_name = "plans_taxes"
 
     belongs_to :plan, optional: true
     belongs_to :catalog_plan, optional: true

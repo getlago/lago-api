@@ -13,13 +13,13 @@ class CsAdminAuditLog < ApplicationRecord
   belongs_to :rollback_of, class_name: "CsAdminAuditLog", optional: true
   has_one :rollback, class_name: "CsAdminAuditLog", foreign_key: :rollback_of_id, inverse_of: :rollback_of
 
+  scope :newest_first, -> { order(created_at: :desc) }
+
   validates :actor_email, presence: true
   validates :action, presence: true
   validates :feature_type, presence: true
   validates :feature_key, presence: true
   validates :reason, presence: true, length: {minimum: 10, maximum: 500}
-
-  scope :newest_first, -> { order(created_at: :desc) }
 
   def rolled_back?
     rollback.present?

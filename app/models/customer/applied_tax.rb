@@ -2,9 +2,9 @@
 
 class Customer
   class AppliedTax < ApplicationRecord
-    self.table_name = "customers_taxes"
-
     include PaperTrailTraceable
+
+    self.table_name = "customers_taxes"
 
     belongs_to :customer
     belongs_to :tax

@@ -7,12 +7,12 @@ class Commitment < ApplicationRecord
 
   enum :commitment_type, COMMITMENT_TYPES
 
+  monetize :amount_cents, disable_validation: true, allow_nil: true
+
   belongs_to :plan
   belongs_to :organization
   has_many :applied_taxes, class_name: "Commitment::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
-
-  monetize :amount_cents, disable_validation: true, allow_nil: true
 
   validates :amount_cents, numericality: {greater_than: 0}, allow_nil: false
   validates :commitment_type, uniqueness: {scope: :plan_id}

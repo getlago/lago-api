@@ -29,9 +29,9 @@ class Membership < ApplicationRecord
   has_many :membership_roles
   has_many :roles, through: :membership_roles
 
-  validates :user_id, uniqueness: {conditions: -> { where(revoked_at: nil) }, scope: :organization_id}
-
   scope :admins, -> { joins(:roles).where(roles: {admin: true}).distinct }
+
+  validates :user_id, uniqueness: {conditions: -> { where(revoked_at: nil) }, scope: :organization_id}
 
   def admin?
     roles.admins.exists?

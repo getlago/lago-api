@@ -5,8 +5,6 @@ module IntegrationCustomers
     include PaperTrailTraceable
     include SettingsStorable
 
-    self.table_name = "integration_customers"
-
     TAX_INTEGRATION_TYPES = %w[
       IntegrationCustomers::AnrokCustomer
       IntegrationCustomers::AvalaraCustomer
@@ -41,19 +39,17 @@ module IntegrationCustomers
       "IntegrationCustomers::SalesforceCustomer" => CATEGORIES[:crm]
     }.freeze
 
+    self.table_name = "integration_customers"
+
     enum :category, CATEGORIES, validate: {allow_nil: true}
+
+    settings_accessors :sync_with_provider
 
     belongs_to :customer
     belongs_to :integration, class_name: "Integrations::BaseIntegration"
     belongs_to :organization
 
     has_many :billing_object_connections, foreign_key: :integration_customer_id, dependent: :destroy
-
-    settings_accessors :sync_with_provider
-
-    validates :customer_id, uniqueness: {scope: :type}
-    validates :code, uniqueness: {scope: %i[customer_id category]}, allow_nil: true
-    validate :only_one_tax_integration_per_customer, if: :tax_kind?
 
     scope :accounting_kind, -> do
       where(type: CATEGORY_BY_TYPE.select { |_, category| category == CATEGORIES[:accounting] }.keys)
@@ -70,6 +66,10 @@ module IntegrationCustomers
     scope :salesforce_kind, -> do
       where(type: %w[IntegrationCustomers::SalesforceCustomer])
     end
+
+    validates :customer_id, uniqueness: {scope: :type}
+    validates :code, uniqueness: {scope: %i[customer_id category]}, allow_nil: true
+    validate :only_one_tax_integration_per_customer, if: :tax_kind?
 
     before_validation :set_category
     before_validation :set_code

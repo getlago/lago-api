@@ -19,18 +19,18 @@ class ApiKey < ApplicationRecord
   # Set on the short-lived keys minted for the AI agent, which act with the member's permissions.
   belongs_to :membership, optional: true
 
-  validates :value, uniqueness: true
-  validates :value, presence: true, on: :update
-  validates :permissions, presence: true
-  validate :permissions_keys_compliance
-  validate :permissions_values_allowed
-
   default_scope { active }
 
   # Arel, not a SQL string: a raw string makes the query non-retryable on a dropped connection.
   scope :active, -> { where(arel_table[:expires_at].eq(nil).or(arel_table[:expires_at].gt(Time.current))) }
   scope :non_expiring, -> { where(expires_at: nil) }
   scope :with_most_permissions, -> { order(Arel.sql("(SELECT SUM(jsonb_array_length(value)) FROM jsonb_each(permissions))")).last }
+
+  validates :value, uniqueness: true
+  validates :value, presence: true, on: :update
+  validates :permissions, presence: true
+  validate :permissions_keys_compliance
+  validate :permissions_values_allowed
 
   before_create :set_value
 

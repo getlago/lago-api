@@ -10,13 +10,13 @@ class DunningCampaignThreshold < ApplicationRecord
   belongs_to :dunning_campaign
   belongs_to :organization
 
+  default_scope -> { kept }
+
   validates :amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :currency, inclusion: {in: currency_list}
   validates :currency,
     uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :dunning_campaign_id},
     unless: :deleted_at
-
-  default_scope -> { kept }
 end
 
 # == Schema Information

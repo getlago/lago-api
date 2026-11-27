@@ -5,13 +5,13 @@ class RateOverride < ApplicationRecord
   include ChargePropertiesValidation
   include Discard::Model
 
-  self.discard_column = :deleted_at
-
   # A rate override mirrors the overridable pricing fields of a rate_card_rate.
   # Structural card fields (currency, billing timing, proration, ...) are never
   # overridden here and are always inherited from the rate card.
   RATE_MODELS = RateCardRate::RATE_MODELS
   BILLING_INTERVAL_UNITS = RateCardRate::BILLING_INTERVAL_UNITS
+
+  self.discard_column = :deleted_at
 
   enum :rate_model, RATE_MODELS, validate: true
   enum :billing_interval_unit, BILLING_INTERVAL_UNITS, validate: {allow_nil: true}
@@ -26,12 +26,12 @@ class RateOverride < ApplicationRecord
   attr_accessor :billable_metric
   has_many :fees
 
+  default_scope -> { kept }
+
   validates :min_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :billing_interval_count, numericality: {greater_than_or_equal_to: 1}, allow_nil: true
 
   validate :validate_properties
-
-  default_scope -> { kept }
 
   # The charge validators read pricing data from a `properties` attribute.
   def properties

@@ -12,6 +12,8 @@ module X402
     enum :status, STATUSES, validate: true
     enum :settled_by, SETTLED_BY, prefix: true, validate: true
 
+    attr_readonly :payer_address, :payee_address, :payment_digest, :purchase_settings, :invoice_id, :request_key_digest
+
     belongs_to :organization
     belongs_to :x402_connection, -> { with_discarded }, class_name: "X402::Connection", inverse_of: :settlements
     belongs_to :customer, -> { with_discarded }, optional: true
@@ -20,7 +22,13 @@ module X402
     belongs_to :payment, optional: true, inverse_of: :x402_settlement
     belongs_to :invoice, optional: true
 
-    attr_readonly :payer_address, :payee_address, :payment_digest, :purchase_settings, :invoice_id, :request_key_digest
+    scope :pending_reconciliation, -> { pending.where(reconcile_after: ..Time.current) }
+    scope :grant_retry_due, -> { credit_purchase.settled.where(wallet_transaction_id: nil, updated_at: ..GRANT_RETRY_DELAY.ago) }
+    scope :payment_retry_due, lambda {
+      invoice_payment.settled
+        .where(payment_id: nil, updated_at: ..PAYMENT_RETRY_DELAY.ago)
+        .where(arel_table[:error_reason].is_distinct_from("payment_not_recorded"))
+    }
 
     validates :network, inclusion: {in: X402::Network::NETWORKS.keys}
     validates :asset, :payment_digest, presence: true
@@ -33,14 +41,6 @@ module X402
     validate :validate_addresses
     validate :validate_connection, on: :create
     validate :validate_invoice, on: :create
-
-    scope :pending_reconciliation, -> { pending.where(reconcile_after: ..Time.current) }
-    scope :grant_retry_due, -> { credit_purchase.settled.where(wallet_transaction_id: nil, updated_at: ..GRANT_RETRY_DELAY.ago) }
-    scope :payment_retry_due, lambda {
-      invoice_payment.settled
-        .where(payment_id: nil, updated_at: ..PAYMENT_RETRY_DELAY.ago)
-        .where(arel_table[:error_reason].is_distinct_from("payment_not_recorded"))
-    }
 
     before_validation :normalize_addresses, on: :create
 

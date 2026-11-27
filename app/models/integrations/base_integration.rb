@@ -6,10 +6,10 @@ module Integrations
     include SecretsStorable
     include SettingsStorable
 
-    self.table_name = "integrations"
-
     INTEGRATION_ACCOUNTING_TYPES = %w[Integrations::NetsuiteIntegration Integrations::XeroIntegration Integrations::QuickbooksIntegration].freeze
     INTEGRATION_TAX_TYPES = %w[Integrations::AnrokIntegration Integrations::AvalaraIntegration].freeze
+
+    self.table_name = "integrations"
 
     belongs_to :organization
 

@@ -5,16 +5,16 @@ module IntegrationMappings
     include PaperTrailTraceable
     include SettingsStorable
 
+    MAPPABLE_TYPES = %i[AddOn BillableMetric Product].freeze
+
     self.table_name = "integration_mappings"
 
-    MAPPABLE_TYPES = %i[AddOn BillableMetric Product].freeze
+    settings_accessors :external_id, :external_account_code, :external_name
 
     belongs_to :integration, class_name: "Integrations::BaseIntegration"
     belongs_to :mappable, polymorphic: true
     belongs_to :organization
     belongs_to :billing_entity, optional: true
-
-    settings_accessors :external_id, :external_account_code, :external_name
 
     validates :mappable_type, inclusion: {in: MAPPABLE_TYPES.map(&:to_s)}
     validates :mappable_type,

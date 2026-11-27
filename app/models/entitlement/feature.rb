@@ -13,13 +13,13 @@ module Entitlement
     has_many :plans, through: :entitlements
     has_many :catalog_plans, through: :entitlements
 
+    default_scope -> { kept }
+
     validates :code, presence: true, string: true, length: {maximum: 255}
     validates :name, length: {maximum: 255}
     validates :description, length: {maximum: 600}
 
     attr_writer :subscriptions_count
-
-    default_scope -> { kept }
 
     def self.ransackable_attributes(_auth_object = nil)
       %w[code name description]

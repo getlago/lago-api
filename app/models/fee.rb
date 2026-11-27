@@ -5,15 +5,23 @@ class Fee < ApplicationRecord
   include Discard::Model
   include PreloadableAggregations
 
-  self.discard_column = :deleted_at
-  self.ignored_columns += %w[duplicated_in_advance]
-
   # TODO: Deprecate add_on type in the near future
   FEE_TYPES = %i[charge add_on subscription credit commitment fixed_charge product].freeze
   PAYMENT_STATUS = %i[pending succeeded failed refunded].freeze
 
+  self.discard_column = :deleted_at
+  self.ignored_columns += %w[duplicated_in_advance]
+
   enum :fee_type, FEE_TYPES
   enum :payment_status, PAYMENT_STATUS, prefix: :payment
+
+  monetize :amount_cents
+  monetize :taxes_amount_cents, with_model_currency: :currency
+  monetize :total_amount_cents
+  monetize :precise_amount_cents, with_model_currency: :currency
+  monetize :taxes_precise_amount_cents, with_model_currency: :currency
+  monetize :precise_total_amount_cents
+  monetize :unit_amount_cents, disable_validation: true, allow_nil: true, with_model_currency: :currency
 
   belongs_to :invoice, optional: true
   belongs_to :charge, -> { with_discarded }, optional: true
@@ -52,22 +60,6 @@ class Fee < ApplicationRecord
   has_many :applied_taxes, class_name: "Fee::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
   has_many :presentation_breakdowns, dependent: :destroy
-
-  monetize :amount_cents
-  monetize :taxes_amount_cents, with_model_currency: :currency
-  monetize :total_amount_cents
-  monetize :precise_amount_cents, with_model_currency: :currency
-  monetize :taxes_precise_amount_cents, with_model_currency: :currency
-  monetize :precise_total_amount_cents
-  monetize :unit_amount_cents, disable_validation: true, allow_nil: true, with_model_currency: :currency
-
-  validates :amount_currency, inclusion: {in: currency_list}
-  validates :units, numericality: {greater_than_or_equal_to: 0}
-  validates :events_count, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
-  validates :true_up_fee_id, presence: false, unless: :charge?
-  validates :total_aggregated_units, presence: true, if: :charge?
-  validate :validate_contract_provenance
-  validates :rate_card_rate, presence: true, if: :product?
 
   default_scope -> { kept }
 
@@ -111,6 +103,14 @@ class Fee < ApplicationRecord
   preloadable_aggregation :credited_amount_cents do |ids|
     CreditNoteItem.where(fee_id: ids).group(:fee_id).sum(:amount_cents)
   end
+
+  validates :amount_currency, inclusion: {in: currency_list}
+  validates :units, numericality: {greater_than_or_equal_to: 0}
+  validates :events_count, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
+  validates :true_up_fee_id, presence: false, unless: :charge?
+  validates :total_aggregated_units, presence: true, if: :charge?
+  validate :validate_contract_provenance
+  validates :rate_card_rate, presence: true, if: :product?
 
   def item_key
     id || object_id

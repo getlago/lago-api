@@ -2,9 +2,6 @@
 
 module Clickhouse
   class ActivityLog < BaseRecord
-    self.table_name = "activity_logs"
-    self.primary_key = nil
-
     RESOURCE_TYPES_WITH_DISCARDED = %w[
       BillableMetric Plan CatalogPlan Customer BillingEntity Coupon ProductCategory Product ProductFilter RateCard
       RateCardRate PlanRateCard ContractRateCard PlanWallet CatalogWallet
@@ -140,6 +137,9 @@ module Clickhouse
       order_created: "order.created",
       order_executed: "order.executed"
     }
+
+    self.table_name = "activity_logs"
+    self.primary_key = nil
 
     belongs_to :organization
     belongs_to :resource, polymorphic: true

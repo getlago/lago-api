@@ -29,6 +29,21 @@ class CreditNote < ApplicationRecord
   enum :reason, REASON, validate: true
   enum :status, STATUS
 
+  expiring_document_urls :file, :xml_file
+
+  monetize :credit_amount_cents
+  monetize :balance_amount_cents
+  monetize :refund_amount_cents
+  monetize :offset_amount_cents
+  monetize :total_amount_cents
+  monetize :taxes_amount_cents,
+    :coupons_adjustment_amount_cents,
+    :sub_total_excluding_taxes_amount_cents,
+    with_model_currency: :total_amount_currency
+
+  sequenced scope: ->(credit_note) { CreditNote.where(invoice_id: credit_note.invoice_id) },
+    lock_key: ->(credit_note) { credit_note.invoice_id }
+
   belongs_to :customer, -> { with_discarded }
   belongs_to :invoice
   belongs_to :organization
@@ -59,21 +74,6 @@ class CreditNote < ApplicationRecord
 
   has_one_attached :file
   has_one_attached :xml_file
-
-  expiring_document_urls :file, :xml_file
-
-  monetize :credit_amount_cents
-  monetize :balance_amount_cents
-  monetize :refund_amount_cents
-  monetize :offset_amount_cents
-  monetize :total_amount_cents
-  monetize :taxes_amount_cents,
-    :coupons_adjustment_amount_cents,
-    :sub_total_excluding_taxes_amount_cents,
-    with_model_currency: :total_amount_currency
-
-  sequenced scope: ->(credit_note) { CreditNote.where(invoice_id: credit_note.invoice_id) },
-    lock_key: ->(credit_note) { credit_note.invoice_id }
 
   validates :total_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :credit_amount_cents, numericality: {greater_than_or_equal_to: 0}

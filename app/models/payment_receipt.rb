@@ -3,6 +3,8 @@
 class PaymentReceipt < ApplicationRecord
   include ExpiringDocumentUrl
 
+  expiring_document_urls :file, :xml_file
+
   belongs_to :payment
   belongs_to :organization
   belongs_to :billing_entity
@@ -11,8 +13,6 @@ class PaymentReceipt < ApplicationRecord
 
   has_one_attached :file
   has_one_attached :xml_file
-
-  expiring_document_urls :file, :xml_file
 end
 
 # == Schema Information

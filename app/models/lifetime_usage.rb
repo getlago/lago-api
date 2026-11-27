@@ -6,19 +6,19 @@ class LifetimeUsage < ApplicationRecord
 
   self.discard_column = :deleted_at
 
-  belongs_to :organization
-  belongs_to :subscription
-
   monetize :current_usage_amount_cents,
     :invoiced_usage_amount_cents,
     :historical_usage_amount_cents,
     with_currency: ->(lifetime_usage) { lifetime_usage.subscription.plan.amount_currency }
 
+  belongs_to :organization
+  belongs_to :subscription
+
+  default_scope -> { kept }
+
   validates :current_usage_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :invoiced_usage_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :historical_usage_amount_cents, numericality: {greater_than_or_equal_to: 0}
-
-  default_scope -> { kept }
 
   def total_amount_cents
     historical_usage_amount_cents + invoiced_usage_amount_cents + current_usage_amount_cents

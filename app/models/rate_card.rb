@@ -7,8 +7,6 @@ class RateCard < ApplicationRecord
   include CatalogAttachable
   include CatalogCodeFormat
 
-  self.discard_column = :deleted_at
-
   BILLING_TIMINGS = {
     arrears: "arrears",
     advance: "advance"
@@ -19,6 +17,8 @@ class RateCard < ApplicationRecord
   REGROUP_PAID_FEES = {
     invoice: "invoice"
   }.freeze
+
+  self.discard_column = :deleted_at
 
   enum :billing_timing, BILLING_TIMINGS, validate: true
   # nil is a valid value (fee stays standalone); prefix keeps the predicate
@@ -35,6 +35,8 @@ class RateCard < ApplicationRecord
   has_many :applied_taxes, class_name: "RateCard::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
+  default_scope -> { kept }
+
   validates :name, presence: true
   validates :code,
     presence: true,
@@ -46,8 +48,6 @@ class RateCard < ApplicationRecord
   validate :validate_display_on_invoice
   validate :validate_proration
   validate :validate_regroup_paid_fees
-
-  default_scope -> { kept }
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]

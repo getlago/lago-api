@@ -2,16 +2,16 @@
 
 class CreditNote
   class AppliedTax < ApplicationRecord
+    include PaperTrailTraceable
+
     self.table_name = "credit_notes_taxes"
 
-    include PaperTrailTraceable
+    monetize :amount_cents
+    monetize :base_amount_cents, with_model_currency: :amount_currency
 
     belongs_to :credit_note
     belongs_to :tax, optional: true
     belongs_to :organization
-
-    monetize :amount_cents
-    monetize :base_amount_cents, with_model_currency: :amount_currency
   end
 end
 

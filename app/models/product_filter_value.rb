@@ -10,6 +10,12 @@ class ProductFilterValue < ApplicationRecord
   belongs_to :product_filter, -> { with_discarded }
   belongs_to :billable_metric_filter, -> { with_discarded }
 
+  default_scope -> { kept.order(created_at: :asc) }
+
+  delegate :key, to: :billable_metric_filter
+
+  private
+
   # A NULL value selects all configured values for the billable metric filter.
   # An empty string is still invalid; all configured values are selected by nil.
   validates :value, presence: true, allow_nil: true
@@ -20,12 +26,6 @@ class ProductFilterValue < ApplicationRecord
   # reference could otherwise be created between the discard and the cleanup job
   # and be orphaned. Reject any new reference to a discarded filter or metric.
   validate :validate_metric_filter_kept, on: :create
-
-  default_scope -> { kept.order(created_at: :asc) }
-
-  delegate :key, to: :billable_metric_filter
-
-  private
 
   def validate_value_inclusion
     return if value.blank?

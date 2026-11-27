@@ -10,11 +10,11 @@ class PaymentIntent < ApplicationRecord
   belongs_to :invoice
   belongs_to :organization
 
-  validates :status, :expires_at, presence: true
-  validates :status, uniqueness: {scope: :invoice_id}, if: :active?
-
   scope :awaiting_expiration, -> { active.where("expires_at <= ?", Time.current) }
   scope :non_expired, -> { where("expires_at > ?", Time.current) }
+
+  validates :status, :expires_at, presence: true
+  validates :status, uniqueness: {scope: :invoice_id}, if: :active?
 end
 
 # == Schema Information

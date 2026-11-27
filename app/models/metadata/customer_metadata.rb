@@ -6,16 +6,16 @@ module Metadata
 
     COUNT_PER_CUSTOMER = 5
 
-    belongs_to :customer
-    belongs_to :organization
-
     # NOTE: Null byte injection. Prevent 500 errors (ArgumentError: string contains null byte).
     sanitize_null_bytes :key, :value
 
-    validates :key, presence: true, uniqueness: {scope: :customer_id}, length: {maximum: 20}
-    validates :value, presence: true, length: {maximum: 100}
+    belongs_to :customer
+    belongs_to :organization
 
     scope :displayable, -> { where(display_in_invoice: true) }
+
+    validates :key, presence: true, uniqueness: {scope: :customer_id}, length: {maximum: 20}
+    validates :value, presence: true, length: {maximum: 100}
   end
 end
 

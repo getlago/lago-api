@@ -14,10 +14,10 @@ class PlanRateCard < ApplicationRecord
 
   has_many :rate_phases, -> { order(:position) }
 
+  default_scope -> { kept }
+
   validates :rate_card_id, uniqueness: {scope: :catalog_plan_id, conditions: -> { where(deleted_at: nil) }}
   validates :units, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
-
-  default_scope -> { kept }
 
   def edit_error_code
     "plan_locked" if catalog_plan.attached_to_contracts?

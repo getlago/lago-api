@@ -32,17 +32,17 @@ class QuoteVersion < ApplicationRecord
     instance_methods: false,
     validate: {allow_nil: true}
 
-  belongs_to :organization
-  belongs_to :quote
-  belongs_to :billing_entity, optional: true
-  has_one :order_form
-
   sequenced(
     scope: ->(quote_version) { quote_version.quote.versions },
     lock_key: ->(quote_version) { quote_version.quote_id }
   )
 
   delegate :customer, to: :quote
+
+  belongs_to :organization
+  belongs_to :quote
+  belongs_to :billing_entity, optional: true
+  has_one :order_form
 
   validates :currency, inclusion: {in: currency_list}, allow_nil: true
 

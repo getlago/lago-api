@@ -8,10 +8,10 @@ class GroupProperty < ApplicationRecord
   belongs_to :charge
   belongs_to :group, -> { with_discarded }
 
+  default_scope -> { kept }
+
   validates :values, presence: true
   validates :group_id, presence: true, uniqueness: {scope: :charge_id}
-
-  default_scope -> { kept }
 end
 
 # == Schema Information

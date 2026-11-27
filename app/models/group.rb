@@ -12,11 +12,11 @@ class Group < ApplicationRecord
   has_many :properties, class_name: "GroupProperty"
   has_many :fees
 
-  validates :key, :value, presence: true
-
   default_scope -> { kept }
   scope :parents, -> { where(parent_group_id: nil) }
   scope :children, -> { where.not(parent_group_id: nil) }
+
+  validates :key, :value, presence: true
 
   def name
     parent ? "#{parent.value} • #{value}" : value

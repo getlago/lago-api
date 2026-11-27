@@ -15,6 +15,10 @@ class Payment < ApplicationRecord
 
   delegate :billing_entity, to: :customer
 
+  alias_attribute :currency, :amount_currency
+
+  monetize :amount_cents
+
   belongs_to :organization
   belongs_to :customer, -> { with_discarded }
   belongs_to :payable, polymorphic: true
@@ -27,17 +31,6 @@ class Payment < ApplicationRecord
   has_one :invoice_settlement, foreign_key: :source_payment_id
   has_one :payment_receipt, dependent: :destroy
   has_one :x402_settlement, class_name: "X402::Settlement", inverse_of: :payment
-
-  alias_attribute :currency, :amount_currency
-
-  monetize :amount_cents
-
-  validates :payment_type, presence: true
-  validates :reference, presence: true, length: {maximum: 40}, if: -> { payment_type_manual? }
-  validates :reference, absence: true, if: -> { payment_type_provider? || payment_type_x402? }
-  validate :manual_payment_credit_invoice_amount_cents
-  validate :max_invoice_paid_amount_cents, on: :create
-  validate :payment_request_succeeded, on: :create
 
   scope :for_organization, lambda { |organization|
     payables_join = ActiveRecord::Base.sanitize_sql_array([
@@ -57,6 +50,13 @@ class Payment < ApplicationRecord
     joins(payables_join)
       .where("invoices.id IS NOT NULL OR payment_requests.id IS NOT NULL")
   }
+
+  validates :payment_type, presence: true
+  validates :reference, presence: true, length: {maximum: 40}, if: -> { payment_type_manual? }
+  validates :reference, absence: true, if: -> { payment_type_provider? || payment_type_x402? }
+  validate :manual_payment_credit_invoice_amount_cents
+  validate :max_invoice_paid_amount_cents, on: :create
+  validate :payment_request_succeeded, on: :create
 
   def self.ransackable_attributes(_ = nil)
     %w[id provider_payment_id reference] + _ransackers.keys

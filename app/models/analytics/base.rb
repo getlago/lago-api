@@ -2,9 +2,9 @@
 
 module Analytics
   class Base < ApplicationRecord
-    self.abstract_class = true
-
     VERSION_CACHE_EXPIRATION = 1.day
+
+    self.abstract_class = true
 
     def self.find_all_by(organization_id, **args)
       if args[:expire_cache] == true && args[:external_customer_id].present?

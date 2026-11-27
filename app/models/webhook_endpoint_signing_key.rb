@@ -4,10 +4,10 @@ class WebhookEndpointSigningKey < ApplicationRecord
   SECRET_PREFIX = "whsec_"
   SECRET_BYTES = 32
 
+  encrypts :secret
+
   belongs_to :organization
   belongs_to :webhook_endpoint
-
-  encrypts :secret
 
   validates :secret, presence: true
   validate :organization_matches_endpoint

@@ -12,10 +12,10 @@ class CouponTarget < ApplicationRecord
   belongs_to :billable_metric, optional: true
   belongs_to :organization
 
+  default_scope -> { kept }
+
   # A target points at a legacy plan or a catalog plan, never both.
   validates_with ParentPresenceValidator, parents: %i[plan catalog_plan], optional: true, error: :single_plan_target
-
-  default_scope -> { kept }
 end
 
 # == Schema Information

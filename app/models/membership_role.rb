@@ -9,12 +9,12 @@ class MembershipRole < ApplicationRecord
   belongs_to :membership
   belongs_to :role
 
-  validate :role_belongs_to_organization, on: :create
-  validate :forbid_modification, on: :update
-
   default_scope -> { kept }
 
   scope :admins, -> { joins(:role).where(roles: {admin: true}) }
+
+  validate :role_belongs_to_organization, on: :create
+  validate :forbid_modification, on: :update
 
   # Only communicate errors on last role discard
   before_discard :forbid_last_admin_role_discard

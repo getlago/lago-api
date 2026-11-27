@@ -6,8 +6,6 @@ class Charge < ApplicationRecord
   include ChargePropertiesValidation
   include Discard::Model
 
-  self.discard_column = :deleted_at
-
   EVENT_TARGET_WALLET_CODE = "target_wallet_code"
 
   CHARGE_MODELS = %i[
@@ -22,6 +20,8 @@ class Charge < ApplicationRecord
   ].freeze
 
   REGROUPING_PAID_FEES_OPTIONS = %i[invoice].freeze
+
+  self.discard_column = :deleted_at
 
   attribute :regroup_paid_fees, :integer
 
@@ -45,6 +45,11 @@ class Charge < ApplicationRecord
   has_many :applied_taxes, class_name: "Charge::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
+  default_scope -> { kept }
+
+  scope :pay_in_advance, -> { where(pay_in_advance: true) }
+  scope :parents, -> { where(parent_id: nil) }
+
   validate :validate_properties
   validate :validate_dynamic, if: -> { dynamic? }
   validates :min_amount_cents, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
@@ -59,11 +64,6 @@ class Charge < ApplicationRecord
   validate :validate_custom_model
   validate :validate_invoiceable_unless_pay_in_advance
   validate :validate_accepts_target_wallet, if: -> { accepts_target_wallet_changed? }
-
-  default_scope -> { kept }
-
-  scope :pay_in_advance, -> { where(pay_in_advance: true) }
-  scope :parents, -> { where(parent_id: nil) }
 
   def pricing_group_keys
     properties["pricing_group_keys"].presence || properties["grouped_by"]

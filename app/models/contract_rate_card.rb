@@ -4,14 +4,14 @@ class ContractRateCard < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
 
+  TERMINATION_BILLING_ACTIONS = BillingOperation::ACTION_TYPES.values_at(
+    :close_fixed_arrears, :close_metered_arrears, :regroup_paid_fees
+  ).freeze
+
   self.discard_column = :deleted_at
   # The contract end date is the only end of a card; drop once released.
   self.ignored_columns += %w[ended_date]
   self.ignored_columns += %w[units]
-
-  TERMINATION_BILLING_ACTIONS = BillingOperation::ACTION_TYPES.values_at(
-    :close_fixed_arrears, :close_metered_arrears, :regroup_paid_fees
-  ).freeze
 
   belongs_to :organization
   belongs_to :contract
@@ -24,12 +24,6 @@ class ContractRateCard < ApplicationRecord
   has_many :billing_operations
   has_many :daily_usages
   has_many :fees
-
-  validates :billing_anchor_date, presence: true
-  # Only on create: nil means the schedule is exhausted, not that the card was made wrong.
-  validates :next_billing_at, presence: true, on: :create
-  validates :effective_date, presence: true
-  validates :rate_card_id, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil) }}
 
   default_scope -> { kept }
 
@@ -56,6 +50,12 @@ class ContractRateCard < ApplicationRecord
       .where(contracts: {status: %w[active terminated], started_at: ..timestamp})
       .where(customers: {deleted_at: nil})
   }
+
+  validates :billing_anchor_date, presence: true
+  # Only on create: nil means the schedule is exhausted, not that the card was made wrong.
+  validates :next_billing_at, presence: true, on: :create
+  validates :effective_date, presence: true
+  validates :rate_card_id, uniqueness: {scope: :contract_id, conditions: -> { where(deleted_at: nil) }}
 
   # A card seeded from its contract carries the contract's explicit anchor, or
   # its own start day when the contract set none: an anchor matching what it

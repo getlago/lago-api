@@ -2,9 +2,6 @@
 
 module Clickhouse
   class SecurityLog < BaseRecord
-    self.table_name = "security_logs"
-    self.primary_key = nil
-
     LOG_TYPES = %w[
       api_key
       billing_entity
@@ -43,6 +40,9 @@ module Clickhouse
       webhook_endpoint.deleted
       webhook_endpoint.updated
     ].freeze
+
+    self.table_name = "security_logs"
+    self.primary_key = nil
 
     belongs_to :organization
     belongs_to :user, optional: true

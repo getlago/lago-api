@@ -7,6 +7,8 @@ class UsageThreshold < ApplicationRecord
 
   self.discard_column = :deleted_at
 
+  monetize :amount_cents, with_currency: ->(threshold) { threshold.currency }
+
   belongs_to :organization
   belongs_to :plan, optional: true
   belongs_to :subscription, optional: true
@@ -14,17 +16,15 @@ class UsageThreshold < ApplicationRecord
   has_many :applied_usage_thresholds
   has_many :invoices, through: :applied_usage_thresholds
 
-  monetize :amount_cents, with_currency: ->(threshold) { threshold.currency }
+  scope :recurring, -> { where(recurring: true) }
+  scope :not_recurring, -> { where(recurring: false) }
+
+  default_scope -> { kept }
 
   validates :amount_cents, numericality: {greater_than: 0}
   validates :amount_cents, uniqueness: {scope: %i[plan_id recurring deleted_at]}, if: -> { deleted_at.nil? && subscription_id.nil? }
   validates :recurring, uniqueness: {scope: %i[plan_id deleted_at]}, if: -> { recurring? && deleted_at.nil? && subscription_id.nil? }
   validate :exactly_one_parent_present
-
-  scope :recurring, -> { where(recurring: true) }
-  scope :not_recurring, -> { where(recurring: false) }
-
-  default_scope -> { kept }
 
   def invoice_name
     threshold_display_name || I18n.t("invoice.usage_threshold")

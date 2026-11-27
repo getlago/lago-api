@@ -14,12 +14,12 @@ class ProductCategory < ApplicationRecord
   has_many :plan_applied_rate_cards, through: :products
   has_many :contract_applied_rate_cards, through: :products
 
+  default_scope -> { kept }
+
   validates :name, presence: true
   validates :code,
     presence: true,
     uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id}
-
-  default_scope -> { kept }
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]

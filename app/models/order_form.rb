@@ -27,6 +27,13 @@ class OrderForm < ApplicationRecord
     instance_methods: false,
     validate: {allow_nil: true}
 
+  expiring_document_urls :signed_document
+
+  sequenced(
+    scope: ->(order_form) { order_form.organization.order_forms },
+    lock_key: ->(order_form) { order_form.organization_id }
+  )
+
   belongs_to :organization
   belongs_to :customer
   belongs_to :quote_version
@@ -40,18 +47,6 @@ class OrderForm < ApplicationRecord
 
   has_one_attached :signed_document
 
-  expiring_document_urls :signed_document
-
-  sequenced(
-    scope: ->(order_form) { order_form.organization.order_forms },
-    lock_key: ->(order_form) { order_form.organization_id }
-  )
-
-  validates :void_reason, presence: true, if: :voided?
-  validates :signed_document,
-    content_type: SIGNED_DOCUMENT_CONTENT_TYPES,
-    size: {less_than: SIGNED_DOCUMENT_MAX_SIZE}
-
   scope :expirable, -> do
     at_time_zone = Utils::Timezone.at_time_zone_sql
 
@@ -60,6 +55,11 @@ class OrderForm < ApplicationRecord
       .where.not(expires_at: nil)
       .where("DATE(order_forms.expires_at#{at_time_zone}) <= DATE(?#{at_time_zone})", Time.current)
   end
+
+  validates :void_reason, presence: true, if: :voided?
+  validates :signed_document,
+    content_type: SIGNED_DOCUMENT_CONTENT_TYPES,
+    size: {less_than: SIGNED_DOCUMENT_MAX_SIZE}
 
   before_save :ensure_number
 

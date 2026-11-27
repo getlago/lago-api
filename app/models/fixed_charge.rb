@@ -5,13 +5,13 @@ class FixedCharge < ApplicationRecord
   include ChargePropertiesValidation
   include Discard::Model
 
-  self.discard_column = :deleted_at
-
   CHARGE_MODELS = {
     standard: "standard",
     graduated: "graduated",
     volume: "volume"
   }.freeze
+
+  self.discard_column = :deleted_at
 
   enum :charge_model, CHARGE_MODELS
 
@@ -29,6 +29,12 @@ class FixedCharge < ApplicationRecord
   has_many :applied_taxes, class_name: "FixedCharge::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
+  default_scope -> { kept }
+
+  scope :pay_in_advance, -> { where(pay_in_advance: true) }
+  scope :pay_in_arrears, -> { where(pay_in_advance: false) }
+  scope :parents, -> { where(parent_id: nil) }
+
   validates :units, numericality: {greater_than_or_equal_to: 0}
   validates :charge_model, :code, presence: true
   validates :pay_in_advance, exclusion: [nil]
@@ -39,12 +45,6 @@ class FixedCharge < ApplicationRecord
   validate :validate_pay_in_advance
   validate :validate_prorated
   validate :validate_properties
-
-  default_scope -> { kept }
-
-  scope :pay_in_advance, -> { where(pay_in_advance: true) }
-  scope :pay_in_arrears, -> { where(pay_in_advance: false) }
-  scope :parents, -> { where(parent_id: nil) }
 
   def equal_properties?(fixed_charge)
     charge_model == fixed_charge.charge_model &&

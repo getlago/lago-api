@@ -3,6 +3,8 @@
 class Credit < ApplicationRecord
   include Currencies
 
+  monetize :amount_cents, disable_validation: true, allow_nil: true
+
   belongs_to :invoice
   belongs_to :applied_coupon, optional: true
   belongs_to :credit_note, optional: true
@@ -11,10 +13,6 @@ class Credit < ApplicationRecord
 
   has_one :coupon, -> { with_discarded }, through: :applied_coupon
 
-  monetize :amount_cents, disable_validation: true, allow_nil: true
-
-  validates :amount_currency, inclusion: {in: currency_list}
-
   scope :coupon_kind, -> { where.not(applied_coupon_id: nil) }
   scope :credit_note_kind, -> { where.not(credit_note_id: nil) }
   scope :progressive_billing_invoice_kind, -> { where.not(progressive_billing_invoice_id: nil) }
@@ -22,6 +20,8 @@ class Credit < ApplicationRecord
   # value for the customer; their credits are released back to the source like voided ones.
   scope :active, -> { joins(:invoice).where.not(invoices: {status: %i[voided closed deleted]}) }
   scope :voided, -> { joins(:invoice).where(invoices: {status: :voided}) }
+
+  validates :amount_currency, inclusion: {in: currency_list}
 
   def item_id
     return coupon&.id if applied_coupon_id
