@@ -162,6 +162,78 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
     end
   end
 
+  context "when the invoice contains a credit purchase fee" do
+    subject(:compute_amounts) { described_class.new(invoice: purchase_invoice) }
+
+    let(:purchase_invoice) { create(:invoice, :credit_purchase, :open, organization:, customer:) }
+    let(:contract) { create(:contract, organization:, customer:) }
+    let(:tax_application) { "tax_on_purchase" }
+    let(:wallet) { create(:catalog_wallet, organization:, customer:, contract:, tax_application:) }
+    let(:wallet_transaction) do
+      create(:catalog_wallet_transaction, :pending, organization:, catalog_wallet: wallet, purchase_amount_cents: 8000)
+    end
+    let(:purchase_fee) do
+      create(
+        :credit_purchase_fee,
+        invoice: purchase_invoice,
+        wallet_transaction:,
+        amount_cents: 8000,
+        precise_amount_cents: 8000
+      )
+    end
+    let(:wallet_tax) { create(:tax, organization:, rate: 20, code: "wallet-tax") }
+
+    before do
+      purchase_fee
+      create(:catalog_wallet_applied_tax, organization:, catalog_wallet: wallet, tax: wallet_tax)
+    end
+
+    it "applies the wallet taxes through the invoice calculation entry point" do
+      compute_amounts.call
+
+      expect(purchase_fee.reload.applied_taxes.sole).to have_attributes(
+        tax: wallet_tax,
+        tax_code: wallet_tax.code,
+        tax_rate: 20,
+        amount_cents: 1600 # 8000 * 20 / 100
+      )
+      expect(purchase_fee).to have_attributes(taxes_rate: 20, taxes_amount_cents: 1600)
+      expect(purchase_invoice.applied_taxes.sole).to have_attributes(
+        tax: wallet_tax,
+        tax_code: wallet_tax.code,
+        tax_rate: 20,
+        amount_cents: 1600, # 8000 * 20 / 100
+        fees_amount_cents: 8000
+      )
+      expect(purchase_invoice).to have_attributes(
+        fees_amount_cents: 8000,
+        taxes_rate: 20,
+        taxes_amount_cents: 1600,
+        sub_total_including_taxes_amount_cents: 9600, # 8000 + 1600
+        total_amount_cents: 9600
+      )
+    end
+
+    context "when the wallet is taxed on consumption" do
+      let(:tax_application) { "tax_on_consumption" }
+
+      it "leaves the purchase untaxed" do
+        compute_amounts.call
+
+        expect(purchase_fee.reload.applied_taxes).to be_empty
+        expect(purchase_fee).to have_attributes(taxes_rate: 0, taxes_amount_cents: 0)
+        expect(purchase_invoice.applied_taxes).to be_empty
+        expect(purchase_invoice).to have_attributes(
+          fees_amount_cents: 8000,
+          taxes_rate: 0,
+          taxes_amount_cents: 0,
+          sub_total_including_taxes_amount_cents: 8000,
+          total_amount_cents: 8000
+        )
+      end
+    end
+  end
+
   it "sets fees_amount_cents from the list of fees" do
     expect { compute_amounts.call }.to change(invoice, :fees_amount_cents).from(0).to(530)
   end
