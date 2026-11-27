@@ -311,6 +311,44 @@ RSpec.describe BillingEngineMigrations::CopySubscriptionAlertsService, :premium 
     end
   end
 
+  context "with a metric alert copied on its shadow product" do
+    before { create_v1_alert(:billable_metric_current_usage_units_alert, billable_metric:, code: "tokens") }
+
+    it "targets the product by its code in the scope" do
+      allow(UsageMonitoring::ContractAlerts::CreateService).to receive(:call).and_call_original
+
+      expect(result).to be_success
+      expect(UsageMonitoring::ContractAlerts::CreateService).to have_received(:call).with(
+        organization: shadow_organization,
+        contract:,
+        params: hash_including(scope: [{type: "contract", product_code: product.code, with_product_filters: true}])
+      )
+    end
+  end
+
+  {
+    "scope" => :scope,
+    "a scope entry" => BaseService::ValidationFailure.item_field(:scope, 0, :product_code),
+    "the alert type" => :alert_type
+  }.each do |label, field|
+    context "when the contract alert service refuses #{label} the copy built" do
+      before do
+        create_v1_alert(:usage_current_amount_alert, code: "first")
+        create_v1_alert(:billable_metric_current_usage_amount_alert, billable_metric:, code: "second")
+        allow(Rails.logger).to receive(:warn)
+        allow(UsageMonitoring::ContractAlerts::CreateService).to receive(:call)
+          .and_return(BaseService::Result.new.single_validation_failure!(field:, error_code: "value_is_mandatory"))
+      end
+
+      it "fails without copying the next alerts" do
+        expect(result).to be_failure
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(UsageMonitoring::ContractAlerts::CreateService).to have_received(:call).once
+        expect(Rails.logger).to have_received(:warn).with(a_string_including("cannot create alert first: Validation errors:"))
+      end
+    end
+  end
+
   context "when the contract alert service fails unexpectedly" do
     before do
       create_v1_alert(:usage_current_amount_alert, code: "first")

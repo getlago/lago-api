@@ -10,6 +10,9 @@ module BillingEngineMigrations
       BaseService::NotFoundFailure
     ].freeze
 
+    # The copy builds these params itself: their refusal is a bug of the copy, not of the V1 alert
+    MAPPED_PARAMS = %w[alert_type scope].freeze
+
     def initialize(migration:, subscription:)
       @migration = migration
       @subscription = subscription
@@ -68,7 +71,7 @@ module BillingEngineMigrations
     end
 
     def contract_alerts
-      @contract_alerts ||= contract.contract_alerts.includes(:thresholds).order(:code).to_a
+      @contract_alerts ||= contract.contract_alerts.includes(:thresholds, :product).order(:code).to_a
     end
 
     def existing_codes
@@ -113,10 +116,12 @@ module BillingEngineMigrations
     end
 
     def matches_expected?(contract_alert, expected)
+      target = expected[:scope].first
+
       contract_alert.alert_type == expected[:alert_type] &&
-        contract_alert.product_id == expected[:product_id] &&
+        contract_alert.product&.code == target&.dig(:product_code) &&
         contract_alert.product_filter_id.nil? &&
-        contract_alert.with_product_filters == (expected[:with_product_filters] == true) &&
+        contract_alert.with_product_filters == (target&.dig(:with_product_filters) == true) &&
         contract_alert.name == expected[:name] &&
         comparable_thresholds(contract_alert.thresholds) == comparable_thresholds(expected[:thresholds])
     end
@@ -150,12 +155,22 @@ module BillingEngineMigrations
     end
 
     def skip_or_fail(alert, error)
-      if EXPECTED_REFUSALS.any? { error.is_a?(it) }
+      if expected_refusal?(error)
         log(:info, "skipped alert #{alert.code}: #{error.message}")
       else
         log(:warn, "cannot create alert #{alert.code}: #{error.message}")
         result.fail_with_error!(error)
       end
+    end
+
+    def expected_refusal?(error)
+      return false if error.is_a?(BaseService::ValidationFailure) && refuses_mapped_params?(error)
+
+      EXPECTED_REFUSALS.any? { error.is_a?(it) }
+    end
+
+    def refuses_mapped_params?(error)
+      error.messages.keys.any? { |field| MAPPED_PARAMS.include?(field.to_s[/\A[a-z_]+/]) }
     end
 
     def expected_params(alert)
@@ -172,14 +187,16 @@ module BillingEngineMigrations
     end
 
     def product_alert_params(alert, alert_type:)
-      product_ids = shadow_product_ids_by_metric_code.fetch(alert.billable_metric.code, [])
+      product_codes = shadow_product_codes_by_metric_code.fetch(alert.billable_metric.code, [])
 
-      if product_ids.empty?
+      if product_codes.empty?
         "shadow_product_not_found"
-      elsif product_ids.many?
+      elsif product_codes.many?
         "shadow_product_ambiguous"
       else
-        alert_params(alert, alert_type:).merge(product_id: product_ids.first, with_product_filters: true)
+        alert_params(alert, alert_type:).merge(
+          scope: [{type: "contract", product_code: product_codes.first, with_product_filters: true}]
+        )
       end
     end
 
@@ -188,6 +205,7 @@ module BillingEngineMigrations
         alert_type:,
         code: alert.code,
         name: alert.name,
+        scope: [],
         thresholds: alert.thresholds.map do
           {
             code: it.code,
@@ -200,13 +218,13 @@ module BillingEngineMigrations
       }
     end
 
-    def shadow_product_ids_by_metric_code
-      @shadow_product_ids_by_metric_code ||= shadow_organization.products.metered
+    def shadow_product_codes_by_metric_code
+      @shadow_product_codes_by_metric_code ||= shadow_organization.products.metered
         .joins(:billable_metric)
         .where(billable_metrics: {code: v1_alerts.filter_map { it.billable_metric&.code }.uniq})
         .where(id: priced_product_ids)
         .distinct
-        .pluck("billable_metrics.code", :id)
+        .pluck("billable_metrics.code", "products.code")
         .group_by(&:first)
         .transform_values { it.map(&:last) }
     end
