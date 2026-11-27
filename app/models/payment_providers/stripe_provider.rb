@@ -51,14 +51,14 @@ module PaymentProviders
       ::Stripe::PermissionError
     ].freeze
 
-    validates :secret_key, presence: true
-    validates :success_redirect_url, url: true, allow_nil: true, length: {maximum: 1024}
-
     settings_accessors :webhook_id
     secrets_accessors :secret_key
     settings_accessors :supports_3ds
     settings_accessors :require_terms_of_service_consent, default: false
     settings_accessors :seller_profile
+
+    validates :secret_key, presence: true
+    validates :success_redirect_url, url: true, allow_nil: true, length: {maximum: 1024}
 
     def self.to_stripe_amount(amount_cents, currency)
       if two_decimal_override_currency?(currency)

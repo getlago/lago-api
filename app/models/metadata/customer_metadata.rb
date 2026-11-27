@@ -2,12 +2,12 @@
 
 module Metadata
   class CustomerMetadata < ApplicationRecord
+    include NullByteSanitizable
+
     COUNT_PER_CUSTOMER = 5
 
     belongs_to :customer
     belongs_to :organization
-
-    include NullByteSanitizable
 
     # NOTE: Null byte injection. Prevent 500 errors (ArgumentError: string contains null byte).
     sanitize_null_bytes :key, :value

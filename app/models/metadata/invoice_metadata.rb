@@ -2,12 +2,12 @@
 
 module Metadata
   class InvoiceMetadata < ApplicationRecord
+    include NullByteSanitizable
+
     COUNT_PER_INVOICE = 5
 
     belongs_to :invoice, touch: true
     belongs_to :organization
-
-    include NullByteSanitizable
 
     # NOTE: Null byte injection. Prevent 500 errors (ArgumentError: string contains null byte).
     sanitize_null_bytes :key, :value

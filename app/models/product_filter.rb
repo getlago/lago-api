@@ -20,10 +20,6 @@ class ProductFilter < ApplicationRecord
 
   delegate :attached_to_plan_or_subscription?, to: :product
 
-  def attached_to_subscriptions?
-    ContractRateCard.joins(:rate_card).where(rate_cards: {product_filter_id: id}).exists?
-  end
-
   validates :name, presence: true
   validates :code,
     presence: true,
@@ -33,6 +29,10 @@ class ProductFilter < ApplicationRecord
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]
+  end
+
+  def attached_to_subscriptions?
+    ContractRateCard.joins(:rate_card).where(rate_cards: {product_filter_id: id}).exists?
   end
 
   def invoice_name

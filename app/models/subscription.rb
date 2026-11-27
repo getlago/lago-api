@@ -10,6 +10,30 @@ class Subscription < ApplicationRecord
 
   self.ignored_columns += %w[incompleted_at cancelation_reason]
 
+  STATUSES = [
+    :pending,
+    :active,
+    :terminated,
+    :canceled,
+    :incomplete
+  ].freeze
+
+  CANCELLATION_REASONS = {payment_failed: "payment_failed", timeout: "timeout", manual: "manual"}.freeze
+
+  BILLING_TIME = %i[
+    calendar
+    anniversary
+  ].freeze
+
+  ON_TERMINATION_CREDIT_NOTES = {credit: "credit", skip: "skip", refund: "refund", offset: "offset"}.freeze
+  ON_TERMINATION_INVOICES = {generate: "generate", skip: "skip"}.freeze
+
+  enum :status, STATUSES
+  enum :billing_time, BILLING_TIME
+  enum :on_termination_credit_note, ON_TERMINATION_CREDIT_NOTES, prefix: true
+  enum :on_termination_invoice, ON_TERMINATION_INVOICES, prefix: true
+  enum :cancellation_reason, CANCELLATION_REASONS
+
   belongs_to :customer, -> { with_discarded }
   belongs_to :plan, -> { with_discarded }
   belongs_to :previous_subscription, class_name: "Subscription", optional: true
@@ -54,30 +78,6 @@ class Subscription < ApplicationRecord
 
   validates :external_id, :billing_time, presence: true
   validate :validate_external_id, on: [:create, :update], if: -> { status_changed? }
-
-  STATUSES = [
-    :pending,
-    :active,
-    :terminated,
-    :canceled,
-    :incomplete
-  ].freeze
-
-  CANCELLATION_REASONS = {payment_failed: "payment_failed", timeout: "timeout", manual: "manual"}.freeze
-
-  BILLING_TIME = %i[
-    calendar
-    anniversary
-  ].freeze
-
-  ON_TERMINATION_CREDIT_NOTES = {credit: "credit", skip: "skip", refund: "refund", offset: "offset"}.freeze
-  ON_TERMINATION_INVOICES = {generate: "generate", skip: "skip"}.freeze
-
-  enum :status, STATUSES
-  enum :billing_time, BILLING_TIME
-  enum :on_termination_credit_note, ON_TERMINATION_CREDIT_NOTES, prefix: true
-  enum :on_termination_invoice, ON_TERMINATION_INVOICES, prefix: true
-  enum :cancellation_reason, CANCELLATION_REASONS
 
   validates :on_termination_credit_note, absence: true, if: -> { plan&.pay_in_arrears? }
   validates :started_at, presence: true, if: -> { incomplete? }

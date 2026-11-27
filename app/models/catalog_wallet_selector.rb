@@ -15,15 +15,15 @@ class CatalogWalletSelector < ApplicationRecord
     metered: "metered"
   }.freeze
 
+  enum :selector_type, SELECTOR_TYPES, validate: true, prefix: true
+  enum :fee_type, FEE_TYPES, validate: {allow_nil: true}, prefix: true
+
   belongs_to :organization
   belongs_to :plan_wallet, -> { with_discarded }, optional: true
   belongs_to :catalog_wallet, -> { with_discarded }, optional: true
   belongs_to :product_category, -> { with_discarded }, optional: true
   belongs_to :product, -> { with_discarded }, optional: true
   belongs_to :product_filter, -> { with_discarded }, optional: true
-
-  enum :selector_type, SELECTOR_TYPES, validate: true, prefix: true
-  enum :fee_type, FEE_TYPES, validate: {allow_nil: true}, prefix: true
 
   validates :fee_type, presence: true, if: :selector_type_fee_type?
   validates :product_category_id, presence: true, if: :selector_type_product_category?

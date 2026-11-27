@@ -5,26 +5,6 @@ class RecurringTransactionRule < ApplicationRecord
   include PaperTrailTraceable
   include ConnectionResolvable
 
-  belongs_to :wallet
-  belongs_to :organization
-  belongs_to :payment_method, optional: true
-
-  delegate :customer, to: :wallet
-
-  has_many :billing_object_connections, as: :owner, dependent: :destroy
-  has_many :applied_invoice_custom_sections,
-    class_name: "RecurringTransactionRule::AppliedInvoiceCustomSection",
-    dependent: :destroy
-  has_many :selected_invoice_custom_sections,
-    through: :applied_invoice_custom_sections,
-    source: :invoice_custom_section
-
-  validates :transaction_name, length: {minimum: 1, maximum: 255}, allow_nil: true
-  validates :grants_target_top_up, inclusion: {in: [true, false]}, allow_nil: true, if: :target?
-  validates :grants_target_top_up, exclusion: {in: [true, false]}, unless: :target?
-  validate :target_ongoing_balance_not_below_threshold,
-    if: -> { target_ongoing_balance_changed? || threshold_credits_changed? || method_changed? || trigger_changed? }
-
   STATUSES = [
     :active,
     :terminated
@@ -52,6 +32,26 @@ class RecurringTransactionRule < ApplicationRecord
   enum :method, METHODS
   enum :trigger, TRIGGERS
   enum :status, STATUSES
+
+  belongs_to :wallet
+  belongs_to :organization
+  belongs_to :payment_method, optional: true
+
+  delegate :customer, to: :wallet
+
+  has_many :billing_object_connections, as: :owner, dependent: :destroy
+  has_many :applied_invoice_custom_sections,
+    class_name: "RecurringTransactionRule::AppliedInvoiceCustomSection",
+    dependent: :destroy
+  has_many :selected_invoice_custom_sections,
+    through: :applied_invoice_custom_sections,
+    source: :invoice_custom_section
+
+  validates :transaction_name, length: {minimum: 1, maximum: 255}, allow_nil: true
+  validates :grants_target_top_up, inclusion: {in: [true, false]}, allow_nil: true, if: :target?
+  validates :grants_target_top_up, exclusion: {in: [true, false]}, unless: :target?
+  validate :target_ongoing_balance_not_below_threshold,
+    if: -> { target_ongoing_balance_changed? || threshold_credits_changed? || method_changed? || trigger_changed? }
 
   scope :active, -> { where(status: statuses[:active]).where("expiration_at IS NULL OR expiration_at > ?", Time.current) }
   scope :eligible_for_termination, -> {

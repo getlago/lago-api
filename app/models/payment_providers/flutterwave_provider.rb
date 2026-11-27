@@ -10,10 +10,11 @@ module PaymentProviders
     PROCESSING_STATUSES = %w[pending].freeze
     SUCCESS_STATUSES = %w[successful].freeze
     FAILED_STATUSES = %w[failed cancelled].freeze
-    validates :secret_key, presence: true
-    validates :success_redirect_url, url: true, allow_nil: true, length: {maximum: 1024}
 
     secrets_accessors :secret_key, :webhook_secret
+
+    validates :secret_key, presence: true
+    validates :success_redirect_url, url: true, allow_nil: true, length: {maximum: 1024}
 
     before_create :generate_webhook_secret
 

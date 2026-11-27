@@ -28,7 +28,12 @@ class Order < ApplicationRecord
     "errors" => []
   }.freeze
 
-  before_save :ensure_number
+  enum :status, STATUSES,
+    default: :created,
+    validate: true
+  enum :execution_mode, EXECUTION_MODES,
+    instance_methods: false,
+    validate: {allow_nil: true}
 
   belongs_to :organization
   belongs_to :customer
@@ -41,12 +46,10 @@ class Order < ApplicationRecord
     class_name: "Clickhouse::ActivityLog",
     as: :resource
 
-  enum :status, STATUSES,
-    default: :created,
-    validate: true
-  enum :execution_mode, EXECUTION_MODES,
-    instance_methods: false,
-    validate: {allow_nil: true}
+  sequenced(
+    scope: ->(order) { order.organization.orders },
+    lock_key: ->(order) { order.organization_id }
+  )
 
   validates :execution_mode, presence: true, if: -> { executed? || execute_at.present? }
 
@@ -55,19 +58,16 @@ class Order < ApplicationRecord
   delegate :order_type, to: :quote
   delegate :currency, to: :quote_version
 
-  # TODO: migrate this to a real column when billing items validation is ready
-  def billing_snapshot
-    quote_version.billing_items
-  end
+  before_save :ensure_number
 
   def self.ransackable_attributes(_ = nil)
     %w[number]
   end
 
-  sequenced(
-    scope: ->(order) { order.organization.orders },
-    lock_key: ->(order) { order.organization_id }
-  )
+  # TODO: migrate this to a real column when billing items validation is ready
+  def billing_snapshot
+    quote_version.billing_items
+  end
 
   private
 

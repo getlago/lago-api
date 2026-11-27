@@ -44,6 +44,8 @@ class WebhookEndpoint < ApplicationRecord
 
   V2_ERROR_CODES = {invalid_types: "value_is_invalid", exceeded_limit: "exceeded_limit"}.freeze
 
+  enum :signature_algo, SIGNATURE_ALGOS
+
   belongs_to :organization
   has_many :webhooks, dependent: :delete_all
   has_many :signing_keys, class_name: "WebhookEndpointSigningKey", dependent: :delete_all
@@ -54,8 +56,6 @@ class WebhookEndpoint < ApplicationRecord
   validate :validate_event_types, if: :event_types_changed?
 
   before_validation :normalize_event_types, if: :event_types_changed?
-
-  enum :signature_algo, SIGNATURE_ALGOS
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[webhook_url]

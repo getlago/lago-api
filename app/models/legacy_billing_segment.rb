@@ -7,9 +7,9 @@ class LegacyBillingSegment < ApplicationRecord
 
   STATUSES = {pending: "pending", processing: "processing", done: "done", failed: "failed"}.freeze
 
-  belongs_to :invoice, optional: true
-
   enum :status, STATUSES, validate: true, prefix: true
+
+  belongs_to :invoice, optional: true
 
   def readonly?
     true

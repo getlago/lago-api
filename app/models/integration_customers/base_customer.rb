@@ -7,12 +7,6 @@ module IntegrationCustomers
 
     self.table_name = "integration_customers"
 
-    belongs_to :customer
-    belongs_to :integration, class_name: "Integrations::BaseIntegration"
-    belongs_to :organization
-
-    has_many :billing_object_connections, foreign_key: :integration_customer_id, dependent: :destroy
-
     TAX_INTEGRATION_TYPES = %w[
       IntegrationCustomers::AnrokCustomer
       IntegrationCustomers::AvalaraCustomer
@@ -49,8 +43,13 @@ module IntegrationCustomers
 
     enum :category, CATEGORIES, validate: {allow_nil: true}
 
-    before_validation :set_category
-    before_validation :set_code
+    belongs_to :customer
+    belongs_to :integration, class_name: "Integrations::BaseIntegration"
+    belongs_to :organization
+
+    has_many :billing_object_connections, foreign_key: :integration_customer_id, dependent: :destroy
+
+    settings_accessors :sync_with_provider
 
     validates :customer_id, uniqueness: {scope: :type}
     validates :code, uniqueness: {scope: %i[customer_id category]}, allow_nil: true
@@ -72,7 +71,8 @@ module IntegrationCustomers
       where(type: %w[IntegrationCustomers::SalesforceCustomer])
     end
 
-    settings_accessors :sync_with_provider
+    before_validation :set_category
+    before_validation :set_code
 
     def self.customer_type(type)
       CUSTOMER_TYPES.fetch(type) { raise(NotImplementedError) }

@@ -7,20 +7,6 @@ class Coupon < ApplicationRecord
 
   self.discard_column = :deleted_at
 
-  belongs_to :organization
-
-  has_many :applied_coupons
-  has_many :customers, -> { kept }, through: :applied_coupons
-  has_many :coupon_targets
-  has_many :plans, through: :coupon_targets
-  has_many :catalog_plans, through: :coupon_targets
-  has_many :billable_metrics, through: :coupon_targets
-
-  has_many :activity_logs,
-    -> { order(logged_at: :desc) },
-    class_name: "Clickhouse::ActivityLog",
-    as: :resource
-
   STATUSES = [
     :active,
     :terminated
@@ -46,6 +32,20 @@ class Coupon < ApplicationRecord
   enum :expiration, EXPIRATION_TYPES, validate: true
   enum :coupon_type, COUPON_TYPES, validate: true
   enum :frequency, FREQUENCIES, validate: true
+
+  belongs_to :organization
+
+  has_many :applied_coupons
+  has_many :customers, -> { kept }, through: :applied_coupons
+  has_many :coupon_targets
+  has_many :plans, through: :coupon_targets
+  has_many :catalog_plans, through: :coupon_targets
+  has_many :billable_metrics, through: :coupon_targets
+
+  has_many :activity_logs,
+    -> { order(logged_at: :desc) },
+    class_name: "Clickhouse::ActivityLog",
+    as: :resource
 
   monetize :amount_cents, disable_validation: true, allow_nil: true
 

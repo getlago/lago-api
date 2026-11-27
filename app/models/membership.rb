@@ -3,14 +3,6 @@
 class Membership < ApplicationRecord
   include PaperTrailTraceable
 
-  belongs_to :organization
-  belongs_to :user
-
-  has_many :ai_conversations
-  has_many :data_exports
-  has_many :membership_roles
-  has_many :roles, through: :membership_roles
-
   STATUSES = [
     :active,
     :revoked
@@ -28,6 +20,14 @@ class Membership < ApplicationRecord
   ].freeze
 
   enum :status, STATUSES
+
+  belongs_to :organization
+  belongs_to :user
+
+  has_many :ai_conversations
+  has_many :data_exports
+  has_many :membership_roles
+  has_many :roles, through: :membership_roles
 
   validates :user_id, uniqueness: {conditions: -> { where(revoked_at: nil) }, scope: :organization_id}
 

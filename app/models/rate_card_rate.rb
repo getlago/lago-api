@@ -32,15 +32,15 @@ class RateCardRate < ApplicationRecord
     terminated: "terminated"
   }.freeze
 
-  belongs_to :organization
-  belongs_to :rate_card, -> { with_discarded }
-
-  has_many :fees
-
   # allow_nil here only keeps a missing value on the presence error
   # (value_is_mandatory) instead of also failing inclusion (value_is_invalid)
   enum :rate_model, RATE_MODELS, validate: {allow_nil: true}
   enum :billing_interval_unit, BILLING_INTERVAL_UNITS, validate: {allow_nil: true}
+
+  belongs_to :organization
+  belongs_to :rate_card, -> { with_discarded }
+
+  has_many :fees
 
   validates :code, presence: true
   validates :code, uniqueness: {scope: :rate_card_id, conditions: -> { where(deleted_at: nil) }}
@@ -50,8 +50,6 @@ class RateCardRate < ApplicationRecord
   validates :rate_model, presence: true
   validates :min_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :billing_interval_count, numericality: {greater_than_or_equal_to: 1}
-
-  before_validation :normalize_effective_from
 
   validate :validate_effective_from_parseable
   validate :validate_effective_from_is_appended
@@ -64,6 +62,8 @@ class RateCardRate < ApplicationRecord
 
   scope :pending, -> { where("effective_from > ?", Time.current) }
   scope :effective, -> { where(effective_from: ..Time.current) }
+
+  before_validation :normalize_effective_from
 
   # The charge validators read pricing data from a `properties` attribute.
   def properties

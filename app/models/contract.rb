@@ -22,6 +22,17 @@ class Contract < ApplicationRecord
 
   PAYMENT_METHOD_TYPES = {provider: "provider", manual: "manual"}.freeze
 
+  # A draft is live (it holds its external id, stays editable and can be
+  # canceled) but never billable.
+  LIVE_STATUSES = %w[draft pending active].freeze
+
+  # Live contracts accepting rate changes and usage billing. Terminated cards with owed
+  # coverage remain discoverable separately through their billing cursors.
+  BILLABLE_STATUSES = %w[active].freeze
+
+  enum :status, STATUSES, validate: true
+  enum :payment_method_type, PAYMENT_METHOD_TYPES, validate: true, prefix: true
+
   belongs_to :organization
   # with_discarded: a terminated contract must still resolve its customer and
   # catalog plan after they are discarded — history, serializers and invoices
@@ -49,16 +60,12 @@ class Contract < ApplicationRecord
     primary_key: :external_id
   has_one :contract_activity, class_name: "UsageMonitoring::ContractActivity"
 
-  enum :status, STATUSES, validate: true
-  enum :payment_method_type, PAYMENT_METHOD_TYPES, validate: true, prefix: true
+  validates :external_id, presence: true
+  validates :code, presence: true, on: :create
+  validates :code, uniqueness: {scope: [:organization_id, :external_id]}, allow_nil: true, if: :will_save_change_to_code?
 
-  # A draft is live (it holds its external id, stays editable and can be
-  # canceled) but never billable.
-  LIVE_STATUSES = %w[draft pending active].freeze
-
-  # Live contracts accepting rate changes and usage billing. Terminated cards with owed
-  # coverage remain discoverable separately through their billing cursors.
-  BILLABLE_STATUSES = %w[active].freeze
+  validate :validate_started_before_ended
+  validate :validate_code_unchanged, on: :update
 
   # The live contracts for an external id: at most one per status (the partial
   # unique index is per status), so a pending replacement can coexist with the
@@ -73,13 +80,6 @@ class Contract < ApplicationRecord
 
   # Active contracts whose planned end has arrived, compared as an instant like the start.
   scope :due_for_termination, ->(timestamp) { active.where(ended_at: ..timestamp) }
-
-  validates :external_id, presence: true
-  validates :code, presence: true, on: :create
-  validates :code, uniqueness: {scope: [:organization_id, :external_id]}, allow_nil: true, if: :will_save_change_to_code?
-
-  validate :validate_started_before_ended
-  validate :validate_code_unchanged, on: :update
 
   # Termination ends the agreement in force, so it prefers the active contract,
   # then a pending replacement, then a draft. started_at/created_at break ties

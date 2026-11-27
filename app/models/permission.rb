@@ -15,6 +15,5 @@ module Permission
     DottedHash.new(h, separator: ":").transform_values(&:to_a)
   end
 
-  # rubocop:disable Layout/ClassStructure
   DATA = yaml_to_hash("permissions.yml").freeze
 end

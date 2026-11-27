@@ -19,8 +19,6 @@ class ApiKey < ApplicationRecord
   # Set on the short-lived keys minted for the AI agent, which act with the member's permissions.
   belongs_to :membership, optional: true
 
-  before_create :set_value
-
   validates :value, uniqueness: true
   validates :value, presence: true, on: :update
   validates :permissions, presence: true
@@ -34,6 +32,12 @@ class ApiKey < ApplicationRecord
   scope :non_expiring, -> { where(expires_at: nil) }
   scope :with_most_permissions, -> { order(Arel.sql("(SELECT SUM(jsonb_array_length(value)) FROM jsonb_each(permissions))")).last }
 
+  before_create :set_value
+
+  def self.default_permissions
+    RESOURCES.index_with { MODES.dup }
+  end
+
   def flat_permissions
     permissions.flat_map { |resource, modes| Array(modes).map { |mode| "#{resource}:#{mode}" } }.sort
   end
@@ -43,10 +47,6 @@ class ApiKey < ApplicationRecord
     return true unless member_key? || organization.api_permissions_enabled?
 
     Array(permissions[resource]).include?(mode)
-  end
-
-  def self.default_permissions
-    RESOURCES.index_with { MODES.dup }
   end
 
   def member_key?

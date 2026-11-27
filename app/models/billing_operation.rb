@@ -26,14 +26,14 @@ class BillingOperation < ApplicationRecord
     contract_termination: "contract_termination"
   }.freeze
 
+  enum :reason, REASONS, validate: true
+  enum :cancellation_reason, CANCELLATION_REASONS, prefix: true, validate: {allow_nil: true}
+
   belongs_to :organization
   belongs_to :customer, -> { with_discarded }
   belongs_to :contract_rate_card, -> { with_discarded }
   belongs_to :invoice, optional: true
   has_many :segments, -> { order(:position) }, class_name: "BillingOperationSegment", inverse_of: :billing_operation
-
-  enum :reason, REASONS, validate: true
-  enum :cancellation_reason, CANCELLATION_REASONS, prefix: true, validate: {allow_nil: true}
 
   validates :action_type, inclusion: {in: ACTION_TYPES.values}
   validates :billing_at, :target_cycle_started_at, presence: true

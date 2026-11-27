@@ -218,3 +218,93 @@ ThreadSafety/NewThread:
 ThreadSafety/DirChdir:
   Exclude:
     - "spec/**/*"
+
+# Declarative macros stay grouped at the top of a model, in this order.
+# Settings such as `self.table_name =` and calls without a category are not checked.
+Layout/ClassStructure:
+  Enabled: true
+  Include:
+    - "app/models/**/*.rb"
+  Exclude:
+    # Its constants call `new`, so they come after `initialize`.
+    - "app/models/usage_filters.rb"
+  Categories:
+    module_inclusion:
+      - include
+      - prepend
+      - extend
+    enums:
+      - enum
+    associations:
+      - belongs_to
+      - has_one
+      - has_many
+      - has_and_belongs_to_many
+      - has_one_attached
+      - has_many_attached
+      - accepts_nested_attributes_for
+    attribute_types:
+      - attribute
+    attributes:
+      - alias_attribute
+      - attr_readonly
+      - encrypts
+      - expiring_document_urls
+      - has_secure_password
+      - monetize
+      - normalizes
+      - sanitize_null_bytes
+      - secrets_accessors
+      - sequenced
+      - settings_accessors
+      - store_accessor
+    validations:
+      - validate
+      - validates
+      - validates_with
+      - validates_associated
+    scopes:
+      - default_scope
+      - scope
+    callbacks:
+      - after_commit
+      - after_create
+      - after_create_commit
+      - after_destroy
+      - after_destroy_commit
+      - after_discard
+      - after_initialize
+      - after_save
+      - after_save_commit
+      - after_update
+      - after_update_commit
+      - after_validation
+      - around_create
+      - around_save
+      - around_update
+      - before_create
+      - before_destroy
+      - before_discard
+      - before_save
+      - before_update
+      - before_validation
+    aggregations:
+      - preloadable_aggregation
+      - preloadable_associated_aggregation
+  ExpectedOrder:
+    - module_inclusion
+    - constants
+    - attribute_types
+    - enums
+    - associations
+    - attributes
+    - validations
+    - scopes
+    - callbacks
+    - aggregations
+    - public_class_methods
+    - class_singleton
+    - initializer
+    - public_methods
+    - protected_methods
+    - private_methods

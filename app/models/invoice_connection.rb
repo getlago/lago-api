@@ -8,6 +8,8 @@ class InvoiceConnection < ApplicationRecord
     crm: "crm"
   }.freeze
 
+  enum :category, CATEGORIES, validate: true
+
   belongs_to :organization
   belongs_to :invoice
   belongs_to :payment_provider_customer,
@@ -16,8 +18,6 @@ class InvoiceConnection < ApplicationRecord
   belongs_to :integration_customer,
     optional: true,
     class_name: "IntegrationCustomers::BaseCustomer"
-
-  enum :category, CATEGORIES, validate: true
 end
 
 # == Schema Information

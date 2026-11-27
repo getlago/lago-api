@@ -22,6 +22,11 @@ class CatalogWalletTransaction < ApplicationRecord
     void: "void"
   }.freeze
 
+  enum :direction, DIRECTIONS, validate: true
+  enum :status, STATUSES, validate: true
+  enum :reason, REASONS, validate: true
+  enum :allocation_type, CreditAllocationRule::TRIGGERS, validate: {allow_nil: true}, prefix: true
+
   belongs_to :organization
   belongs_to :catalog_wallet, -> { with_discarded }
   belongs_to :credit_allocation, -> { with_discarded }, class_name: "CatalogWalletCreditAllocation", optional: true
@@ -35,11 +40,6 @@ class CatalogWalletTransaction < ApplicationRecord
     class_name: "CatalogWalletConsumption",
     foreign_key: :outbound_transaction_id,
     inverse_of: :outbound_transaction
-
-  enum :direction, DIRECTIONS, validate: true
-  enum :status, STATUSES, validate: true
-  enum :reason, REASONS, validate: true
-  enum :allocation_type, CreditAllocationRule::TRIGGERS, validate: {allow_nil: true}, prefix: true
 
   validates :priority, inclusion: {in: 1..CatalogWalletSettings::LOWEST_PRIORITY}
   validates :credit_amount_cents, numericality: {only_integer: true, greater_than: 0}

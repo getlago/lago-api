@@ -6,6 +6,15 @@ class Payment < ApplicationRecord
 
   PAYABLE_PAYMENT_STATUS = %w[pending processing succeeded failed].freeze
 
+  PAYMENT_TYPES = {provider: "provider", manual: "manual", x402: "x402"}.freeze
+
+  attribute :payment_type, :string
+
+  enum :payment_type, PAYMENT_TYPES, default: :provider, prefix: :payment_type
+  enum :payable_payment_status, PAYABLE_PAYMENT_STATUS.map { |s| [s, s] }.to_h, validate: {allow_nil: true}
+
+  delegate :billing_entity, to: :customer
+
   belongs_to :organization
   belongs_to :customer, -> { with_discarded }
   belongs_to :payable, polymorphic: true
@@ -23,19 +32,12 @@ class Payment < ApplicationRecord
 
   monetize :amount_cents
 
-  PAYMENT_TYPES = {provider: "provider", manual: "manual", x402: "x402"}.freeze
-  attribute :payment_type, :string
-  enum :payment_type, PAYMENT_TYPES, default: :provider, prefix: :payment_type
   validates :payment_type, presence: true
   validates :reference, presence: true, length: {maximum: 40}, if: -> { payment_type_manual? }
   validates :reference, absence: true, if: -> { payment_type_provider? || payment_type_x402? }
   validate :manual_payment_credit_invoice_amount_cents
   validate :max_invoice_paid_amount_cents, on: :create
   validate :payment_request_succeeded, on: :create
-
-  enum :payable_payment_status, PAYABLE_PAYMENT_STATUS.map { |s| [s, s] }.to_h, validate: {allow_nil: true}
-
-  delegate :billing_entity, to: :customer
 
   scope :for_organization, lambda { |organization|
     payables_join = ActiveRecord::Base.sanitize_sql_array([

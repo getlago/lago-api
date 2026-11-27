@@ -7,6 +7,16 @@ class Plan < ApplicationRecord
 
   self.discard_column = :deleted_at
 
+  INTERVALS = %i[
+    weekly
+    monthly
+    yearly
+    quarterly
+    semiannual
+  ].freeze
+
+  enum :interval, INTERVALS, validate: {allow_nil: true}
+
   belongs_to :organization
   belongs_to :parent, class_name: "Plan", optional: true
 
@@ -38,16 +48,6 @@ class Plan < ApplicationRecord
     -> { order(logged_at: :desc) },
     class_name: "Clickhouse::ActivityLog",
     as: :resource
-
-  INTERVALS = %i[
-    weekly
-    monthly
-    yearly
-    quarterly
-    semiannual
-  ].freeze
-
-  enum :interval, INTERVALS, validate: {allow_nil: true}
 
   monetize :amount_cents, allow_nil: true
 

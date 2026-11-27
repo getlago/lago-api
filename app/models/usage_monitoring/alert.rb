@@ -28,7 +28,7 @@ module UsageMonitoring
 
     DIRECTIONS = {increasing: "increasing", decreasing: "decreasing"}.freeze
 
-    default_scope -> { kept }
+    enum :direction, DIRECTIONS, validate: true
 
     belongs_to :organization
     belongs_to :billable_metric, -> { with_discarded }, optional: true
@@ -57,13 +57,13 @@ module UsageMonitoring
     validates :subscription_external_id, presence: true, if: :need_subscription?
     validates :wallet, presence: true, if: :need_wallet?
 
+    default_scope -> { kept }
+
     scope :using_current_usage, -> { where(alert_type: CURRENT_USAGE_TYPES) }
     scope :using_lifetime_usage, -> { where(alert_type: "lifetime_usage_amount") }
     scope :using_billable_metric_lifetime_usage, -> { where(alert_type: BILLABLE_METRIC_LIFETIME_USAGE_TYPES) }
     scope :using_subscription, -> { where(alert_type: SUBSCRIPTION_TYPES) }
     scope :using_wallet, -> { where(alert_type: WALLET_TYPES) }
-
-    enum :direction, DIRECTIONS, validate: true
 
     def self.find_sti_class(type_name)
       STI_MAPPING.fetch(type_name).constantize

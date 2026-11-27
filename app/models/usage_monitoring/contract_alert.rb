@@ -13,7 +13,7 @@ module UsageMonitoring
       "usage_units" => "UsageMonitoring::ContractUsageUnitsAlert"
     }.freeze
 
-    default_scope -> { kept }
+    enum :direction, Alert::DIRECTIONS, validate: true
 
     belongs_to :organization
     belongs_to :product, -> { with_discarded }, optional: true
@@ -32,14 +32,14 @@ module UsageMonitoring
       class_name: "UsageMonitoring::ContractTriggeredAlert",
       inverse_of: :alert
 
-    enum :direction, Alert::DIRECTIONS, validate: true
-
     validates :alert_type, presence: true, inclusion: {in: STI_MAPPING.keys}
     validates :code, presence: true
     validates :contract_external_id, presence: true
     validates :product, presence: true, if: :need_product?
     validate :validate_product_filter_belongs_to_product
     validate :validate_with_product_filters
+
+    default_scope -> { kept }
 
     def self.find_sti_class(type_name)
       STI_MAPPING.fetch(type_name).constantize

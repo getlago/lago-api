@@ -7,9 +7,9 @@ class PendingSignupToken < ApplicationRecord
   MAX_PASSWORD_ATTEMPTS = 5
   TOKEN_FORMAT = /\A[A-Za-z0-9_-]{43}\z/
 
-  belongs_to :pending_signup
-
   enum :status, STATUSES, validate: true
+
+  belongs_to :pending_signup
 
   validates :token_digest, :expires_at, presence: true
 

@@ -31,11 +31,6 @@ module Integrations
     validates :code, uniqueness: {scope: :organization_id}
     validates :name, presence: true
 
-    # Returns the short provider key, e.g. "netsuite", "anrok".
-    def provider_key
-      type.demodulize.delete_suffix("Integration").underscore
-    end
-
     def self.integration_type(type)
       case type
       when "netsuite"
@@ -61,6 +56,11 @@ module Integrations
       else
         raise(NotImplementedError)
       end
+    end
+
+    # Returns the short provider key, e.g. "netsuite", "anrok".
+    def provider_key
+      type.demodulize.delete_suffix("Integration").underscore
     end
 
     def external_id_key

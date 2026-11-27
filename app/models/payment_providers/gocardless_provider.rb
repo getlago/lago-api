@@ -8,10 +8,10 @@ module PaymentProviders
     SUCCESS_STATUSES = %w[paid_out].freeze
     FAILED_STATUSES = %w[cancelled customer_approval_denied failed charged_back].freeze
 
+    secrets_accessors :access_token
+
     validates :access_token, presence: true
     validates :success_redirect_url, url: true, allow_nil: true, length: {maximum: 1024}
-
-    secrets_accessors :access_token
 
     def self.auth_site
       if Rails.env.production?

@@ -13,13 +13,13 @@ class BillingObjectConnection < ApplicationRecord
     skip: "skip"
   }.freeze
 
+  enum :category, CATEGORIES, validate: true
+  enum :behavior, BEHAVIORS, validate: true
+
   belongs_to :organization
   belongs_to :owner, polymorphic: true
   belongs_to :payment_provider_customer, class_name: "PaymentProviderCustomers::BaseCustomer", optional: true
   belongs_to :integration_customer, class_name: "IntegrationCustomers::BaseCustomer", optional: true
-
-  enum :category, CATEGORIES, validate: true
-  enum :behavior, BEHAVIORS, validate: true
 end
 
 # == Schema Information

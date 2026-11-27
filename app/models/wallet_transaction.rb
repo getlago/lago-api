@@ -4,6 +4,36 @@ class WalletTransaction < ApplicationRecord
   include HasPurchaseOrderNumber
   include PaperTrailTraceable
 
+  STATUSES = [
+    :pending,
+    :settled,
+    :failed
+  ].freeze
+
+  TRANSACTION_STATUSES = [
+    :purchased,
+    :granted,
+    :voided,
+    :invoiced
+  ].freeze
+
+  TRANSACTION_TYPES = [
+    :inbound,
+    :outbound
+  ].freeze
+
+  SOURCES = [
+    :manual,
+    :interval,
+    :threshold,
+    :x402
+  ].freeze
+
+  enum :status, STATUSES
+  enum :transaction_status, TRANSACTION_STATUSES
+  enum :transaction_type, TRANSACTION_TYPES
+  enum :source, SOURCES
+
   belongs_to :wallet
   belongs_to :organization
   belongs_to :billing_entity, optional: true
@@ -34,36 +64,6 @@ class WalletTransaction < ApplicationRecord
   has_many :selected_invoice_custom_sections,
     through: :applied_invoice_custom_sections,
     source: :invoice_custom_section
-
-  STATUSES = [
-    :pending,
-    :settled,
-    :failed
-  ].freeze
-
-  TRANSACTION_STATUSES = [
-    :purchased,
-    :granted,
-    :voided,
-    :invoiced
-  ].freeze
-
-  TRANSACTION_TYPES = [
-    :inbound,
-    :outbound
-  ].freeze
-
-  SOURCES = [
-    :manual,
-    :interval,
-    :threshold,
-    :x402
-  ].freeze
-
-  enum :status, STATUSES
-  enum :transaction_status, TRANSACTION_STATUSES
-  enum :transaction_type, TRANSACTION_TYPES
-  enum :source, SOURCES
 
   validates :status, :transaction_type, :source, :transaction_status, presence: true
   validates :priority, presence: true, inclusion: {in: 1..50}

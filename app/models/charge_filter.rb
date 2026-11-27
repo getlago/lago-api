@@ -8,6 +8,8 @@ class ChargeFilter < ApplicationRecord
 
   self.discard_column = :deleted_at
 
+  CODE_SLUG_LIMIT = 200
+
   belongs_to :charge, -> { with_discarded }, touch: true
   belongs_to :organization
 
@@ -21,8 +23,6 @@ class ChargeFilter < ApplicationRecord
 
   # NOTE: Ensure filters are keeping the initial ordering
   default_scope -> { kept.order(updated_at: :asc) }
-
-  CODE_SLUG_LIMIT = 200
 
   # A name for a filter. Removing a value from a billable metric trims it out of every filter using it,
   # so two filters can collapse onto the same values and stop being distinguishable:

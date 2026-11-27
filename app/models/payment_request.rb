@@ -3,6 +3,10 @@
 class PaymentRequest < ApplicationRecord
   include PaperTrailTraceable
 
+  PAYMENT_STATUS = %i[pending succeeded failed].freeze
+
+  enum :payment_status, PAYMENT_STATUS, prefix: :payment
+
   has_many :applied_invoices, class_name: "PaymentRequest::AppliedInvoice"
   has_many :invoices, through: :applied_invoices
   has_many :payments, as: :payable
@@ -13,13 +17,6 @@ class PaymentRequest < ApplicationRecord
 
   delegate :billing_entity, to: :customer
 
-  validates :amount_cents, presence: true
-  validates :amount_currency, presence: true
-
-  PAYMENT_STATUS = %i[pending succeeded failed].freeze
-
-  enum :payment_status, PAYMENT_STATUS, prefix: :payment
-
   alias_attribute :total_amount_cents, :amount_cents
   alias_attribute :currency, :amount_currency
 
@@ -27,6 +24,9 @@ class PaymentRequest < ApplicationRecord
   monetize :total_due_amount_cents, with_model_currency: :currency, allow_nil: true
 
   normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
+
+  validates :amount_cents, presence: true
+  validates :amount_currency, presence: true
 
   def self.ransackable_attributes(_ = nil)
     %w[id number]

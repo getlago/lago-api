@@ -4,22 +4,14 @@ class Role < ApplicationRecord
   include Discard::Model
 
   self.discard_column = :deleted_at
-  default_scope -> { kept }
+
+  RESERVED_CODES = %w[admin finance manager].freeze
+  RESERVED_NAME_FORMAT = /\A(#{RESERVED_CODES.join("|")})\z/i
 
   belongs_to :organization, optional: true
   has_many :membership_roles
   has_many :memberships, through: :membership_roles
   has_many :active_memberships, -> { active }, through: :membership_roles, source: :membership
-
-  scope :admins, -> { where(admin: true) }
-  scope :with_code, ->(*codes) { where(code: codes) }
-  scope :with_organization, ->(organization_id) { where(organization_id: [nil, organization_id]) }
-
-  RESERVED_CODES = %w[admin finance manager].freeze
-  RESERVED_NAME_FORMAT = /\A(#{RESERVED_CODES.join("|")})\z/i
-
-  # Only on create or rename, so saving an existing role never rewrites its name.
-  before_validation :normalize_name, if: -> { new_record? || name_changed? }
 
   validate :code_is_not_reserved, if: -> { organization_id && deleted_at.blank? }
   # Only checked when the name is set or changed, so existing roles stay valid.
@@ -38,6 +30,15 @@ class Role < ApplicationRecord
     if: -> { organization_id && deleted_at.blank? }
   validates :description, length: {maximum: 255}
   validates :permissions, presence: true, if: :organization_id
+
+  default_scope -> { kept }
+
+  scope :admins, -> { where(admin: true) }
+  scope :with_code, ->(*codes) { where(code: codes) }
+  scope :with_organization, ->(organization_id) { where(organization_id: [nil, organization_id]) }
+
+  # Only on create or rename, so saving an existing role never rewrites its name.
+  before_validation :normalize_name, if: -> { new_record? || name_changed? }
 
   def permissions_hash
     Permission.permissions_hash(code).dup.tap do |h|

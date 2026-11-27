@@ -7,7 +7,13 @@ class Fee < ApplicationRecord
 
   self.discard_column = :deleted_at
   self.ignored_columns += %w[duplicated_in_advance]
-  default_scope -> { kept }
+
+  # TODO: Deprecate add_on type in the near future
+  FEE_TYPES = %i[charge add_on subscription credit commitment fixed_charge product].freeze
+  PAYMENT_STATUS = %i[pending succeeded failed refunded].freeze
+
+  enum :fee_type, FEE_TYPES
+  enum :payment_status, PAYMENT_STATUS, prefix: :payment
 
   belongs_to :invoice, optional: true
   belongs_to :charge, -> { with_discarded }, optional: true
@@ -55,13 +61,6 @@ class Fee < ApplicationRecord
   monetize :precise_total_amount_cents
   monetize :unit_amount_cents, disable_validation: true, allow_nil: true, with_model_currency: :currency
 
-  # TODO: Deprecate add_on type in the near future
-  FEE_TYPES = %i[charge add_on subscription credit commitment fixed_charge product].freeze
-  PAYMENT_STATUS = %i[pending succeeded failed refunded].freeze
-
-  enum :fee_type, FEE_TYPES
-  enum :payment_status, PAYMENT_STATUS, prefix: :payment
-
   validates :amount_currency, inclusion: {in: currency_list}
   validates :units, numericality: {greater_than_or_equal_to: 0}
   validates :events_count, numericality: {greater_than_or_equal_to: 0}, allow_nil: true
@@ -69,6 +68,8 @@ class Fee < ApplicationRecord
   validates :total_aggregated_units, presence: true, if: :charge?
   validate :validate_contract_provenance
   validates :rate_card_rate, presence: true, if: :product?
+
+  default_scope -> { kept }
 
   scope :positive_units, -> { where("fees.units > ?", 0) }
 

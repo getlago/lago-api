@@ -4,6 +4,8 @@ module UsageMonitoring
   class CatalogWalletTriggeredAlert < ApplicationRecord
     include TriggeredAlertRecord
 
+    enum :alert_type, CatalogWalletAlertSettings::ALERT_TYPES, validate: true
+
     belongs_to :organization
     belongs_to :catalog_wallet, -> { with_discarded }
     belongs_to :alert,
@@ -11,8 +13,6 @@ module UsageMonitoring
       foreign_key: :catalog_wallet_alert_id,
       optional: true,
       inverse_of: :all_triggered_alerts
-
-    enum :alert_type, CatalogWalletAlertSettings::ALERT_TYPES, validate: true
 
     # Alerts are deleted for good: the history keeps which alert it was once the alert is gone
     before_validation :copy_alert, on: :create, if: :alert

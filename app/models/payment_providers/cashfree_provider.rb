@@ -12,11 +12,11 @@ module PaymentProviders
     SUCCESS_STATUSES = %w[PAID].freeze
     FAILED_STATUSES = %w[EXPIRED CANCELLED].freeze
 
+    secrets_accessors :client_id, :client_secret
+
     validates :client_id, presence: true
     validates :client_secret, presence: true
     validates :success_redirect_url, url: true, allow_nil: true, length: {maximum: 1024}
-
-    secrets_accessors :client_id, :client_secret
 
     def payment_type
       "cashfree"

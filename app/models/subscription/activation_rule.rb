@@ -24,11 +24,11 @@ class Subscription::ActivationRule < ApplicationRecord
     payment: "payment"
   }.freeze
 
-  belongs_to :subscription
-  belongs_to :organization
-
   enum :status, STATUSES, validate: true
   enum :type, TYPES, validate: true
+
+  belongs_to :subscription
+  belongs_to :organization
 
   validates :type, presence: true, inclusion: {in: STI_MAPPING.keys}
 

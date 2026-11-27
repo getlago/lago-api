@@ -1,6 +1,13 @@
 # frozen_string_literal: true
 
 class AdjustedFee < ApplicationRecord
+  ADJUSTED_FEE_TYPES = [
+    :adjusted_units,
+    :adjusted_amount
+  ].freeze
+
+  enum :fee_type, Fee::FEE_TYPES
+
   belongs_to :invoice
   belongs_to :subscription
   belongs_to :fee, optional: true
@@ -24,13 +31,6 @@ class AdjustedFee < ApplicationRecord
     foreign_key: :charge_filter_id,
     optional: true
   belongs_to :organization
-
-  ADJUSTED_FEE_TYPES = [
-    :adjusted_units,
-    :adjusted_amount
-  ].freeze
-
-  enum :fee_type, Fee::FEE_TYPES
 
   scope :matching_charge_boundaries, ->(boundaries) {
     where(fee_type: :charge)

@@ -6,6 +6,17 @@ class Wallet < ApplicationRecord
   include Currencies
   include ConnectionResolvable
 
+  LOWEST_PRIORITY = 50
+
+  REFRESH_RELEVANT_ATTRIBUTES = %w[code priority allowed_fee_types].freeze
+
+  STATUSES = [
+    :active,
+    :terminated
+  ].freeze
+
+  enum :status, STATUSES
+
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
   belongs_to :payment_method, optional: true
@@ -42,10 +53,6 @@ class Wallet < ApplicationRecord
   monetize :consumed_amount_cents
   monetize :ongoing_balance_cents, :ongoing_usage_balance_cents, with_model_currency: :balance_currency
 
-  LOWEST_PRIORITY = 50
-
-  REFRESH_RELEVANT_ATTRIBUTES = %w[code priority allowed_fee_types].freeze
-
   validates :rate_amount, numericality: {greater_than: 0}
   validates :currency, inclusion: {in: currency_list}
   validates :invoice_requires_successful_payment, exclusion: [nil]
@@ -56,13 +63,6 @@ class Wallet < ApplicationRecord
   validates :balance_cents, numericality: {greater_than_or_equal_to: 0}, if: :traceable?
   validate :paid_top_up_max_greater_than_or_equal_min
   validate :unique_code_per_customer, if: :code_changed?
-
-  STATUSES = [
-    :active,
-    :terminated
-  ].freeze
-
-  enum :status, STATUSES
 
   scope :expired, -> { where("wallets.expiration_at::timestamp(0) <= ?", Time.current) }
   scope :with_positive_balance, -> { where("balance_cents > 0") }

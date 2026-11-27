@@ -4,12 +4,6 @@ class AppliedCoupon < ApplicationRecord
   include PaperTrailTraceable
   include Currencies
 
-  belongs_to :coupon, -> { with_discarded }
-  belongs_to :customer, -> { with_discarded }
-  belongs_to :organization
-
-  has_many :credits
-
   STATUSES = [
     :active,
     :terminated
@@ -23,6 +17,12 @@ class AppliedCoupon < ApplicationRecord
 
   enum :status, STATUSES
   enum :frequency, FREQUENCIES
+
+  belongs_to :coupon, -> { with_discarded }
+  belongs_to :customer, -> { with_discarded }
+  belongs_to :organization
+
+  has_many :credits
 
   monetize :amount_cents, disable_validation: true, allow_nil: true
 

@@ -6,13 +6,14 @@ class Subscription::FixedChargeUnitsOverride < ApplicationRecord
 
   self.table_name = "subscription_fixed_charge_units_overrides"
   self.discard_column = :deleted_at
-  default_scope -> { kept }
 
   belongs_to :organization
   belongs_to :subscription
   belongs_to :fixed_charge
 
   validates :units, presence: true, numericality: {greater_than_or_equal_to: 0}
+
+  default_scope -> { kept }
 
   # Returns a {fixed_charge_id => units} map for the given subscription and
   # fixed_charges in one query. Lets collection callers (REST index, GraphQL

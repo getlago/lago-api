@@ -1,10 +1,6 @@
 # frozen_string_literal: true
 
 class ContractRateCard < ApplicationRecord
-  TERMINATION_BILLING_ACTIONS = BillingOperation::ACTION_TYPES.values_at(
-    :close_fixed_arrears, :close_metered_arrears, :regroup_paid_fees
-  ).freeze
-
   include PaperTrailTraceable
   include Discard::Model
 
@@ -12,6 +8,10 @@ class ContractRateCard < ApplicationRecord
   # The contract end date is the only end of a card; drop once released.
   self.ignored_columns += %w[ended_date]
   self.ignored_columns += %w[units]
+
+  TERMINATION_BILLING_ACTIONS = BillingOperation::ACTION_TYPES.values_at(
+    :close_fixed_arrears, :close_metered_arrears, :regroup_paid_fees
+  ).freeze
 
   belongs_to :organization
   belongs_to :contract

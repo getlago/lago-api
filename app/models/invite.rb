@@ -3,9 +3,6 @@
 class Invite < ApplicationRecord
   include PaperTrailTraceable
 
-  belongs_to :organization
-  belongs_to :recipient, class_name: "Membership", foreign_key: :membership_id, optional: true
-
   INVITE_STATUS = %i[
     pending
     accepted
@@ -14,10 +11,13 @@ class Invite < ApplicationRecord
 
   enum :status, INVITE_STATUS
 
-  validates :email, email: true
-  validates :token, uniqueness: true
+  belongs_to :organization
+  belongs_to :recipient, class_name: "Membership", foreign_key: :membership_id, optional: true
 
   normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
+
+  validates :email, email: true
+  validates :token, uniqueness: true
 
   # NOTE: Emails are saved with the case the user typed, so this lookup ignores case, as login does.
   def existing_user

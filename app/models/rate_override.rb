@@ -13,6 +13,9 @@ class RateOverride < ApplicationRecord
   RATE_MODELS = RateCardRate::RATE_MODELS
   BILLING_INTERVAL_UNITS = RateCardRate::BILLING_INTERVAL_UNITS
 
+  enum :rate_model, RATE_MODELS, validate: true
+  enum :billing_interval_unit, BILLING_INTERVAL_UNITS, validate: {allow_nil: true}
+
   belongs_to :organization
 
   has_one :rate_phase
@@ -22,9 +25,6 @@ class RateOverride < ApplicationRecord
   # card's item metric.
   attr_accessor :billable_metric
   has_many :fees
-
-  enum :rate_model, RATE_MODELS, validate: true
-  enum :billing_interval_unit, BILLING_INTERVAL_UNITS, validate: {allow_nil: true}
 
   validates :min_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :billing_interval_count, numericality: {greater_than_or_equal_to: 1}, allow_nil: true

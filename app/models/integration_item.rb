@@ -3,9 +3,6 @@
 class IntegrationItem < ApplicationRecord
   include PaperTrailTraceable
 
-  belongs_to :integration, class_name: "Integrations::BaseIntegration"
-  belongs_to :organization
-
   ITEM_TYPES = [
     :standard,
     :tax,
@@ -14,6 +11,9 @@ class IntegrationItem < ApplicationRecord
   ].freeze
 
   enum :item_type, ITEM_TYPES
+
+  belongs_to :integration, class_name: "Integrations::BaseIntegration"
+  belongs_to :organization
 
   validates :external_id, presence: true, uniqueness: {scope: %i[integration_id item_type]}
 

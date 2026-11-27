@@ -12,12 +12,12 @@ class UsageAttributionType < ApplicationRecord
 
   MAX_ATTRIBUTION_KEYS = 4
 
+  enum :role, ROLES, validate: {allow_nil: true}
+
   belongs_to :organization
   belongs_to :parent, -> { with_discarded }, class_name: "UsageAttributionType", optional: true
   has_many :children, -> { order(:code) }, class_name: "UsageAttributionType", foreign_key: :parent_id, inverse_of: :parent
   has_many :usage_attribution_values
-
-  enum :role, ROLES, validate: {allow_nil: true}
 
   normalizes :attribution_keys, with: ->(attribution_keys) do
     Array(attribution_keys).filter_map { it.to_s.strip.presence }.uniq

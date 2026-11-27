@@ -8,11 +8,11 @@ module Integrations
       "index_integrations_on_code_and_organization_id" => :code
     }.freeze
 
-    validates :connection_id, presence: true
-    validate :realm_id_uniqueness
-
     settings_accessors :sync_invoices, :sync_credit_notes, :sync_payments, :realm_id, :sandbox
     secrets_accessors :connection_id
+
+    validates :connection_id, presence: true
+    validate :realm_id_uniqueness
 
     # The setting is stored uncast: only true and "true" select the sandbox
     def sandbox?

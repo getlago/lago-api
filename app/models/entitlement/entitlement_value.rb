@@ -6,8 +6,6 @@ module Entitlement
 
     self.discard_column = :deleted_at
 
-    default_scope -> { kept }
-
     belongs_to :organization
     belongs_to :privilege, class_name: "Entitlement::Privilege", foreign_key: :entitlement_privilege_id
     belongs_to :entitlement, class_name: "Entitlement::Entitlement", foreign_key: :entitlement_entitlement_id
@@ -15,6 +13,8 @@ module Entitlement
     validates :entitlement_privilege_id, presence: true
     validates :entitlement_entitlement_id, presence: true
     validates :value, presence: true
+
+    default_scope -> { kept }
   end
 end
 

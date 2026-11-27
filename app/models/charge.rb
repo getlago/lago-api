@@ -8,22 +8,6 @@ class Charge < ApplicationRecord
 
   self.discard_column = :deleted_at
 
-  belongs_to :organization
-  belongs_to :plan, -> { with_discarded }, touch: true
-  belongs_to :billable_metric, -> { with_discarded }
-  belongs_to :parent, class_name: "Charge", optional: true
-
-  has_one :applied_pricing_unit, as: :pricing_unitable
-  has_one :pricing_unit, through: :applied_pricing_unit
-
-  has_many :children, class_name: "Charge", foreign_key: :parent_id, dependent: :nullify
-  has_many :fees
-  has_many :filters, dependent: :destroy, class_name: "ChargeFilter"
-  has_many :filter_values, through: :filters, class_name: "ChargeFilterValue", source: :values
-
-  has_many :applied_taxes, class_name: "Charge::AppliedTax", dependent: :destroy
-  has_many :taxes, through: :applied_taxes
-
   EVENT_TARGET_WALLET_CODE = "target_wallet_code"
 
   CHARGE_MODELS = %i[
@@ -39,10 +23,27 @@ class Charge < ApplicationRecord
 
   REGROUPING_PAID_FEES_OPTIONS = %i[invoice].freeze
 
+  attribute :regroup_paid_fees, :integer
+
   enum :charge_model, CHARGE_MODELS, validate: true
 
-  attribute :regroup_paid_fees, :integer
   enum :regroup_paid_fees, REGROUPING_PAID_FEES_OPTIONS
+
+  belongs_to :organization
+  belongs_to :plan, -> { with_discarded }, touch: true
+  belongs_to :billable_metric, -> { with_discarded }
+  belongs_to :parent, class_name: "Charge", optional: true
+
+  has_one :applied_pricing_unit, as: :pricing_unitable
+  has_one :pricing_unit, through: :applied_pricing_unit
+
+  has_many :children, class_name: "Charge", foreign_key: :parent_id, dependent: :nullify
+  has_many :fees
+  has_many :filters, dependent: :destroy, class_name: "ChargeFilter"
+  has_many :filter_values, through: :filters, class_name: "ChargeFilterValue", source: :values
+
+  has_many :applied_taxes, class_name: "Charge::AppliedTax", dependent: :destroy
+  has_many :taxes, through: :applied_taxes
 
   validate :validate_properties
   validate :validate_dynamic, if: -> { dynamic? }

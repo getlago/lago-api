@@ -6,8 +6,6 @@ module Entitlement
 
     self.discard_column = :deleted_at
 
-    default_scope -> { kept }
-
     belongs_to :organization
     belongs_to :feature, class_name: "Entitlement::Feature", foreign_key: :entitlement_feature_id
     belongs_to :plan, optional: true
@@ -18,6 +16,8 @@ module Entitlement
     validates_with ParentPresenceValidator,
       parents: %i[plan catalog_plan subscription],
       error: "one_of_plan_or_subscription_required"
+
+    default_scope -> { kept }
 
     # Newest first, ties by id, as Feature#ordered_privileges.
     scope :newest_first, -> { order(created_at: :desc, id: :asc) }

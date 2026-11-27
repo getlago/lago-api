@@ -8,7 +8,26 @@ class CreditNote < ApplicationRecord
 
   DB_PRECISION_SCALE = 5
 
-  before_save :ensure_number
+  # NOTE: Status of the credit part
+  # - available: a credit amount remain available
+  # - consumed: the credit amount was totaly consumed
+  CREDIT_STATUS = %i[available consumed voided].freeze
+
+  # NOTE: Status of the refund part
+  # - pending: the refund is pending for its execution
+  # - refunded: the refund has been executed
+  # - failed: the refund process has failed
+  REFUND_STATUS = %i[pending succeeded failed].freeze
+
+  TYPES = %w[credit refund offset].freeze
+
+  REASON = %i[duplicated_charge product_unsatisfactory order_change order_cancellation fraudulent_charge other].freeze
+  STATUS = %i[draft finalized deleted].freeze
+
+  enum :credit_status, CREDIT_STATUS
+  enum :refund_status, REFUND_STATUS, validate: {allow_nil: true}
+  enum :reason, REASON, validate: true
+  enum :status, STATUS
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :invoice
@@ -53,27 +72,6 @@ class CreditNote < ApplicationRecord
     :sub_total_excluding_taxes_amount_cents,
     with_model_currency: :total_amount_currency
 
-  # NOTE: Status of the credit part
-  # - available: a credit amount remain available
-  # - consumed: the credit amount was totaly consumed
-  CREDIT_STATUS = %i[available consumed voided].freeze
-
-  # NOTE: Status of the refund part
-  # - pending: the refund is pending for its execution
-  # - refunded: the refund has been executed
-  # - failed: the refund process has failed
-  REFUND_STATUS = %i[pending succeeded failed].freeze
-
-  TYPES = %w[credit refund offset].freeze
-
-  REASON = %i[duplicated_charge product_unsatisfactory order_change order_cancellation fraudulent_charge other].freeze
-  STATUS = %i[draft finalized deleted].freeze
-
-  enum :credit_status, CREDIT_STATUS
-  enum :refund_status, REFUND_STATUS, validate: {allow_nil: true}
-  enum :reason, REASON, validate: true
-  enum :status, STATUS
-
   sequenced scope: ->(credit_note) { CreditNote.where(invoice_id: credit_note.invoice_id) },
     lock_key: ->(credit_note) { credit_note.invoice_id }
 
@@ -82,6 +80,8 @@ class CreditNote < ApplicationRecord
   validates :refund_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :offset_amount_cents, numericality: {greater_than_or_equal_to: 0}
   validates :balance_amount_cents, numericality: {greater_than_or_equal_to: 0}
+
+  before_save :ensure_number
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[number id]

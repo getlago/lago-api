@@ -47,20 +47,29 @@ class Customer < ApplicationRecord
     email
   ].freeze
 
+  PAYMENT_PROVIDERS = %w[stripe gocardless cashfree adyen flutterwave moneyhash].freeze
+
+  BILLING_ADDRESS_FIELDS = %i[
+    address_line1 address_line2 city zipcode state country
+  ].freeze
+
+  SHIPPING_ADDRESS_FIELDS = %i[
+    shipping_address_line1 shipping_address_line2 shipping_city
+    shipping_zipcode shipping_state shipping_country
+  ].freeze
+
+  ADDRESS_FIELDS = (BILLING_ADDRESS_FIELDS + SHIPPING_ADDRESS_FIELDS).freeze
+
   attribute :finalize_zero_amount_invoice, :integer
-  enum :finalize_zero_amount_invoice, FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS, prefix: :finalize_zero_amount_invoice
   attribute :customer_type, :string
-  enum :customer_type, CUSTOMER_TYPES, prefix: :customer_type, validate: {allow_nil: true}
   attribute :account_type, :string
+
+  enum :finalize_zero_amount_invoice, FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS, prefix: :finalize_zero_amount_invoice
+  enum :customer_type, CUSTOMER_TYPES, prefix: :customer_type, validate: {allow_nil: true}
   enum :account_type, ACCOUNT_TYPES, suffix: :account, validate: true
 
   enum :subscription_invoice_issuing_date_anchor, SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS, prefix: true, validate: {allow_nil: true}
   enum :subscription_invoice_issuing_date_adjustment, SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS, prefix: true, validate: {allow_nil: true}
-
-  attr_readonly :x402_agent_address
-
-  before_validation :normalize_x402_agent_address, on: :create
-  before_save :ensure_slug
 
   belongs_to :organization
   belongs_to :billing_entity, optional: true
@@ -137,39 +146,19 @@ class Customer < ApplicationRecord
 
   delegate :default_currency, to: :organization, prefix: true
 
-  PAYMENT_PROVIDERS = %w[stripe gocardless cashfree adyen flutterwave moneyhash].freeze
+  attr_readonly :x402_agent_address
 
-  default_scope -> { kept }
   sequenced scope: ->(customer) { customer.organization.customers.with_discarded },
     lock_key: ->(customer) { customer.organization_id }
 
-  scope :awaiting_wallet_refresh, -> { where(awaiting_wallet_refresh: true) }
-  scope :by_x402_agent_address, ->(address) {
-    family = X402::Network.family_of_address(address)
+  # NOTE: Null byte injection. Prevent 500 errors (ArgumentError: string contains null byte).
+  # Address fields keep the historical blank -> nil behavior; identity/free-text
+  # fields are only stripped so existing empty-string values are preserved.
+  sanitize_null_bytes(*ADDRESS_FIELDS, blank_to_nil: true)
+  sanitize_null_bytes :name, :firstname, :lastname, :legal_name, :legal_number,
+    :phone, :url, :logo_url, :tax_identification_number
 
-    if family
-      where(x402_agent_address: X402::Network.normalize_address(address, family:))
-    else
-      none
-    end
-  }
-  scope :with_active_wallets, -> { joins(:wallets).where(wallets: {status: :active}) }
-
-  scope :falling_back_to_default_dunning_campaign, -> {
-    where(applied_dunning_campaign_id: nil, exclude_from_dunning_campaign: false)
-  }
-
-  scope :without_tax_errors, -> {
-    tax_error_code = ErrorDetail.error_codes[:tax_error]
-
-    joins(sanitize_sql_array([
-      'LEFT OUTER JOIN "error_details" ON "error_details"."owner_id" = "customers"."id"
-        AND "error_details"."owner_type" = \'Customer\'
-        AND "error_details"."error_code" = ?
-        AND "error_details"."deleted_at" IS NULL', tax_error_code
-    ]))
-      .where('"error_details"."owner_id" IS NULL')
-  }
+  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
   validates :country, :shipping_country, country_code: true, allow_nil: true
   validates :document_locale, language_code: true, unless: -> { document_locale.nil? }
@@ -202,25 +191,37 @@ class Customer < ApplicationRecord
   validates :email, email: true, if: -> { email? && will_save_change_to_email? }
   validate :validate_x402_agent_address, on: :create, if: :x402_agent_address
 
-  BILLING_ADDRESS_FIELDS = %i[
-    address_line1 address_line2 city zipcode state country
-  ].freeze
+  default_scope -> { kept }
+  scope :awaiting_wallet_refresh, -> { where(awaiting_wallet_refresh: true) }
+  scope :by_x402_agent_address, ->(address) {
+    family = X402::Network.family_of_address(address)
 
-  SHIPPING_ADDRESS_FIELDS = %i[
-    shipping_address_line1 shipping_address_line2 shipping_city
-    shipping_zipcode shipping_state shipping_country
-  ].freeze
+    if family
+      where(x402_agent_address: X402::Network.normalize_address(address, family:))
+    else
+      none
+    end
+  }
+  scope :with_active_wallets, -> { joins(:wallets).where(wallets: {status: :active}) }
 
-  ADDRESS_FIELDS = (BILLING_ADDRESS_FIELDS + SHIPPING_ADDRESS_FIELDS).freeze
+  scope :falling_back_to_default_dunning_campaign, -> {
+    where(applied_dunning_campaign_id: nil, exclude_from_dunning_campaign: false)
+  }
 
-  # NOTE: Null byte injection. Prevent 500 errors (ArgumentError: string contains null byte).
-  # Address fields keep the historical blank -> nil behavior; identity/free-text
-  # fields are only stripped so existing empty-string values are preserved.
-  sanitize_null_bytes(*ADDRESS_FIELDS, blank_to_nil: true)
-  sanitize_null_bytes :name, :firstname, :lastname, :legal_name, :legal_number,
-    :phone, :url, :logo_url, :tax_identification_number
+  scope :without_tax_errors, -> {
+    tax_error_code = ErrorDetail.error_codes[:tax_error]
 
-  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
+    joins(sanitize_sql_array([
+      'LEFT OUTER JOIN "error_details" ON "error_details"."owner_id" = "customers"."id"
+        AND "error_details"."owner_type" = \'Customer\'
+        AND "error_details"."error_code" = ?
+        AND "error_details"."deleted_at" IS NULL', tax_error_code
+    ]))
+      .where('"error_details"."owner_id" IS NULL')
+  }
+
+  before_validation :normalize_x402_agent_address, on: :create
+  before_save :ensure_slug
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[id name firstname lastname legal_name external_id email]

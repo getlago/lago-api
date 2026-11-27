@@ -7,25 +7,6 @@ class BillableMetric < ApplicationRecord
 
   self.discard_column = :deleted_at
 
-  belongs_to :organization
-
-  has_many :alerts, class_name: "UsageMonitoring::Alert"
-  has_many :charges, dependent: :destroy
-  has_many :plans, through: :charges
-  has_many :subscriptions, through: :plans
-  has_many :fees, through: :charges
-  has_many :invoices, through: :fees
-  has_many :coupon_targets
-  has_many :coupons, through: :coupon_targets
-  has_many :groups, dependent: :delete_all
-  has_many :filters, -> { order(:key) }, dependent: :delete_all, class_name: "BillableMetricFilter"
-  has_many :product_filter_values, through: :filters
-
-  has_many :activity_logs,
-    -> { order(logged_at: :desc) },
-    class_name: "Clickhouse::ActivityLog",
-    as: :resource
-
   AGGREGATION_TYPES = {
     count_agg: 0,
     sum_agg: 1,
@@ -49,7 +30,24 @@ class BillableMetric < ApplicationRecord
   enum :rounding_function, ROUNDING_FUNCTIONS
   enum :weighted_interval, WEIGHTED_INTERVAL
 
-  before_validation :reset_field_name_for_count_agg
+  belongs_to :organization
+
+  has_many :alerts, class_name: "UsageMonitoring::Alert"
+  has_many :charges, dependent: :destroy
+  has_many :plans, through: :charges
+  has_many :subscriptions, through: :plans
+  has_many :fees, through: :charges
+  has_many :invoices, through: :fees
+  has_many :coupon_targets
+  has_many :coupons, through: :coupon_targets
+  has_many :groups, dependent: :delete_all
+  has_many :filters, -> { order(:key) }, dependent: :delete_all, class_name: "BillableMetricFilter"
+  has_many :product_filter_values, through: :filters
+
+  has_many :activity_logs,
+    -> { order(logged_at: :desc) },
+    class_name: "Clickhouse::ActivityLog",
+    as: :resource
 
   validate :validate_recurring
   validate :validate_expression
@@ -69,6 +67,8 @@ class BillableMetric < ApplicationRecord
   default_scope -> { kept }
 
   scope :with_expression, -> { where("expression IS NOT NULL AND expression <> ''") }
+
+  before_validation :reset_field_name_for_count_agg
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]

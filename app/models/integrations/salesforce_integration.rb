@@ -2,10 +2,10 @@
 
 module Integrations
   class SalesforceIntegration < BaseIntegration
+    settings_accessors :instance_id
+
     validates :instance_id, presence: true
     validates :code, presence: true
-
-    settings_accessors :instance_id
   end
 end
 

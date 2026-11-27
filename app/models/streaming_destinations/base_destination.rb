@@ -14,6 +14,8 @@ module StreamingDestinations
 
     belongs_to :organization
 
+    settings_accessors :customer_full_usage_excluded_plan_codes, default: []
+
     validates :event_types, presence: true
     validate :event_types_are_known
     validate :event_types_not_already_claimed
@@ -25,8 +27,6 @@ module StreamingDestinations
     def self.streams_event?(organization, event_type)
       for_event(organization, event_type).exists?
     end
-
-    settings_accessors :customer_full_usage_excluded_plan_codes, default: []
 
     def event_types_for(subscription)
       return event_types unless customer_full_usage_excluded_plan_codes.include?(subscription.plan.code)

@@ -5,11 +5,11 @@ class Webhook < ApplicationRecord
 
   STATUS = %i[pending succeeded failed retrying].freeze
 
+  enum :status, STATUS
+
   belongs_to :webhook_endpoint
   belongs_to :object, polymorphic: true, optional: true
   belongs_to :organization
-
-  enum :status, STATUS
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[id object_id]

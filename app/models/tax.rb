@@ -5,7 +5,6 @@ class Tax < ApplicationRecord
   include Discard::Model
 
   self.discard_column = :deleted_at
-  default_scope -> { kept }
 
   ORDERS = %w[name rate].freeze
 
@@ -41,6 +40,8 @@ class Tax < ApplicationRecord
 
   validates :name, :rate, presence: true
   validates :code, presence: true, uniqueness: {scope: :organization_id}
+
+  default_scope -> { kept }
 
   scope :applied_to_organization, -> { where(applied_to_organization: true) }
   scope :applied_to_billing_entity, ->(billing_entity) {

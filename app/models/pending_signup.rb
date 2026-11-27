@@ -13,10 +13,10 @@ class PendingSignup < ApplicationRecord
   SECRET_FORMAT = /\A[A-Za-z0-9_-]{43}\z/
   SECRET_EXCHANGE_WINDOW = 1.hour
 
-  has_secure_password validations: false
-
   belongs_to :user, optional: true
   has_many :tokens, class_name: "PendingSignupToken", inverse_of: :pending_signup
+
+  has_secure_password validations: false
 
   validates :email, :normalized_email, :mailbox_key, :signup_secret_digest, :expires_at, presence: true
   validates :password_digest, presence: true, on: :create

@@ -6,13 +6,16 @@ module Integrations
     # additional domain can never be a single label or a whole TLD.
     DOMAIN_FORMAT = /\A(?=.{1,253}\z)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}\z/
 
+    # Tenant aliases that accept users of any Entra tenant, so they do not identify one.
+    MULTI_TENANT_IDS = %w[common organizations consumers].freeze
+
+    settings_accessors :client_id, :domain, :tenant_id, :host
+    secrets_accessors :client_secret
+
     validates :client_secret, :client_id, :domain, :tenant_id, presence: true
     validate :domain_uniqueness
     validate :additional_domains_format
     validate :tenant_id_and_host_format
-
-    settings_accessors :client_id, :domain, :tenant_id, :host
-    secrets_accessors :client_secret
 
     # Integrations claiming an email domain, as the primary `domain` or as one of the
     # `additional_domains`. Domains are compared case-insensitively.
@@ -26,9 +29,6 @@ module Integrations
     def host
       get_from_settings("host").presence || "login.microsoftonline.com"
     end
-
-    # Tenant aliases that accept users of any Entra tenant, so they do not identify one.
-    MULTI_TENANT_IDS = %w[common organizations consumers].freeze
 
     # The Entra tenant that answers the token request built from `host` and `tenant_id`. A session
     # it issues can open another organization only if that organization's integration has the same issuer.

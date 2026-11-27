@@ -14,6 +14,8 @@ class Product < ApplicationRecord
     fixed: "fixed"
   }.freeze
 
+  enum :product_type, PRODUCT_TYPES, validate: true
+
   belongs_to :organization
   belongs_to :product_category, -> { with_discarded }, optional: true, inverse_of: :products
   belongs_to :billable_metric, -> { with_discarded }, optional: true
@@ -27,8 +29,6 @@ class Product < ApplicationRecord
   has_many :contract_alerts,
     ->(product) { where(organization_id: product.organization_id) },
     class_name: "UsageMonitoring::ContractAlert"
-
-  enum :product_type, PRODUCT_TYPES, validate: true
 
   validates :name, presence: true
   validates :code,

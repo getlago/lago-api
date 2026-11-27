@@ -2,18 +2,18 @@
 
 module Integrations
   class AgentStorefrontIntegration < BaseIntegration
+    PLAN_KEYS = %w[plan_code minimum_topup_cents maximum_topup_cents free_credits_cents].freeze
+    MAX_TOPUP_CENTS = 2**63 - 1
+
+    has_many :agent_registrations, class_name: "Agents::Registration", foreign_key: :integration_id, dependent: :delete_all
+
+    settings_accessors :payment_provider_code, :resource_endpoint, :resource_instructions, :scope
+    settings_accessors :plans, default: []
+
     validates :code, :payment_provider_code, :scope, presence: true
     validate :https_urls
     validate :stripe_provider_exists
     validate :validate_plans, if: :plans_changed?
-
-    has_many :agent_registrations, class_name: "Agents::Registration", foreign_key: :integration_id, dependent: :delete_all
-
-    PLAN_KEYS = %w[plan_code minimum_topup_cents maximum_topup_cents free_credits_cents].freeze
-    MAX_TOPUP_CENTS = 2**63 - 1
-
-    settings_accessors :payment_provider_code, :resource_endpoint, :resource_instructions, :scope
-    settings_accessors :plans, default: []
 
     scope :with_payment_provider_code, ->(code) { where("settings->>'payment_provider_code' = ?", code) }
     scope :with_plan_code, ->(code) { where("settings->'plans' @> ?::jsonb", [{plan_code: code}].to_json) }

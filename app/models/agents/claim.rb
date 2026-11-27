@@ -16,12 +16,12 @@ module Agents
     VERIFICATION_TTL = 10.minutes
     GMAIL_DOMAINS = %w[gmail.com googlemail.com].freeze
 
+    enum :status, STATUSES, validate: true
+
     belongs_to :organization
     belongs_to :registration, class_name: "Agents::Registration"
 
     encrypts :email
-
-    enum :status, STATUSES, validate: true
 
     validates :code_hash, presence: true
 

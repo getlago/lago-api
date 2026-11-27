@@ -5,14 +5,6 @@ class PaymentMethod < ApplicationRecord
   include Discard::Model
 
   self.discard_column = :deleted_at
-  default_scope -> { kept }
-
-  scope :default, -> { where(is_default: true) }
-
-  belongs_to :organization
-  belongs_to :customer, -> { with_discarded }
-  belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
-  belongs_to :payment_provider_customer, optional: true, class_name: "PaymentProviderCustomers::BaseCustomer"
 
   PAYMENT_METHOD_TYPES = {
     provider: "provider",
@@ -21,8 +13,17 @@ class PaymentMethod < ApplicationRecord
 
   SHARED_PAYMENT_TOKEN_FORMAT = /\Aspt_[A-Za-z0-9_]+\z/
 
+  belongs_to :organization
+  belongs_to :customer, -> { with_discarded }
+  belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
+  belongs_to :payment_provider_customer, optional: true, class_name: "PaymentProviderCustomers::BaseCustomer"
+
   validates :provider_method_id, presence: true
   validates :is_default, inclusion: {in: [true, false]}
+
+  default_scope -> { kept }
+
+  scope :default, -> { where(is_default: true) }
 
   def payment_provider_type
     payment_provider&.payment_type

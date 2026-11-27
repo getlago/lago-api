@@ -6,9 +6,9 @@ module Integrations
       primary_key: :organization_id,
       foreign_key: :organization_id
 
-    validates :connection_id, :api_key, presence: true
-
     secrets_accessors :connection_id, :api_key
+
+    validates :connection_id, :api_key, presence: true
   end
 end
 

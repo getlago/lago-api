@@ -19,11 +19,11 @@ module PaymentProviders
       "FAILED" => "failed"
     }.freeze
 
-    validates :api_key, presence: true
-    validates :flow_id, presence: true, length: {maximum: 20}
-
     secrets_accessors :api_key, :signature_key
     settings_accessors :flow_id
+
+    validates :api_key, presence: true
+    validates :flow_id, presence: true, length: {maximum: 20}
 
     def self.api_base_url
       if Rails.env.production?

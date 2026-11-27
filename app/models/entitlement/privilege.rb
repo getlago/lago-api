@@ -6,8 +6,6 @@ module Entitlement
 
     self.discard_column = :deleted_at
 
-    default_scope -> { kept }
-
     VALUE_TYPES = %w[integer string boolean select].freeze
 
     belongs_to :organization
@@ -20,6 +18,8 @@ module Entitlement
     validates :value_type, presence: true, inclusion: {in: VALUE_TYPES}
 
     validate :validate_config
+
+    default_scope -> { kept }
 
     private
 

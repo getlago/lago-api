@@ -3,8 +3,6 @@
 class User < ApplicationRecord
   include PaperTrailTraceable
 
-  has_secure_password
-
   has_many :password_resets
   has_many :user_devices
 
@@ -17,11 +15,13 @@ class User < ApplicationRecord
   has_many :quote_owners, dependent: :destroy
   has_many :quotes, through: :quote_owners
 
+  has_secure_password
+
+  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
+
   validates :email, presence: true
   # A confirmed self-serve signup copies the bcrypt digest computed at Step 1: the password itself is never kept.
   validates :password, presence: true, unless: :created_from_password_digest?
-
-  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
   # The key of the user lookups and the per-email throttles: sanitized, lowercased and composed, so the case and Unicode
   # spelling variants of one address share it.

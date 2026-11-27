@@ -5,14 +5,14 @@ class AppliedUsageThreshold < ApplicationRecord
   belongs_to :invoice
   belongs_to :organization
 
-  validates :usage_threshold_id, uniqueness: {scope: :invoice_id}
-
   monetize :lifetime_usage_amount_cents,
     with_currency: ->(applied_usage_threshold) { applied_usage_threshold.invoice.currency }
 
   monetize :passed_threshold_amount_cents,
     disable_validation: true,
     with_currency: ->(applied_usage_threshold) { applied_usage_threshold.invoice.currency }
+
+  validates :usage_threshold_id, uniqueness: {scope: :invoice_id}
 
   def passed_threshold_amount_cents
     if usage_threshold.recurring?

@@ -4,10 +4,6 @@ class ErrorDetail < ApplicationRecord
   include Discard::Model
 
   self.discard_column = :deleted_at
-  default_scope -> { kept }
-
-  belongs_to :owner, polymorphic: true
-  belongs_to :organization
 
   ERROR_CODES = {
     not_provided: 0,
@@ -15,7 +11,13 @@ class ErrorDetail < ApplicationRecord
     tax_voiding_error: 2,
     invoice_generation_error: 3
   }.freeze
+
   enum :error_code, ERROR_CODES, validate: true
+
+  belongs_to :owner, polymorphic: true
+  belongs_to :organization
+
+  default_scope -> { kept }
 
   def self.create_generation_error_for(invoice:, error:)
     return unless invoice
