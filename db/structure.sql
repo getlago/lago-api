@@ -1833,6 +1833,7 @@ DROP TYPE IF EXISTS public.billing_operation_reason;
 DROP TYPE IF EXISTS public.billing_operation_cancellation_reason;
 DROP TYPE IF EXISTS public.billing_object_connection_behavior;
 DROP TYPE IF EXISTS public.billing_engine_migration_status;
+DROP TYPE IF EXISTS public.billing_engine_migration_events_copy_source;
 DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
 DROP TYPE IF EXISTS public.agent_registration_status;
@@ -1931,6 +1932,16 @@ CREATE TYPE public.billable_metric_rounding_function AS ENUM (
 
 CREATE TYPE public.billable_metric_weighted_interval AS ENUM (
     'seconds'
+);
+
+
+--
+-- Name: billing_engine_migration_events_copy_source; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.billing_engine_migration_events_copy_source AS ENUM (
+    'api',
+    'raw_topic'
 );
 
 
@@ -3180,7 +3191,8 @@ CREATE TABLE public.billing_engine_migrations (
     status public.billing_engine_migration_status DEFAULT 'shadowing'::public.billing_engine_migration_status NOT NULL,
     plan_mapping jsonb DEFAULT '{}'::jsonb NOT NULL,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    events_copy_source public.billing_engine_migration_events_copy_source DEFAULT 'api'::public.billing_engine_migration_events_copy_source NOT NULL
 );
 
 
@@ -19303,6 +19315,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261123222607'),
 ('20261123221111'),
 ('20261123213837'),
+('20261123201512'),
 ('20261123185222'),
 ('20261123142220'),
 ('20261123142148'),

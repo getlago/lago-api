@@ -6,10 +6,11 @@ module Events
 
     EVENT_SOURCE = "http_ruby"
 
-    def initialize(events:, organization:, catalog_events: false)
+    def initialize(events:, organization:, catalog_events: false, sync: false)
       @events = Array.wrap(events)
       @organization = organization
       @catalog_events = catalog_events
+      @sync = sync
       super
     end
 
@@ -18,14 +19,14 @@ module Events
       return result if topic.blank?
 
       messages = events.map { |event| build_message(event) }
-      Karafka.producer.produce_many_async(messages)
+      sync ? Karafka.producer.produce_many_sync(messages) : Karafka.producer.produce_many_async(messages)
 
       result
     end
 
     private
 
-    attr_reader :events, :organization, :catalog_events
+    attr_reader :events, :organization, :catalog_events, :sync
 
     # Native v2 requests never fall back to the subscription pipeline.
     # Other callers keep the existing topic selection.

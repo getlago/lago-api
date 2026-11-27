@@ -1,5 +1,8 @@
 # frozen_string_literal: true
 
 RSpec.configure do |config|
-  config.before { BillingEngineMigrations::Lookup.expire! }
+  config.before do
+    BillingEngineMigrations::Lookup.expire!
+    BillingEngineMigrations::MappedSubscriptions.expire!
+  end
 end

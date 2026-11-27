@@ -11,6 +11,11 @@ RSpec.describe BillingEngineMigration do
         .backed_by_column_of_type(:enum)
         .validating
         .with_values(shadowing: "shadowing", paused: "paused", aborted: "aborted")
+      expect(migration).to define_enum_for(:events_copy_source)
+        .backed_by_column_of_type(:enum)
+        .validating
+        .with_values(api: "api", raw_topic: "raw_topic")
+        .with_prefix(:events_copied_from)
     end
   end
 
@@ -58,6 +63,101 @@ RSpec.describe BillingEngineMigration do
         subject(:migration) { create(:billing_engine_migration) }
 
         it { expect(migration).to be_valid }
+      end
+    end
+
+    describe "events_copy_source validation" do
+      subject(:migration) { create(:billing_engine_migration, status:, updated_at:, shadow_organization:) }
+
+      let(:shadow_organization) { create(:shadow_organization, clickhouse_events_store: true) }
+      let(:updated_at) { (BillingEngineMigrations::Lookup::REFRESH_INTERVAL + 1.second).ago }
+
+      before { migration.events_copy_source = "raw_topic" }
+
+      context "when the migration is shadowing" do
+        let(:status) { "shadowing" }
+
+        it "refuses to switch the source" do
+          expect(migration).not_to be_valid
+          expect(migration.errors.where(:events_copy_source, :invalid)).to be_present
+        end
+
+        it "refuses to switch the source and pause at once" do
+          migration.status = "paused"
+
+          expect(migration).not_to be_valid
+          expect(migration.errors.where(:events_copy_source, :invalid)).to be_present
+        end
+      end
+
+      context "when the migration has been paused for longer than the lookup refresh" do
+        let(:status) { "paused" }
+
+        it { expect(migration).to be_valid }
+
+        it "accepts to switch the source and resume at once" do
+          migration.status = "shadowing"
+
+          expect(migration).to be_valid
+        end
+      end
+
+      context "when the migration was paused within the lookup refresh" do
+        let(:status) { "paused" }
+        let(:updated_at) { (BillingEngineMigrations::Lookup::REFRESH_INTERVAL - 1.second).ago }
+
+        it "refuses to switch the source" do
+          expect(migration).not_to be_valid
+          expect(migration.errors.where(:events_copy_source, :invalid)).to be_present
+        end
+      end
+
+      context "when the migration is created with it" do
+        subject(:migration) { build(:billing_engine_migration, shadow_organization:) }
+
+        it { expect(migration).to be_valid }
+
+        context "when the shadow organization reads its events from PostgreSQL" do
+          let(:shadow_organization) { create(:shadow_organization) }
+
+          it "refuses it" do
+            expect(migration).not_to be_valid
+            expect(migration.errors.where(:events_copy_source, :requires_clickhouse_events_store)).to be_present
+          end
+        end
+      end
+
+      context "when the shadow organization reads its events from PostgreSQL" do
+        let(:status) { "paused" }
+        let(:shadow_organization) { create(:shadow_organization) }
+
+        it "refuses to switch the source to the raw topic" do
+          expect(migration).not_to be_valid
+          expect(migration.errors.where(:events_copy_source, :requires_clickhouse_events_store)).to be_present
+        end
+      end
+
+      context "when the shadow organization left the ClickHouse store after the switch" do
+        subject(:migration) { create(:billing_engine_migration, :copying_from_raw_topic, status: "paused", updated_at:) }
+
+        before { migration.shadow_organization.update!(clickhouse_events_store: false) }
+
+        it "accepts to switch back to the API" do
+          migration.events_copy_source = "api"
+
+          expect(migration).to be_valid
+        end
+      end
+
+      context "when a migration copying from the raw topic moves to a shadow organization on PostgreSQL" do
+        subject(:migration) { create(:billing_engine_migration, :copying_from_raw_topic) }
+
+        before { migration.shadow_organization = create(:shadow_organization) }
+
+        it "refuses it" do
+          expect(migration).not_to be_valid
+          expect(migration.errors.where(:events_copy_source, :requires_clickhouse_events_store)).to be_present
+        end
       end
     end
 

@@ -6,6 +6,11 @@ FactoryBot.define do
     shadow_organization
     status { "shadowing" }
     plan_mapping { {} }
+
+    trait :copying_from_raw_topic do
+      events_copy_source { "raw_topic" }
+      shadow_organization { association(:shadow_organization, clickhouse_events_store: true) }
+    end
   end
 
   factory :shadow_organization, parent: :organization do
