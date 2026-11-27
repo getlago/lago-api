@@ -11,7 +11,7 @@ RSpec.describe "invoices:fill_expected_finalization_date" do # rubocop:disable R
     create(:invoice, issuing_date: Date.new(2026, 10, 1), expected_finalization_date: nil, updated_at: 1.day.ago)
   end
   let(:invoice_with_date) do
-    create(:invoice, issuing_date: Date.new(2026, 10, 1), expected_finalization_date: Date.new(2026, 10, 5))
+    create(:invoice, issuing_date: Date.new(2026, 10, 1), expected_finalization_date: Date.new(2026, 10, 5), updated_at: 1.day.ago)
   end
 
   before do
@@ -24,10 +24,11 @@ RSpec.describe "invoices:fill_expected_finalization_date" do # rubocop:disable R
 
   it "fills the missing expected finalization dates from the issuing date" do
     freeze_time do
+      dated_invoice_updated_at = invoice_with_date.updated_at
       task.invoke
 
       expect(invoice_without_date.reload).to have_attributes(expected_finalization_date: Date.new(2026, 10, 1), updated_at: Time.current)
-      expect(invoice_with_date.reload.expected_finalization_date).to eq(Date.new(2026, 10, 5))
+      expect(invoice_with_date.reload).to have_attributes(expected_finalization_date: Date.new(2026, 10, 5), updated_at: dated_invoice_updated_at)
     end
   end
 end

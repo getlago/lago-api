@@ -25,7 +25,9 @@ RSpec.describe PaymentProviders::DestroyService do
     end
 
     context "with attached payment provider customers" do
-      let_it_be(:customer) { create(:customer, organization:) }
+      let(:customer) do
+        create(:customer, organization:, payment_provider: "stripe", payment_provider_code: payment_provider.code, updated_at: 1.day.ago)
+      end
       let(:payment_provider_customer) { create(:stripe_customer, customer:, organization:, payment_provider:) }
 
       before { payment_provider_customer }
@@ -42,9 +44,12 @@ RSpec.describe PaymentProviders::DestroyService do
       end
 
       it "detaches the provider from the customers" do
-        expect { destroy_service.call }
-          .to change { Customer.find(customer.id).updated_at }
-        expect(Customer.find(customer.id)).to have_attributes(payment_provider: nil, payment_provider_code: nil)
+        freeze_time do
+          expect { destroy_service.call }
+            .to change { customer.reload.payment_provider }.from("stripe").to(nil)
+            .and change(customer, :payment_provider_code).from(payment_provider.code).to(nil)
+            .and change(customer, :updated_at).to(Time.current)
+        end
       end
 
       it "bumps updated_at on the payment provider customers" do

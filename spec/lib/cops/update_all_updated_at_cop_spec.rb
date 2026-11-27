@@ -72,6 +72,28 @@ RSpec.describe Cops::UpdateAllUpdatedAtCop, :config do
     expect_no_corrections
   end
 
+  it "registers an offense on an SQL heredoc without updated_at" do
+    expect_offense(<<~RUBY)
+      invoices.update_all(<<~SQL)
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^ Set `updated_at` in `update_all`, as it skips callbacks.
+        status = 1
+      SQL
+    RUBY
+
+    expect_no_corrections
+  end
+
+  it "does not register an offense when an SQL heredoc sets updated_at" do
+    expect_no_offenses(<<~RUBY)
+      invoices.update_all(<<~SQL)
+        status = 1, updated_at = NOW()
+      SQL
+      invoices.update_all([<<~SQL, Time.current])
+        status = 1, updated_at = ?
+      SQL
+    RUBY
+  end
+
   it "does not register an offense when the hash sets updated_at" do
     expect_no_offenses(<<~RUBY)
       invoices.update_all(status: :finalized, updated_at: Time.current)

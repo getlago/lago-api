@@ -79,6 +79,23 @@ RSpec.describe DunningCampaigns::DestroyService do
           end
         end
 
+        context "when the last attempts are already reset" do
+          let(:customer) { create(:customer, organization:, applied_dunning_campaign: dunning_campaign, updated_at: 1.day.ago) }
+
+          before do
+            customer
+            allow(dunning_campaign).to receive(:reset_customers_last_attempt)
+          end
+
+          it "refreshes updated_at when it detaches the customers" do
+            freeze_time do
+              expect { destroy_service.call }
+                .to change { customer.reload.applied_dunning_campaign_id }.from(dunning_campaign.id).to(nil)
+                .and change(customer, :updated_at).to(Time.current)
+            end
+          end
+        end
+
         context "when dunning campaign was applied on billing_entity" do
           before { organization.default_billing_entity.update!(applied_dunning_campaign: dunning_campaign) }
 

@@ -51,7 +51,8 @@ module Cops
     end
 
     def sets_updated_at_in_sql?(node)
-      UPDATED_AT_SQL.match?(node.source)
+      source = node.heredoc? ? node.loc.heredoc_body.source : node.source
+      UPDATED_AT_SQL.match?(source)
     end
   end
 end

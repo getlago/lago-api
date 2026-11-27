@@ -6,21 +6,21 @@ RSpec.describe Cops::DiscardAllCop, :config do
   it "registers an offense when using discard_all" do
     expect_offense(<<~RUBY)
       users.discard_all
-      ^^^^^^^^^^^^^^^^^ Avoid using `discard_all`. Use `update_all(deleted_at: Time.current)` instead.
+      ^^^^^^^^^^^^^^^^^ Avoid using `discard_all`. Use `update_all(deleted_at: Time.current, updated_at: Time.current)` instead.
     RUBY
   end
 
   it "registers an offense when using discard_all on a class" do
     expect_offense(<<~RUBY)
       User.discard_all
-      ^^^^^^^^^^^^^^^^ Avoid using `discard_all`. Use `update_all(deleted_at: Time.current)` instead.
+      ^^^^^^^^^^^^^^^^ Avoid using `discard_all`. Use `update_all(deleted_at: Time.current, updated_at: Time.current)` instead.
     RUBY
   end
 
   it "registers an offense when using discard_all with a block" do
     expect_offense(<<~RUBY)
       users.where(active: false).discard_all
-      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Avoid using `discard_all`. Use `update_all(deleted_at: Time.current)` instead.
+      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Avoid using `discard_all`. Use `update_all(deleted_at: Time.current, updated_at: Time.current)` instead.
     RUBY
   end
 
