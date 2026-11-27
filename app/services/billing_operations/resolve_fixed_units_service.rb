@@ -109,20 +109,32 @@ module BillingOperations
     end
 
     def prepaid_units_at(timestamp)
-      completed_advance_operations.includes(:segments).flat_map do |previous|
-        saved = previous.segments.select { !it.units.nil? }
-        if saved.any?
-          saved.filter_map { it.units if it.started_at <= timestamp && timestamp < it.ended_at }
-        else
-          prepaid_units_from_fees(previous.invoice, timestamp)
-        end
-      end.max || 0.to_d
+      quantities = completed_advance_operations.includes(:segments).flat_map do |previous|
+        prepaid_units_from_operation(previous, timestamp)
+      end
+      quantities.max || 0.to_d
+    end
+
+    def prepaid_units_from_operation(previous, timestamp)
+      saved_segments = previous.segments.reject { |segment| segment.units.nil? }
+      if saved_segments.empty?
+        prepaid_units_from_fees(previous.invoice, timestamp)
+      else
+        prepaid_units_from_segments(saved_segments, timestamp)
+      end
+    end
+
+    def prepaid_units_from_segments(saved_segments, timestamp)
+      saved_segments.filter_map do |segment|
+        segment.units if segment.started_at <= timestamp && timestamp < segment.ended_at
+      end
     end
 
     def completed_advance_operations
-      operation.contract_rate_card.billing_operations.completed
+      renewals = operation.contract_rate_card.billing_operations.completed
         .where(organization_id: operation.organization_id, target_cycle_started_at: operation.target_cycle_started_at,
-          cancelled_at: nil, action_type: %w[renew_fixed_advance reconcile_advance_coverage])
+          cancelled_at: nil, action_type: "renew_fixed_advance")
+      renewals.or(operation.reconciliations.completed.where(cancelled_at: nil).unscope(:order))
     end
 
     def prepaid_units_from_fees(invoice, timestamp)

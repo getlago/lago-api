@@ -28,7 +28,7 @@ module ContractRateCards
     rescue ActiveRecord::RecordNotUnique => error
       unique_index_failure!(error,
         "index_units_reconciliation_history" => :units,
-        "index_contract_rate_cards_terms_on_card_and_effective_date" => :units)
+        "index_current_contract_rate_card_terms" => :units)
     rescue BaseService::FailedResult => error
       result.fail_with_error!(error.result.error)
     rescue BaseLockService::FailedToAcquireLock => error
@@ -71,7 +71,7 @@ module ContractRateCards
       if params[:apply_units] == "now"
         record_units_change(schedule)
       else
-        schedule_units_change(cycle, schedule)
+        schedule_units_change(schedule)
       end
       return result if result.failure?
 
@@ -103,13 +103,16 @@ module ContractRateCards
       contract_rate_card.units_changes.reset
     end
 
-    def schedule_units_change(cycle, schedule)
-      return result.single_validation_failure!(field: :contract, error_code: "contract_locked") unless schedule.cycle_at(cycle.ended_at)
+    def schedule_units_change(schedule)
+      effective_date = timestamp.in_time_zone(contract_rate_card.contract.customer.applicable_timezone).to_date
+      return result.single_validation_failure!(field: :contract, error_code: "contract_locked") unless schedule.next_segment_start(after_date: effective_date)
 
-      effective_date = cycle.ended_at.in_time_zone(contract_rate_card.contract.customer.applicable_timezone).to_date
-      term = contract_rate_card.terms.find_or_initialize_by(effective_date:)
-      term.assign_attributes(organization: contract_rate_card.organization, units: params[:units], application_timing: :next_billing_cycle)
+      history = ContractRateCardUnitsHistoryQuery.call!(organization: contract_rate_card.organization,
+        contract_rate_cards: [contract_rate_card]).histories.fetch(contract_rate_card.id)
+      term = contract_rate_card.terms.build(organization: contract_rate_card.organization, units: params[:units],
+        effective_date:, application_timing: :next_billing_cycle)
       term.save!
+      history.pending_terms_at(timestamp).each(&:destroy!)
       contract_rate_card.terms.reset
     end
   end

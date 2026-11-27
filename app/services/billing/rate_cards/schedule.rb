@@ -13,6 +13,7 @@ module Billing
       )
         @rates = rates
         @terms = terms
+        @timezone = timezone
         @due_on_coverage_end = due_on_coverage_end
         @walker = CycleWalker.new(rates:, phases:, starts_at:, anchor_date:, timezone:, ends_at:)
       end
@@ -58,9 +59,15 @@ module Billing
         end
       end
 
+      # Skip the whole effective date in the customer's timezone, including DST changes.
+      def next_segment_start(after_date:)
+        from = after_date.next_day.in_time_zone(timezone)
+        segments(from:).find { it.started_at >= from }&.started_at
+      end
+
       private
 
-      attr_reader :rates, :terms, :due_on_coverage_end, :walker
+      attr_reader :rates, :terms, :timezone, :due_on_coverage_end, :walker
 
       # Every priced slice in billing order, from the cycle containing `from`. Lazy, because an
       # open-ended card has no last cycle: callers stop at the first slice that answers them.

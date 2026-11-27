@@ -36,6 +36,28 @@ RSpec.describe BillingOperation do
     end
   end
 
+  describe "#reconciliations" do
+    let(:cycle_start) { Time.utc(2026, 9, 1) }
+    let(:renewal) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: "renew_fixed_advance", target_cycle_started_at: cycle_start)
+    end
+
+    it "groups reconciliations by card and cycle, including work waiting for the clock" do
+      pending = create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: "reconcile_advance_coverage", target_cycle_started_at: cycle_start)
+      completed = create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: "reconcile_advance_coverage", target_cycle_started_at: cycle_start,
+        billing_at: pending.billing_at + 1.hour, processed_at: Time.current)
+      create(:billing_operation, organization:, customer:, contract_rate_card:,
+        action_type: "reconcile_advance_coverage", target_cycle_started_at: cycle_start + 1.month, billing_at: pending.billing_at + 2.hours)
+      create(:billing_operation, action_type: "reconcile_advance_coverage", target_cycle_started_at: cycle_start)
+      renewal
+
+      expect(renewal.reconciliations).to eq([pending, completed])
+    end
+  end
+
   describe "Scopes" do
     describe ".pending" do
       let(:pending_operation) { create(:billing_operation) }

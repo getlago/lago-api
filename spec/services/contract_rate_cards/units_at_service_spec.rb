@@ -8,7 +8,7 @@ RSpec.describe ContractRateCards::UnitsAtService do
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
   let(:contract) { create(:contract, organization:, customer:) }
-  let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, units: 8, effective_date: Date.new(2026, 9, 1)) }
+  let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, units: 8, effective_date: Date.new(2026, 9, 1), billing_anchor_date: Date.new(2026, 9, 1)) }
   let(:timestamp) { Time.utc(2026, 9, 15, 12, 30) }
 
   before do
@@ -53,14 +53,25 @@ RSpec.describe ContractRateCards::UnitsAtService do
 
   context "with a scheduled units change" do
     let(:scheduled_at) { Time.utc(2026, 10, 1, 4) }
+    let(:term_created_at) { Time.utc(2026, 9, 10) }
 
     before do
-      create(:contract_rate_card_term, organization:, contract_rate_card:, units: 12, effective_date: Date.new(2026, 10, 1), application_timing: :next_billing_cycle)
+      create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card, effective_from: Time.utc(2026, 9, 1))
+      create(:contract_rate_card_term, organization:, contract_rate_card:, units: 12, effective_date: Date.new(2026, 9, 10), created_at: term_created_at, application_timing: :next_billing_cycle)
     end
 
     it "returns the scheduled quantity without applying it early" do
       expect(result.units).to eq(5)
-      expect(result.scheduled_term).to have_attributes(units: 12, effective_date: Date.new(2026, 10, 1))
+      expect(result.scheduled_term).to have_attributes(units: 12, effective_date: Date.new(2026, 9, 10), starts_at: scheduled_at)
+    end
+
+    context "when the creation timestamp differs from the effective date" do
+      let(:term_created_at) { Time.utc(2026, 10, 5) }
+
+      it "resolves the scheduled boundary from the effective date" do
+        expect(result.scheduled_term.starts_at).to eq(scheduled_at)
+        expect(described_class.call!(contract_rate_card:, timestamp: scheduled_at).units).to eq(12)
+      end
     end
 
     context "when the scheduled instant is reached" do

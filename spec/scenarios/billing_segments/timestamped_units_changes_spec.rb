@@ -97,8 +97,35 @@ describe "Billing timestamped contract units changes" do
 
     expect(customer.invoices.order(:created_at, :id).pluck(:total_amount_cents)).to eq([26_200, 15_000])
     # September: (8 × 19/30 + 10 × 11/30) × 3000; October: scheduled 5 × 3000.
-    expect(contract_rate_card.reload.terms.find_by!(effective_date: Date.new(2026, 10, 1)).units).to eq(5)
+    expect(contract_rate_card.reload.terms.find_by!(effective_date: Date.new(2026, 9, 10)).units).to eq(5)
   end
+
+  shared_examples "scheduled units at a new price boundary" do |expected_total|
+    it "uses the scheduled quantity when a later rate adds an earlier boundary" do
+      change_units(5, at: Time.utc(2026, 9, 10), mode: "next_billing_period")
+      travel_to(Time.utc(2026, 9, 13)) do
+        perform_enqueued_jobs do
+          post_with_token(organization, "/api/v2/rate_cards/#{rate_card.code}/rates",
+            {rate: {code: "new_price", effective_from: "2026-09-20T00:00:00Z", rate_model: "standard",
+                    billing_interval_unit: "month", rate_properties: {amount: "30"}}})
+          expect(response).to have_http_status(:success)
+        end
+        get_with_token(organization, "/api/v2/contracts/#{contract.external_id}/applied_rate_cards/#{rate_card.code}")
+        expect(response.parsed_body.fetch("applied_rate_card")).to include(
+          "units" => "8.0", "scheduled_units" => "5.0", "scheduled_units_effective_at" => "2026-09-20T00:00:00.000000Z"
+        )
+      end
+      bill_at(Time.utc(2026, 9, 20))
+      bill_at(Time.utc(2026, 10, 1))
+
+      expect(customer.invoices.sum(:total_amount_cents)).to eq(expected_total)
+      expect(customer.invoices.joins(:fees).where(fees: {rate_card_rate_id: rate_card.rates.find_by!(code: "new_price").id})
+        .flat_map(&:fees).map(&:units)).to eq([5])
+      expect(contract_rate_card.reload.units_changes).to be_empty
+    end
+  end
+
+  include_examples "scheduled units at a new price boundary", 20_700 # (8 × 19/30 + 5 × 11/30) × 3000.
 
   context "with graduated pricing" do
     let(:rate_model) { "graduated" }
@@ -119,6 +146,8 @@ describe "Billing timestamped contract units changes" do
 
   context "when paid in advance" do
     let(:timing) { "advance" }
+
+    include_examples "scheduled units at a new price boundary", 29_500 # Original 24000 plus 5 × 3000 × 11/30.
 
     it "defers reconciliation to the clock and retains prepaid coverage across queued changes" do
       change_units(10, at: Time.utc(2026, 9, 10, 0, 0, 0, 123456), process: false)

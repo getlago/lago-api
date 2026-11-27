@@ -19,13 +19,14 @@ RSpec.describe V2::ContractAppliedRateCardSerializer do
       # Too precise for a Float, so rendering units as a Float fails the comparison.
       units:,
       effective_date: Date.new(2026, 10, 1),
-      billing_anchor_date: Date.new(2026, 10, 15),
+      billing_anchor_date:,
       next_billing_at:,
       created_at: Time.zone.parse("2026-09-30T08:00:00Z"),
       updated_at: Time.zone.parse("2026-10-01T09:30:00Z"),
       deleted_at:
     )
   end
+  let(:billing_anchor_date) { Date.new(2026, 10, 15) }
   let(:units) { BigDecimal("12.3456789012345678901") }
   let(:flat_payload) do
     {
@@ -60,22 +61,25 @@ RSpec.describe V2::ContractAppliedRateCardSerializer do
 
   context "with a scheduled units change" do
     let(:timestamp) { Time.utc(2026, 11, 15) }
+    let(:billing_anchor_date) { Date.new(2026, 10, 1) }
 
     around { |example| travel_to(timestamp) { example.run } }
 
     before do
-      create(:contract_rate_card_term, organization:, contract_rate_card:, units: 5, effective_date: Date.new(2026, 12, 1), application_timing: :next_billing_cycle)
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 10, 1))
+      create(:contract_rate_card_term, organization:, contract_rate_card:, units: 5, effective_date: Date.new(2026, 11, 15),
+        created_at: Time.utc(2026, 11, 15), application_timing: :next_billing_cycle)
     end
 
     it "returns current units and the scheduled quantity and time" do
-      expect(payload).to eq(flat_payload.merge(scheduled_units: 5, scheduled_units_effective_at: "2026-12-01T00:00:00Z"))
+      expect(payload).to eq(flat_payload.merge(billing_anchor_date: "2026-10-01", scheduled_units: 5, scheduled_units_effective_at: "2026-12-01T00:00:00Z"))
     end
 
     context "when the scheduled change takes effect" do
       let(:timestamp) { Time.utc(2026, 12, 1) }
 
       it "returns the new current units without a scheduled change" do
-        expect(payload).to eq(flat_payload.merge(units: 5))
+        expect(payload).to eq(flat_payload.merge(billing_anchor_date: "2026-10-01", units: 5))
       end
     end
   end

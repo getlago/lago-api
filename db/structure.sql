@@ -1022,6 +1022,7 @@ DROP INDEX IF EXISTS public.index_customers_by_cursor;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_organization_id;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_customer_id_and_key;
 DROP INDEX IF EXISTS public.index_customer_metadata_on_customer_id;
+DROP INDEX IF EXISTS public.index_current_contract_rate_card_terms;
 DROP INDEX IF EXISTS public.index_cs_admin_audit_logs_on_organization_id;
 DROP INDEX IF EXISTS public.index_cs_admin_audit_logs_on_actor_user_id;
 DROP INDEX IF EXISTS public.index_credits_on_progressive_billing_invoice_id;
@@ -1067,7 +1068,6 @@ DROP INDEX IF EXISTS public.index_contracts_invoice_custom_sections_on_organizat
 DROP INDEX IF EXISTS public.index_contracts_by_status_cursor;
 DROP INDEX IF EXISTS public.index_contracts_by_cursor;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_terms_on_organization_id;
-DROP INDEX IF EXISTS public.index_contract_rate_cards_terms_on_card_and_effective_date;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_rate_card_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_organization_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_next_billing_at;
@@ -1076,6 +1076,7 @@ DROP INDEX IF EXISTS public.index_contract_rate_cards_on_deleted_at;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_contract_id;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_on_contract_and_rate_card;
 DROP INDEX IF EXISTS public.index_contract_rate_cards_by_cursor;
+DROP INDEX IF EXISTS public.index_contract_rate_card_terms_by_date;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_tax_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_organization_id;
 DROP INDEX IF EXISTS public.index_commitments_taxes_on_commitment_id_and_tax_id;
@@ -11332,6 +11333,13 @@ CREATE INDEX index_commitments_taxes_on_tax_id ON public.commitments_taxes USING
 
 
 --
+-- Name: index_contract_rate_card_terms_by_date; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_contract_rate_card_terms_by_date ON public.contract_rate_cards_terms USING btree (contract_rate_card_id, effective_date);
+
+
+--
 -- Name: index_contract_rate_cards_by_cursor; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -11385,13 +11393,6 @@ CREATE INDEX index_contract_rate_cards_on_organization_id ON public.contract_rat
 --
 
 CREATE INDEX index_contract_rate_cards_on_rate_card_id ON public.contract_rate_cards USING btree (rate_card_id);
-
-
---
--- Name: index_contract_rate_cards_terms_on_card_and_effective_date; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_contract_rate_cards_terms_on_card_and_effective_date ON public.contract_rate_cards_terms USING btree (contract_rate_card_id, effective_date);
 
 
 --
@@ -11707,6 +11708,13 @@ CREATE INDEX index_cs_admin_audit_logs_on_actor_user_id ON public.cs_admin_audit
 --
 
 CREATE INDEX index_cs_admin_audit_logs_on_organization_id ON public.cs_admin_audit_logs USING btree (organization_id);
+
+
+--
+-- Name: index_current_contract_rate_card_terms; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_current_contract_rate_card_terms ON public.contract_rate_cards_terms USING btree (contract_rate_card_id, effective_date) WHERE (application_timing = 'current_billing_cycle'::public.contract_rate_cards_terms_application_timing);
 
 
 --
@@ -19252,6 +19260,7 @@ ALTER TABLE ONLY public.membership_roles
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261127132448'),
 ('20261126143645'),
 ('20261126143529'),
 ('20261125113444'),

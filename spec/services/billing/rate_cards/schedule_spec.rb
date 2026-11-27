@@ -58,6 +58,49 @@ RSpec.describe Billing::RateCards::Schedule do
     segments
   end
 
+  describe "#next_segment_start" do
+    let(:timing) { :advance }
+    let(:effective_date) { Date.new(2022, 1, 15) }
+    let(:rates) do
+      [card_rate(Time.utc(2000, 1, 1)), card_rate(Time.utc(2022, 1, 15, 16)), card_rate(Time.utc(2022, 1, 16, 12))]
+    end
+
+    it "skips every price boundary on the effective date" do
+      expect(schedule.next_segment_start(after_date: effective_date)).to eq(Time.utc(2022, 1, 16, 12))
+    end
+
+    context "when the customer date differs from UTC" do
+      let(:timezone) { "America/New_York" }
+      let(:rates) do
+        [card_rate(Time.utc(2000, 1, 1)), card_rate(Time.utc(2022, 1, 16, 2)), card_rate(Time.utc(2022, 1, 16, 5))]
+      end
+
+      it "includes a boundary at midnight on the next customer date" do
+        expect(schedule.next_segment_start(after_date: effective_date)).to eq(Time.utc(2022, 1, 16, 5))
+      end
+    end
+
+    context "when the effective date spans a daylight-saving transition" do
+      let(:timezone) { "America/New_York" }
+      let(:effective_date) { Date.new(2026, 11, 1) }
+      let(:rates) do
+        [card_rate(Time.utc(2000, 1, 1)), card_rate(Time.utc(2026, 11, 2, 4, 30)), card_rate(Time.utc(2026, 11, 2, 5))]
+      end
+
+      it "skips the whole customer date, including its extra hour" do
+        expect(schedule.next_segment_start(after_date: effective_date)).to eq(Time.utc(2026, 11, 2, 5))
+      end
+    end
+
+    context "when the schedule ends before a later date" do
+      let(:ends_at) { Time.utc(2022, 1, 15, 23) }
+
+      it "returns no boundary" do
+        expect(schedule.next_segment_start(after_date: effective_date)).to be_nil
+      end
+    end
+  end
+
   describe "validation" do
     # Without a rate the walk breaks before producing anything and answers "no cycles", which
     # reads as a card that never bills rather than as a card built wrong. BuildScheduleService

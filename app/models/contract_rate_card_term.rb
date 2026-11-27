@@ -13,7 +13,8 @@ class ContractRateCardTerm < ApplicationRecord
   belongs_to :organization
   belongs_to :contract_rate_card, -> { with_discarded }, inverse_of: :terms
 
-  validates :effective_date, presence: true, uniqueness: {scope: :contract_rate_card_id}
+  validates :effective_date, presence: true
+  validates :effective_date, uniqueness: {scope: :contract_rate_card_id, conditions: -> { current_billing_cycle }}, if: :current_billing_cycle?
   validates :units, numericality: {greater_than_or_equal_to: 0}
   validate :organization_matches_contract_rate_card
 
@@ -46,8 +47,9 @@ end
 #
 # Indexes
 #
-#  index_contract_rate_cards_terms_on_card_and_effective_date  (contract_rate_card_id,effective_date) UNIQUE
-#  index_contract_rate_cards_terms_on_organization_id          (organization_id)
+#  index_contract_rate_card_terms_by_date              (contract_rate_card_id,effective_date)
+#  index_contract_rate_cards_terms_on_organization_id  (organization_id)
+#  index_current_contract_rate_card_terms              (contract_rate_card_id,effective_date) UNIQUE WHERE (application_timing = 'current_billing_cycle'::contract_rate_cards_terms_application_timing)
 #
 # Foreign Keys
 #

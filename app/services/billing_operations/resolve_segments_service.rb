@@ -18,13 +18,13 @@ module BillingOperations
         return result
       end
 
-      if operation.units_change? && operation.contract_rate_card.rate_card.arrears?
+      if operation.units_change? && !operation.contract_rate_card.needs_reconciliation?
         result.segments = []
         return result
       end
 
       if operation.action_type == "reconcile_advance_coverage" && !operation.units_change?
-        unless operation.reason == "rate_change" && operation.contract_rate_card.periodic_billing_action == "renew_fixed_advance"
+        unless operation.reason == "rate_change" && operation.contract_rate_card.needs_reconciliation?
           return result.single_validation_failure!(field: :operation, error_code: "fixed_advance_reconciliation_unsupported")
         end
 

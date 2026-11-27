@@ -32,6 +32,12 @@ class BillingOperation < ApplicationRecord
   belongs_to :invoice, optional: true
   has_many :segments, -> { order(:position) }, class_name: "BillingOperationSegment", inverse_of: :billing_operation
 
+  # Several priced renewals can share one cycle and its reconciliation history.
+  has_many :reconciliations, ->(operation) {
+    where(organization_id: operation.organization_id, target_cycle_started_at: operation.target_cycle_started_at,
+      action_type: "reconcile_advance_coverage").order(:billing_at, :created_at, :id)
+  }, class_name: "BillingOperation", foreign_key: :contract_rate_card_id, primary_key: :contract_rate_card_id, inverse_of: false
+
   enum :reason, REASONS, validate: true
   enum :cancellation_reason, CANCELLATION_REASONS, prefix: true, validate: {allow_nil: true}
 

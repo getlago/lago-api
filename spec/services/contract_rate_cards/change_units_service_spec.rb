@@ -35,11 +35,35 @@ RSpec.describe ContractRateCards::ChangeUnitsService do
   context "when applying to the next billing period" do
     let(:params) { {units: "5", apply_units: "next_billing_period"} }
 
-    it "records the cycle boundary without enqueuing an immediate adjustment" do
+    it "records the request date without enqueuing an immediate adjustment" do
       expect { result }.not_to have_enqueued_job(BillingOperations::ProcessJob)
       expect(result).to be_success
-      expect(contract_rate_card.terms.find_by(effective_date: Date.new(2026, 10, 1))).to have_attributes(units: 5, application_timing: "next_billing_cycle")
+      expect(contract_rate_card.terms.find_by(effective_date: Date.new(2026, 9, 15))).to have_attributes(units: 5, application_timing: "next_billing_cycle")
       expect(contract_rate_card.units_changes).to be_empty
+    end
+  end
+
+  context "when scheduling on the card's first day" do
+    let(:timestamp) { Time.utc(2026, 9, 1, 12) }
+    let(:params) { {units: "5", apply_units: "next_billing_period"} }
+
+    it "keeps the starting quantity and the scheduled quantity on the same date" do
+      expect(result).to be_success
+      expect(contract_rate_card.reload.terms.count).to eq(2)
+      expect(ContractRateCards::UnitsAtService.call!(contract_rate_card:, timestamp:).units).to eq(8)
+      expect(contract_rate_card.terms.find_by!(application_timing: :next_billing_cycle).effective_date).to eq(Date.new(2026, 9, 1))
+    end
+  end
+
+  context "when the request is on the previous day in the customer timezone" do
+    let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
+    let(:timestamp) { Time.utc(2026, 9, 15, 2) }
+    let(:params) { {units: "5", apply_units: "next_billing_period"} }
+
+    it "stores the customer's request date and resolves the next local boundary" do
+      expect(result).to be_success
+      expect(contract_rate_card.terms.find_by!(application_timing: :next_billing_cycle).effective_date).to eq(Date.new(2026, 9, 14))
+      expect(ContractRateCards::UnitsAtService.call!(contract_rate_card:, timestamp:).scheduled_term.starts_at).to eq(Time.utc(2026, 10, 1, 4))
     end
   end
 
@@ -71,8 +95,90 @@ RSpec.describe ContractRateCards::ChangeUnitsService do
 
       it "preserves the ability to schedule units for a later priced period" do
         expect(result).to be_success
-        expect(contract_rate_card.terms.find_by!(effective_date: Date.new(2026, 10, 1)).units).to eq(5)
+        expect(contract_rate_card.terms.find_by!(effective_date: Date.new(2026, 9, 15)).units).to eq(5)
       end
+    end
+  end
+
+  context "when a price is added after units were scheduled" do
+    let(:params) { {units: "5", apply_units: "next_billing_period"} }
+
+    it "applies the scheduled quantity at the new price boundary" do
+      expect(result).to be_success
+      expect(ContractRateCards::UnitsAtService.call!(contract_rate_card:, timestamp:).scheduled_term.starts_at).to eq(Time.utc(2026, 10, 1))
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 9, 20))
+      contract_rate_card.reload
+
+      expect(ContractRateCards::UnitsAtService.call!(contract_rate_card:, timestamp:).scheduled_term.starts_at).to eq(Time.utc(2026, 9, 20))
+      expect(ContractRateCards::UnitsAtService.call!(contract_rate_card:, timestamp: Time.utc(2026, 9, 19)).units).to eq(8)
+      expect(ContractRateCards::UnitsAtService.call!(contract_rate_card:, timestamp: Time.utc(2026, 9, 20)).units).to eq(5)
+    end
+  end
+
+  context "when replacing pending scheduled units with invalid units" do
+    let(:params) { {units: "-1", apply_units: "next_billing_period"} }
+
+    before do
+      described_class.call!(contract_rate_card:, params: {units: "7", apply_units: "next_billing_period"})
+    end
+
+    it "keeps the earlier scheduled quantity" do
+      expect(result).to be_failure
+      expect(contract_rate_card.reload.terms.find_by!(application_timing: :next_billing_cycle).units).to eq(7)
+    end
+  end
+
+  context "when another scheduled change is requested on the same date" do
+    let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
+
+    before { create(:rate_card_rate, organization:, rate_card:, effective_from: timestamp + 1.hour) }
+
+    it "replaces the pending change and skips the same-day price boundary" do
+      described_class.call!(contract_rate_card:, params: {units: "5", apply_units: "next_billing_period"})
+      travel_to(timestamp + 2.hours, with_usec: true)
+      described_class.call!(contract_rate_card:, params: {units: "7", apply_units: "next_billing_period"})
+      history = ContractRateCards::UnitsAtService.call!(contract_rate_card:, timestamp: Time.current)
+      expect(history.units).to eq(8)
+      expect(history.scheduled_term).to have_attributes(units: 7, starts_at: Time.utc(2026, 10, 1))
+      expect(contract_rate_card.reload.terms.where(application_timing: :next_billing_cycle).count).to eq(1)
+    end
+  end
+
+  context "when the next UTC date is still the request date for the customer" do
+    let(:customer) { create(:customer, organization:, timezone: "America/New_York") }
+    let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
+    let(:timestamp) { Time.utc(2026, 9, 15, 2) }
+    let(:params) { {units: "5", apply_units: "next_billing_period"} }
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 9, 15, 3))
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 9, 15, 4))
+    end
+
+    it "skips the same local date and includes midnight on the following date" do
+      expect(result).to be_success
+      history = ContractRateCards::UnitsAtService.call!(contract_rate_card:, timestamp:)
+      expect(history.scheduled_term.starts_at).to eq(Time.utc(2026, 9, 15, 4))
+      expect(ContractRateCards::UnitsAtService.call!(contract_rate_card:, timestamp: Time.utc(2026, 9, 15, 3)).units).to eq(8)
+      expect(ContractRateCards::UnitsAtService.call!(contract_rate_card:, timestamp: Time.utc(2026, 9, 15, 4)).units).to eq(5)
+    end
+  end
+
+  context "when the only remaining price boundary is on the request date" do
+    let(:rate_card) { create(:rate_card, :advance, organization:, product:) }
+    let(:contract) do
+      create(:contract, organization:, customer:, started_at: Time.utc(2026, 9, 1), ended_at: timestamp + 1.day)
+    end
+    let(:params) { {units: "5", apply_units: "next_billing_period"} }
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: timestamp + 1.hour)
+    end
+
+    it "returns a validation error without scheduling a change" do
+      expect(result).to be_failure
+      expect(result.error.messages[:contract]).to eq(["contract_locked"])
+      expect(contract_rate_card.reload.terms.sole.units).to eq(8)
     end
   end
 

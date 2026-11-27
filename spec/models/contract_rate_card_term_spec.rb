@@ -61,6 +61,15 @@ RSpec.describe ContractRateCardTerm do
     end
   end
 
+  it "allows scheduled terms to share a request date with starting and previously applied units" do
+    starting = create(:contract_rate_card_term)
+    2.times do
+      create(:contract_rate_card_term, organization: starting.organization, contract_rate_card: starting.contract_rate_card,
+        effective_date: starting.effective_date, application_timing: :next_billing_cycle)
+    end
+    expect(starting.contract_rate_card.terms.count).to eq(3)
+  end
+
   describe "application_timing persistence" do
     let(:unit) { create(:contract_rate_card_term, application_timing: :next_billing_cycle) }
 

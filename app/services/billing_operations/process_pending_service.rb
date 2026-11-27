@@ -13,20 +13,13 @@ module BillingOperations
 
     def call
       result.invoices = []
-      periodic_card_ids = Set.new
-      units_histories = {}
-      processing_error = nil
+      @periodic_card_ids = Set.new
+      @units_histories = {}
+      @processing_error = nil
       Customers::LockService.call!(customer:, scope: :billing_schedule, transaction: false) do
         loop do
-          ScheduleService.call!(customer:, timestamp:) if units_changes_pending?
-          periodic = ProcessService.call(customer:, timestamp:, excluded_periodic_card_ids: periodic_card_ids, units_histories:)
-          processing_error ||= periodic.error
-          result.invoices.concat(periodic.invoices)
-          periodic_card_ids.merge(periodic.periodic_card_ids)
-          ScheduleService.call!(customer:, timestamp:) if units_changes_pending?
-          reconciliation = ReconcileAdvanceCoverageService.call(customer:, timestamp:, units_histories:)
-          processing_error ||= reconciliation.error
-          result.invoices.concat(reconciliation.invoices)
+          process_periodic_operations
+          reconciliation = process_reconciliations
           break if reconciliation.failure? || reconciliation.processed_operation_ids.empty?
         end
       end
@@ -37,7 +30,30 @@ module BillingOperations
 
     private
 
-    attr_reader :customer, :timestamp
+    attr_reader :customer, :timestamp, :periodic_card_ids, :units_histories, :processing_error
+
+    def process_periodic_operations
+      schedule_periodic_operations
+      periodic = ProcessService.call(customer:, timestamp:, excluded_periodic_card_ids: periodic_card_ids, units_histories:)
+      collect_result(periodic)
+      periodic_card_ids.merge(periodic.periodic_card_ids)
+    end
+
+    def process_reconciliations
+      schedule_periodic_operations
+      reconciliation = ReconcileAdvanceCoverageService.call(customer:, timestamp:, units_histories:)
+      collect_result(reconciliation)
+      reconciliation
+    end
+
+    def collect_result(processing_result)
+      @processing_error ||= processing_result.error
+      result.invoices.concat(processing_result.invoices)
+    end
+
+    def schedule_periodic_operations
+      ScheduleService.call!(customer:, timestamp:) if units_changes_pending?
+    end
 
     def units_changes_pending?
       customer.billing_operations.pending.units_changes

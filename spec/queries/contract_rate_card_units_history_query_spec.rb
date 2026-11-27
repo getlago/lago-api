@@ -79,6 +79,25 @@ RSpec.describe ContractRateCardUnitsHistoryQuery do
     end
   end
 
+  context "with scheduled units on several cards" do
+    before do
+      [first_card, second_card].each do |card|
+        card.update!(billing_anchor_date: Date.new(2026, 9, 1))
+        create(:rate_card_rate, organization:, rate_card: card.rate_card, effective_from: Time.utc(2026, 9, 1))
+        create(:contract_rate_card_term, organization:, contract_rate_card: card, units: 7,
+          effective_date: Date.new(2026, 9, 10), created_at: Time.utc(2026, 9, 10), application_timing: :next_billing_cycle)
+      end
+    end
+
+    it "loads rate timelines together and resolves each scheduled boundary" do
+      queries = capture_sql { result }
+
+      expect(queries.grep(/FROM "rate_card_rates"/).size).to eq(1)
+      expect(result.histories.values.map { it.scheduled_term_at(timestamp).starts_at }).to eq([Time.utc(2026, 10, 1)] * 2)
+      expect(result.histories.values.map { it.units_at(Time.utc(2026, 10, 1)) }).to eq([7, 7])
+    end
+  end
+
   context "without cards" do
     let(:cards) { [] }
     let(:change) { nil }
