@@ -56,7 +56,7 @@ class Fee < ApplicationRecord
   monetize :unit_amount_cents, disable_validation: true, allow_nil: true, with_model_currency: :currency
 
   # TODO: Deprecate add_on type in the near future
-  FEE_TYPES = %i[charge add_on subscription credit commitment fixed_charge product].freeze
+  FEE_TYPES = %i[charge add_on subscription credit commitment fixed_charge product credit_purchase].freeze
   PAYMENT_STATUS = %i[pending succeeded failed refunded].freeze
 
   enum :fee_type, FEE_TYPES

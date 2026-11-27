@@ -23,9 +23,8 @@ module Wallets
 
       return true if fee_types.blank?
 
-      valid_types = Fee.fee_types.keys
       incoming = Array(fee_types).map(&:to_s)
-      invalid = incoming - valid_types
+      invalid = incoming - Wallet::LIMITATION_FEE_TYPES
 
       add_error(field: :allowed_fee_types, error_code: "invalid_fee_types") if invalid.any?
     end

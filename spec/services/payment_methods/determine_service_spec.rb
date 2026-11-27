@@ -443,6 +443,76 @@ RSpec.describe PaymentMethods::DetermineService do
         end
       end
 
+      context "with a credit purchase invoice" do
+        let(:invoice) { create(:invoice, :credit_purchase, customer:, organization:) }
+        let(:contract) { create(:contract, organization:, customer:) }
+        let(:wallet) { create(:catalog_wallet, organization:, customer:, contract:) }
+        let(:wallet_transaction) do
+          create(:catalog_wallet_transaction, :pending, organization:, catalog_wallet: wallet, purchase_amount_cents: 8_000)
+        end
+
+        before { create(:credit_purchase_fee, invoice:, organization:, wallet_transaction:) }
+
+        it "returns the customer default payment method" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.payment_method).to eq(default_payment_method)
+        end
+
+        context "when the invoice also has a fee of the wallet's contract" do
+          let(:contract_rate_card) { create(:contract_rate_card, organization:, contract:) }
+
+          before do
+            create(
+              :fee,
+              invoice:,
+              organization:,
+              subscription: nil,
+              fee_type: :product,
+              invoiceable: contract_rate_card.rate_card.product,
+              contract:,
+              contract_rate_card:,
+              rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card)
+            )
+          end
+
+          context "when the contract has a payment method" do
+            let(:contract_payment_method) { create(:payment_method, customer:, is_default: false) }
+            let(:contract) { create(:contract, organization:, customer:, payment_method: contract_payment_method) }
+
+            it "returns the customer default payment method" do
+              result = service.call
+
+              expect(result).to be_success
+              expect(result.payment_method).to eq(default_payment_method)
+            end
+          end
+
+          context "when the contract has manual payment method type" do
+            let(:contract) { create(:contract, organization:, customer:, payment_method_type: "manual") }
+
+            it "returns the customer default payment method" do
+              result = service.call
+
+              expect(result).to be_success
+              expect(result.payment_method).to eq(default_payment_method)
+            end
+          end
+        end
+
+        context "when the customer has no default payment method" do
+          let(:default_payment_method) { nil }
+
+          it "returns nil" do
+            result = service.call
+
+            expect(result).to be_success
+            expect(result.payment_method).to be_nil
+          end
+        end
+      end
+
       context "with a one_off invoice" do
         let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :one_off) }
 

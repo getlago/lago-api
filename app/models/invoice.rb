@@ -100,7 +100,7 @@ class Invoice < ApplicationRecord
     allow_nil: true,
     with_model_currency: :currency
 
-  INVOICE_TYPES = %i[subscription add_on credit one_off advance_charges progressive_billing contract].freeze
+  INVOICE_TYPES = %i[subscription add_on credit one_off advance_charges progressive_billing contract credit_purchase].freeze
   PAYMENT_STATUS = %i[pending succeeded failed].freeze
   TAX_STATUSES = {
     pending: "pending",
@@ -184,7 +184,7 @@ class Invoice < ApplicationRecord
   # A correlated EXISTS, so that a list only probes the fees of the invoices it walks: an
   # `IN` under the `OR` would read the catalog fees of every organization.
   scope :product_catalog, -> {
-    where(invoice_type: :contract)
+    where(invoice_type: %i[contract credit_purchase])
       .or(where(Fee.where(Fee.arel_table[:invoice_id].eq(arel_table[:id])).where.not(contract_id: nil).arel.exists))
   }
 
@@ -502,7 +502,7 @@ class Invoice < ApplicationRecord
   end
 
   def product_catalog?
-    return true if contract?
+    return true if contract? || credit_purchase?
     return contract_fees.any? if contract_fees.loaded?
     return fees.any? { it.contract_id.present? } if fees.loaded?
 

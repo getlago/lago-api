@@ -46,6 +46,8 @@ class Wallet < ApplicationRecord
 
   REFRESH_RELEVANT_ATTRIBUTES = %w[code priority allowed_fee_types].freeze
 
+  LIMITATION_FEE_TYPES = (Fee::FEE_TYPES - %i[credit_purchase]).map(&:to_s).freeze
+
   validates :rate_amount, numericality: {greater_than: 0}
   validates :currency, inclusion: {in: currency_list}
   validates :invoice_requires_successful_payment, exclusion: [nil]

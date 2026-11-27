@@ -81,6 +81,42 @@ RSpec.describe Api::V2::InvoicesController do
       end
     end
 
+    context "with a credit purchase invoice" do
+      let(:credit_purchase_invoice) { create(:invoice, :credit_purchase, organization:, customer:) }
+
+      before { credit_purchase_invoice }
+
+      it "lists it with the catalog invoices" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoices].map { it[:lago_id] }).to match_array([contract_invoice.id, credit_purchase_invoice.id])
+        expect(json[:invoices].find { it[:lago_id] == credit_purchase_invoice.id }).to include(invoice_type: "credit_purchase")
+      end
+
+      context "with the credit_purchase invoice type filter" do
+        let(:params) { {invoice_type: "credit_purchase"} }
+
+        it "lists the credit purchase invoices only" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoices].map { it[:lago_id] }).to eq([credit_purchase_invoice.id])
+        end
+      end
+
+      context "when it is hidden" do
+        let(:credit_purchase_invoice) { create(:invoice, :credit_purchase, :open, organization:, customer:) }
+
+        it "leaves it out of the list" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(json[:invoices].map { it[:lago_id] }).to eq([contract_invoice.id])
+        end
+      end
+    end
+
     %i[external_customer_id customer_external_id].each do |filter|
       context "with the #{filter} filter" do
         let(:params) { {filter => customer.external_id} }
@@ -104,7 +140,7 @@ RSpec.describe Api::V2::InvoicesController do
         expect(response).to have_http_status(:unprocessable_entity)
         expect(json).to eq(
           code: "validation_errors",
-          details: [{code: "value_is_invalid", field: "invoice_type", meta: {allowed_values: %w[contract advance_fees]}}]
+          details: [{code: "value_is_invalid", field: "invoice_type", meta: {allowed_values: %w[contract advance_fees credit_purchase]}}]
         )
       end
     end
@@ -154,6 +190,28 @@ RSpec.describe Api::V2::InvoicesController do
       expect(response).to have_http_status(:success)
       expect(json[:invoice]).to include(lago_id: contract_invoice.id, invoice_type: "contract")
       expect(json[:invoice]).not_to include(:fees, :applied_taxes, :customer, :contracts)
+    end
+
+    context "when the invoice is a credit purchase invoice" do
+      let(:credit_purchase_invoice) { create(:invoice, :credit_purchase, organization:, customer:) }
+      let(:invoice_id) { credit_purchase_invoice.id }
+
+      it "returns the invoice" do
+        subject
+
+        expect(response).to have_http_status(:success)
+        expect(json[:invoice]).to include(lago_id: credit_purchase_invoice.id, invoice_type: "credit_purchase")
+      end
+
+      context "when it is hidden" do
+        let(:credit_purchase_invoice) { create(:invoice, :credit_purchase, :open, organization:, customer:) }
+
+        it "returns a not found error" do
+          subject
+
+          expect(response).to be_v2_not_found_error("invoice")
+        end
+      end
     end
 
     context "when the invoice is a legacy one" do

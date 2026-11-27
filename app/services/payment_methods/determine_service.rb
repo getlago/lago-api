@@ -37,7 +37,9 @@ module PaymentMethods
     end
 
     def determine_invoice_payment_method
-      if invoice.product_catalog?
+      if invoice.credit_purchase?
+        customer.default_payment_method
+      elsif invoice.product_catalog?
         payment_method_for(invoice_contract)
       else
         case invoice.invoice_type

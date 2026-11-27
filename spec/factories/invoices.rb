@@ -29,6 +29,10 @@ FactoryBot.define do
       invoice_type { :credit }
     end
 
+    trait :credit_purchase do
+      invoice_type { :credit_purchase }
+    end
+
     trait :dispute_lost do
       payment_dispute_lost_at { DateTime.current - 1.day }
     end

@@ -40127,6 +40127,12 @@
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
+            },
+            {
+              "name": "credit_purchase",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
             }
           ],
           "possibleTypes": null
@@ -47117,6 +47123,12 @@
             },
             {
               "name": "contract",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "credit_purchase",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
