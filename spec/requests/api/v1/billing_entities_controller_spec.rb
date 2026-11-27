@@ -183,6 +183,13 @@ RSpec.describe Api::V1::BillingEntitiesController do
       before { subject }
     end
 
+    it "produces an activity log" do
+      subject
+
+      billing_entity = organization.billing_entities.find_by(code: "NEW-0001")
+      expect(Utils::ActivityLog).to have_produced("billing_entities.created").after_commit.with(billing_entity)
+    end
+
     context "when the logo is not provided" do
       let(:logo) { nil }
 

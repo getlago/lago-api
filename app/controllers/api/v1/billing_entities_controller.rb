@@ -30,10 +30,10 @@ module Api
       end
 
       def create
-        result = BillingEntities::CreateService.new(
+        result = BillingEntities::CreateService.call(
           organization: current_organization,
           params: create_params
-        ).call
+        )
 
         if result.success?
           render(

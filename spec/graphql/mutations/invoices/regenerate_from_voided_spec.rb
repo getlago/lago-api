@@ -101,6 +101,18 @@ RSpec.describe Mutations::Invoices::RegenerateFromVoided do
     end
   end
 
+  it "produces an activity log" do
+    execute_graphql(
+      current_user: membership.user,
+      current_organization: organization,
+      permissions: required_permission,
+      query: mutation,
+      variables: {input: {voidedInvoiceId: voided_invoice.id, fees: [fee_input]}}
+    )
+
+    expect(Utils::ActivityLog).to have_produced("invoice.regenerated").after_commit.with(voided_invoice)
+  end
+
   context "when a purchaseOrderNumber is provided" do
     it "stores the normalized value on the regenerated invoice" do
       freeze_time do
