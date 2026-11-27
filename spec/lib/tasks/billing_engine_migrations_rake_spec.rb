@@ -4,9 +4,9 @@ require "rails_helper"
 
 require "rake"
 
-RSpec.describe "billing_engine_migrations:backfill_subscriptions" do # rubocop:disable RSpec/DescribeClass
+RSpec.describe "billing_engine_migrations:backfill_subscriptions", :premium do # rubocop:disable RSpec/DescribeClass
   let_it_be(:organization) { create(:organization) }
-  let_it_be(:shadow_organization) { create(:shadow_organization) }
+  let_it_be(:shadow_organization) { create(:shadow_organization, feature_flags: %w[product_catalog contract_alerts]) }
   let_it_be(:plan) { create(:plan, organization:) }
   let_it_be(:other_plan) { create(:plan, organization:) }
   let_it_be(:customer) { create(:customer, organization:) }
@@ -122,6 +122,35 @@ RSpec.describe "billing_engine_migrations:backfill_subscriptions" do # rubocop:d
       expect { task.invoke(organization.id) }
         .to raise_error(SystemExit)
         .and output(/has webhook endpoints, invoice emails or a dunning campaign/).to_stderr
+
+      expect(BillingEngineMigrations::CopyCustomerSubscriptionsJob).not_to have_been_enqueued
+    end
+  end
+
+  context "when the shadow organization has no contract_alerts flag" do
+    let(:migration) do
+      create(
+        :billing_engine_migration,
+        organization:,
+        shadow_organization: create(:shadow_organization),
+        plan_mapping: {plan.code => "catalog_plan"}
+      )
+    end
+
+    it "aborts without enqueuing anything" do
+      expect { task.invoke(organization.id) }
+        .to raise_error(SystemExit)
+        .and output(/cannot hold contract alerts/).to_stderr
+
+      expect(BillingEngineMigrations::CopyCustomerSubscriptionsJob).not_to have_been_enqueued
+    end
+  end
+
+  context "without a premium license", premium: false do
+    it "aborts without enqueuing anything" do
+      expect { task.invoke(organization.id) }
+        .to raise_error(SystemExit)
+        .and output(/cannot hold contract alerts/).to_stderr
 
       expect(BillingEngineMigrations::CopyCustomerSubscriptionsJob).not_to have_been_enqueued
     end
