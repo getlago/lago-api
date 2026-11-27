@@ -16,7 +16,7 @@ module CreditNotes
 
         credit_note.error_details.tax_error.discard_all # rubocop:disable Lago/DiscardAll
 
-        tax_result = Integrations::Aggregator::Taxes::CreditNotes::CreateService.new(credit_note:).call
+        tax_result = Integrations::Aggregator::Taxes::CreditNotes::CreateService.call(credit_note:)
 
         unless tax_result.success?
           create_error_detail(tax_result.error.code)

@@ -404,7 +404,7 @@ RSpec.describe Invoices::VoidService do
 
           threads = invoice_instances.map do |inv|
             Thread.new do
-              results << described_class.new(invoice: inv).call
+              results << described_class.call(invoice: inv)
             end
           end
 

@@ -16,10 +16,10 @@ module Mutations
       type Types::CreditNotes::Object
 
       def resolve(**args)
-        result = ::CreditNotes::UpdateService.new(
+        result = ::CreditNotes::UpdateService.call(
           credit_note: current_organization.credit_notes.not_deleted.find_by(id: args[:id]),
           **args.slice(:refund_status, :metadata)
-        ).call
+        )
 
         result.success? ? result.credit_note : result_error(result)
       end

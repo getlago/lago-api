@@ -24,7 +24,7 @@ module Mutations
           result = ::UsageMonitoring::ContractAlerts::CreateService.call(
             organization: current_organization,
             contract:,
-            params: args.merge(thresholds: args[:thresholds].map(&:to_h))
+            params: args.merge(scope: args[:scope].map(&:to_h), thresholds: args[:thresholds].map(&:to_h))
           )
 
           result.success? ? result.alert : result_error(result)

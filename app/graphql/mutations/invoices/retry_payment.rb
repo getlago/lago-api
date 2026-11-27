@@ -17,10 +17,10 @@ module Mutations
 
       def resolve(**args)
         invoice = current_organization.invoices.visible.find_by(id: args[:id])
-        result = ::Invoices::Payments::RetryService.new(
+        result = ::Invoices::Payments::RetryService.call(
           invoice:,
           payment_method_params: args[:payment_method]&.to_h
-        ).call
+        )
 
         result.success? ? result.invoice : result_error(result)
       end

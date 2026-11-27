@@ -39,21 +39,23 @@ module UsageMonitoring
         validation = Thresholds::ValidateService.call(thresholds:)
         return result.fail_with_error!(validation.error) unless validation.success?
 
-        wallet_values = thresholds.all? { BigDecimal(it[:value].to_s).frac.zero? } &&
-          (alert_type != "balance" || lowest_line(thresholds) >= 0)
-        result.single_validation_failure!(field: :thresholds, error_code: "value_is_invalid") unless wallet_values
+        index = thresholds.index { !BigDecimal(it[:value].to_s).frac.zero? }
+        index ||= line_below_zero_index(thresholds) if alert_type == "balance"
+
+        if index
+          result.single_validation_failure!(field: ValidationFailure.item_field(:thresholds, index, :value), error_code: "value_is_invalid")
+        end
       end
 
-      # A recurring step adds lines below the lowest one-time threshold, from 0 when there is none
-      def lowest_line(thresholds)
-        recurring, one_time = thresholds.partition { ActiveModel::Type::Boolean.new.cast(it[:recurring]) }
-        lowest = one_time.map { BigDecimal(it[:value].to_s) }.min
+      # A negative one-time threshold, or the recurring step whose first line, counted down from the lowest one-time
+      # threshold or from 0 when there is none, falls below 0
+      def line_below_zero_index(thresholds)
+        values = thresholds.map { BigDecimal(it[:value].to_s) }
+        recurring, one_time = thresholds.each_index.partition { ActiveModel::Type::Boolean.new.cast(thresholds[it][:recurring]) }
+        step = recurring.first
 
-        if recurring.empty?
-          lowest
-        else
-          (lowest || 0) - BigDecimal(recurring.first[:value].to_s)
-        end
+        one_time.find { values[it].negative? } ||
+          (step if step && (one_time.map { values[it] }.min || 0) - values[step] < 0)
       end
 
       def validate_single_values(params, fields)

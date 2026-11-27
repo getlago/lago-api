@@ -65,7 +65,7 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService do
 
     context "when invoice does not exist" do
       it "returns an error" do
-        result = described_class.new(invoice: nil).call
+        result = described_class.call(invoice: nil)
 
         expect(result).not_to be_success
         expect(result.error.error_code).to eq("invoice_not_found")
@@ -166,7 +166,7 @@ RSpec.describe Invoices::ComputeTaxesAndTotalsService do
         before { invoice.update!(status: :draft) }
 
         it "sets only tax status" do
-          described_class.new(invoice:, finalizing: false).call
+          described_class.call(invoice:, finalizing: false)
 
           expect(invoice.reload.status).to eq("draft")
           expect(invoice.reload.tax_status).to eq("pending")

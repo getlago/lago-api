@@ -151,7 +151,7 @@ module Invoices
     end
 
     def create_credit_note_credit
-      credit_result = Credits::CreditNoteService.new(invoice:).call
+      credit_result = Credits::CreditNoteService.call(invoice:)
       credit_result.raise_if_error!
 
       refresh_amounts(credit_amount_cents: credit_result.credits.sum(&:amount_cents)) if credit_result.credits

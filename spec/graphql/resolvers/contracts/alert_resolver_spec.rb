@@ -38,8 +38,7 @@ RSpec.describe Resolvers::Contracts::AlertResolver do
       query($id: ID!) {
         contractAlert(id: $id) {
           id alertType code name direction contractExternalId
-          product { id code }
-          productFilter { id code }
+          scope { type product { id code } productFilters { id code } withProductFilters }
           thresholds { code value recurring notifyOn }
           previousValue lastProcessedAt createdAt updatedAt deletedAt
         }
@@ -59,8 +58,14 @@ RSpec.describe Resolvers::Contracts::AlertResolver do
       "name" => "Opus tokens",
       "direction" => "increasing",
       "contractExternalId" => alert.contract_external_id,
-      "product" => {"id" => product.id, "code" => product.code},
-      "productFilter" => {"id" => product_filter.id, "code" => product_filter.code},
+      "scope" => [
+        {
+          "type" => "contract",
+          "product" => {"id" => product.id, "code" => product.code},
+          "productFilters" => [{"id" => product_filter.id, "code" => product_filter.code}],
+          "withProductFilters" => nil
+        }
+      ],
       "thresholds" => [
         {"code" => "warn1000000", "value" => "1000000.0", "recurring" => false, "notifyOn" => ["triggered"]},
         {"code" => "warn2000000", "value" => "2000000.0", "recurring" => false, "notifyOn" => ["triggered"]},

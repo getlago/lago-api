@@ -162,11 +162,11 @@ module WalletTransactions
           voided_invoice_id:
         ).wallet_transaction
 
-        Wallets::Balance::IncreaseService.new(
+        Wallets::Balance::IncreaseService.call(
           wallet:,
           wallet_transaction:,
           reset_consumed_credits:
-        ).call
+        )
 
         wallet_transaction
       end

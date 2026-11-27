@@ -85,8 +85,8 @@ RSpec.describe Resolvers::Entitlement::SubscriptionEntitlementResolver, :premium
       let(:beta_value) { create(:entitlement_value, entitlement:, privilege: beta, value: false) }
 
       it "casts boolean values to strings" do
-        expect(enabled_value.value).to eq("t")
-        expect(beta_value.value).to eq("f")
+        expect(enabled_value.read_attribute(:value)).to eq("t")
+        expect(beta_value.read_attribute(:value)).to eq("f")
 
         result = subject
         data = result["data"]["subscriptionEntitlement"]

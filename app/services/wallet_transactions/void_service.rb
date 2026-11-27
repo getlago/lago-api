@@ -49,7 +49,7 @@ module WalletTransactions
               )
             end
 
-            Wallets::Balance::DecreaseService.new(wallet:, wallet_transaction:).call
+            Wallets::Balance::DecreaseService.call(wallet:, wallet_transaction:)
             result.wallet_transaction = wallet_transaction
           end
         end

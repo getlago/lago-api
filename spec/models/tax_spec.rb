@@ -51,6 +51,24 @@ RSpec.describe Tax do
     end
   end
 
+  describe "validations" do
+    describe "code validation" do
+      let(:other_tax) { create(:tax, organization: tax.organization, code: tax.code) }
+
+      it "refuses the code of a kept tax of the organization" do
+        expect { other_tax }.to raise_error(ActiveRecord::RecordInvalid)
+      end
+
+      context "when the tax with that code is deleted" do
+        before { tax.discard! }
+
+        it "accepts the code" do
+          expect(other_tax).to be_persisted
+        end
+      end
+    end
+  end
+
   describe "customers_count" do
     let(:customer) { create(:customer, organization: tax.organization) }
 

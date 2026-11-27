@@ -262,7 +262,7 @@ RSpec.describe BillingEntities::UpdateService do
 
       it "removes the logo" do
         update_service.call
-        result = described_class.new(billing_entity:, params: {logo: nil}).call
+        result = described_class.call(billing_entity:, params: {logo: nil})
         expect(result.billing_entity.logo.blob).to be_nil
       end
     end
