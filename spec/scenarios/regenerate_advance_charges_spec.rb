@@ -378,7 +378,7 @@ describe "Regenerate Voided Advance Charges Invoice Scenarios", :with_pdf_genera
       update_billing_entity(customer.billing_entity, {country: "FR", eu_tax_management: true})
 
       # VIES is unavailable when the customer gives its VAT number: the check stays pending.
-      mock_vies_check_unavailable!(vat_number)
+      mock_vies_check_unavailable(vat_number)
       create_or_update_customer(
         {external_id: customer.external_id, country: "IT", zipcode: "00146", tax_identification_number: vat_number},
         perform_jobs: false
@@ -392,7 +392,7 @@ describe "Regenerate Voided Advance Charges Invoice Scenarios", :with_pdf_genera
       regenerated_invoice = regenerate_with_five_units(advance_charges_invoice)
       expect(regenerated_invoice.reload).to have_attributes(status: "pending", tax_status: "pending")
 
-      mock_vies_check!(vat_number)
+      mock_vies_check(vat_number)
       Customers::ViesCheckJob.perform_now(customer)
       perform_all_enqueued_jobs
       expect(customer.reload.vies_check_in_progress?).to be(false)

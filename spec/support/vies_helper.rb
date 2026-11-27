@@ -4,7 +4,7 @@ module ViesHelper
   VIES_ENDPOINT = "https://ec.europa.eu/taxation_customs/vies/services/checkVatService"
 
   # VIES answers that the VAT number is valid. Valvat skips the call for an invalid format (like YY123).
-  def mock_vies_check!(vat_number)
+  def mock_vies_check(vat_number)
     stub_vies_request(vat_number).to_return(
       status: 200,
       body: vies_soap_envelope(
@@ -19,7 +19,7 @@ module ViesHelper
 
   # VIES answers with a fault, so the check stays pending and is retried later.
   # MS_UNAVAILABLE is a member state maintenance, GLOBAL_MAX_CONCURRENT_REQ a rate limit.
-  def mock_vies_check_unavailable!(vat_number, fault: "MS_UNAVAILABLE")
+  def mock_vies_check_unavailable(vat_number, fault: "MS_UNAVAILABLE")
     stub_vies_request(vat_number).to_return(
       status: 200,
       body: vies_soap_envelope("<env:Fault><faultcode>env:Server</faultcode><faultstring>#{fault}</faultstring></env:Fault>")
