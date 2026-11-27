@@ -5,8 +5,10 @@ module CopyToProduction
     # Each item type of Copy to production, keyed by the GraphQL value.
     TYPES = {
       "billable_metric" => "CopyToProduction::Items::BillableMetricItem",
+      "catalog_plan" => "CopyToProduction::Items::CatalogPlanItem",
       "coupon" => "CopyToProduction::Items::CouponItem",
       "feature" => "CopyToProduction::Items::FeatureItem",
+      "plan_rate_card" => "CopyToProduction::Items::PlanRateCardItem",
       "pricing_unit" => "CopyToProduction::Items::PricingUnitItem",
       "product" => "CopyToProduction::Items::ProductItem",
       "product_category" => "CopyToProduction::Items::ProductCategoryItem",

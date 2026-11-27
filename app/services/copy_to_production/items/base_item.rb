@@ -62,6 +62,21 @@ module CopyToProduction
       private
 
       attr_reader :sandbox, :production
+
+      # A product another item references, preceded by its category when the product is not reused. A product copied
+      # along this way brings neither the other products of its category nor its rate cards.
+      def product_dependencies(product)
+        dependencies = []
+        if product.product_category && !Items.build("product", sandbox:, production:).find_existing(product)
+          dependencies << ["product_category", product.product_category]
+        end
+        dependencies << ["product", product]
+      end
+
+      # Fails the copy as a create service would, on a production record that a live item reused by code lacks.
+      def not_found!(resource)
+        BaseService::Result.new.not_found_failure!(resource:).raise_if_error!
+      end
     end
   end
 end

@@ -605,6 +605,215 @@ RSpec.describe CopyToProduction::CopyService do
     end
   end
 
+  context "with a catalog plan" do
+    include_context "with a copy to production catalog plan"
+
+    let(:item_type) { "catalog_plan" }
+    let(:id) { plan.id }
+
+    it "copies the plan with its rate cards, phases, wallets, entitlements and taxes" do
+      expect { result }.to change { production.catalog_plans.count }.by(1)
+
+      live_plan = production.catalog_plans.find_by!(code: "pro")
+      expect(result).to be_success
+      expect(result.item).to eq(CopyToProduction::CopyService::Entry.new(item_type: "catalog_plan", record: live_plan))
+      expect(live_plan).to have_attributes(code: "pro", name: "Pro", description: "For teams", invoice_display_name: "Pro plan",
+        currency: "EUR", taxes: [live_vat])
+
+      plan_cards = live_plan.applied_rate_cards.includes(:rate_card, rate_phases: :rate_override).sort_by { it.rate_card.code }
+      expect(plan_cards.map { [it.rate_card.code, it.rate_card.product.code, it.units] })
+        .to eq([["seat_eur", "seat", 2], ["support_eur", "support", nil]])
+      expect(plan_cards.first.rate_phases.map { [it.code, it.name, it.position, it.billing_interval_cycle_count] })
+        .to eq([["trial", "Trial", 1, 1], ["default", nil, 2, nil]])
+      expect(plan_cards.first.rate_phases.first.rate_override).to have_attributes(
+        organization_id: production.id,
+        rate_model: "standard",
+        rate_properties: {"amount" => "5"},
+        min_amount_cents: 300,
+        billing_interval_count: 2,
+        billing_interval_unit: "week",
+        pricing_unit_conversion_rate: nil
+      )
+      expect(production.products.find_by!(code: "seat").product_category)
+        .to eq(production.product_categories.find_by!(code: "compute"))
+
+      live_wallet = live_plan.wallets.sole
+      expect(live_wallet).to have_attributes(
+        code: "credits",
+        name: "Credits",
+        invoice_display_name: "Prepaid credits",
+        currency: "EUR",
+        tax_application: "tax_on_purchase",
+        priority: 10,
+        top_up_min_amount_cents: 1_000,
+        top_up_max_amount_cents: 50_000,
+        taxes: [production.taxes.find_by!(code: "gst")]
+      )
+      expect(live_wallet.selectors.map { [it.selector_type, it.fee_type, it.with_product_filters, it.product_category&.code] })
+        .to contain_exactly(["fee_type", "fixed", false, nil], ["product_category", nil, false, "compute"])
+      expect(live_wallet.metadata.value).to eq("tier" => "gold")
+      expect(live_wallet.credit_allocations.sole).to have_attributes(
+        code: "monthly",
+        trigger: "billing_cycle",
+        billing_cycles: 3,
+        threshold_amount_cents: nil,
+        credit_amount_cents: 5_000,
+        purchase_amount_cents: nil,
+        priority: 5,
+        invoice_requires_successful_payment: nil,
+        product: production.products.find_by!(code: "support")
+      )
+      expect(live_wallet.alerts.sole).to have_attributes(alert_type: "ongoing_balance", code: "low", name: "Low")
+      expect(live_wallet.alerts.sole.thresholds.map { [it.code, it.value, it.recurring, it.notify_on] })
+        .to eq([["warn", 1_000, false, %w[triggered resolved]]])
+
+      expect(live_plan.entitlements.map { [it.feature.code, it.values.map { [it.privilege.code, it.value] }] })
+        .to eq([["seats", [["max", "10"]]]])
+    end
+
+    context "when production has the products, the feature and the rate cards" do
+      let(:live_category) { create(:product_category, organization: production, code: "compute") }
+      let(:live_feature) { create(:feature, organization: production, code: "seats") }
+      let(:live_seat) { create(:product, :fixed, organization: production, product_category: live_category, code: "seat") }
+      let(:live_seat_card) { create(:rate_card, organization: production, product: live_seat, code: "seat_eur") }
+
+      before do
+        create(:privilege, organization: production, feature: live_feature, code: "max", value_type: "integer")
+        live_seat_card
+      end
+
+      it "reuses them by code" do
+        expect { result }.not_to change { [ProductCategory.count, Entitlement::Feature.count] }
+
+        live_plan = production.catalog_plans.find_by!(code: "pro")
+        expect(live_plan.applied_rate_cards.map(&:rate_card)).to include(live_seat_card)
+        expect(production.products.where(code: "seat").count).to eq(1)
+        expect(production.rate_cards.where(code: "seat_eur").count).to eq(1)
+      end
+    end
+
+    context "with a product priced by filter in the plan" do
+      let(:calls) { create(:billable_metric, organization: sandbox, code: "calls") }
+      let(:api) { create(:product, :standalone, organization: sandbox, billable_metric: calls, code: "api") }
+      let(:eu) { create(:product_filter, organization: sandbox, product: api, code: "eu") }
+      let(:api_card) { create(:rate_card, organization: sandbox, product: api, product_filter: eu, code: "api_eu") }
+
+      before do
+        region = create(:billable_metric_filter, billable_metric: calls, key: "region", values: %w[eu us])
+        create(:product_filter_value, organization: sandbox, product_filter: eu, billable_metric_filter: region, value: "eu")
+        create(:rate_card_rate, organization: sandbox, rate_card: api_card, code: "api_eu_rate")
+        create(:rate_phase, organization: sandbox,
+          plan_rate_card: create(:plan_rate_card, organization: sandbox, catalog_plan: plan, rate_card: api_card),
+          code: "default", position: 1)
+      end
+
+      context "when production has the product without the filter" do
+        before do
+          live_calls = create(:billable_metric, organization: production, code: "calls")
+          create(:billable_metric_filter, billable_metric: live_calls, key: "region", values: %w[eu us])
+          create(:product, :standalone, organization: production, billable_metric: live_calls, code: "api")
+        end
+
+        it "answers not found on the product filter of the rate card and copies nothing" do
+          expect { result }.not_to change { [CatalogPlan.count, PlanRateCard.count, RateCard.count] }
+
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq("product_filter")
+        end
+      end
+
+      context "with wallet selectors and a credit allocation on the product and its filter" do
+        before do
+          create(:catalog_wallet_selector, :plan_level, organization: sandbox, plan_wallet: wallet, selector_type: "product",
+            fee_type: nil, product: api, with_product_filters: true)
+          create(:catalog_wallet_selector, :plan_level, organization: sandbox, plan_wallet: wallet,
+            selector_type: "product_filters", fee_type: nil, product_filter: eu)
+          create(:plan_wallet_credit_allocation, organization: sandbox, plan_wallet: wallet, product: nil, product_filter: eu,
+            code: "eu_monthly")
+        end
+
+        it "points them at the live product and its filter" do
+          expect(result).to be_success
+
+          live_api = production.products.find_by!(code: "api")
+          live_wallet = production.catalog_plans.find_by!(code: "pro").wallets.sole
+          expect(live_wallet.selectors.where(selector_type: %w[product product_filters])
+            .map { [it.selector_type, it.product&.code, it.product_filter&.code, it.with_product_filters] })
+            .to contain_exactly(["product", "api", nil, true], ["product_filters", nil, "eu", false])
+          expect(live_wallet.credit_allocations.find_by!(code: "eu_monthly").product_filter)
+            .to eq(live_api.filters.find_by!(code: "eu"))
+        end
+      end
+    end
+
+    context "with an ongoing balance credit allocation" do
+      before do
+        create(:plan_wallet_credit_allocation, :ongoing_balance, organization: sandbox, plan_wallet: wallet, code: "top_up",
+          threshold_amount_cents: 1_000, purchase_amount_cents: 4_000, credit_amount_cents: 4_000)
+      end
+
+      it "copies it without a target" do
+        expect(result).to be_success
+
+        live_wallet = production.catalog_plans.find_by!(code: "pro").wallets.sole
+        expect(live_wallet.credit_allocations.order(:code).map { [it.code, it.trigger, it.product_id, it.product_filter_id] })
+          .to eq([["monthly", "billing_cycle", production.products.find_by!(code: "support").id, nil], ["top_up", "ongoing_balance", nil, nil]])
+        expect(live_wallet.credit_allocations.find_by!(code: "top_up"))
+          .to have_attributes(threshold_amount_cents: 1_000, purchase_amount_cents: 4_000, invoice_requires_successful_payment: true)
+      end
+    end
+  end
+
+  context "with a plan rate card whose plan is live" do
+    let(:item_type) { "plan_rate_card" }
+    let(:id) { plan_rate_card.id }
+    let(:plan) { create(:catalog_plan, organization: sandbox, code: "pro") }
+    let(:product) { create(:product, :fixed, :standalone, organization: sandbox, code: "seat") }
+    let(:rate_card) { create(:rate_card, organization: sandbox, product:, code: "seat_eur") }
+    let(:plan_rate_card) { create(:plan_rate_card, organization: sandbox, catalog_plan: plan, rate_card:, units: 3) }
+    let(:live_plan) { create(:catalog_plan, organization: production, code: "pro") }
+
+    before do
+      create(:rate_card_rate, organization: sandbox, rate_card:)
+      create(:rate_phase, organization: sandbox, plan_rate_card:, code: "default", position: 1)
+      live_plan
+    end
+
+    it "copies it into the live plan with its rate card" do
+      expect(result).to be_success
+
+      live_plan_rate_card = live_plan.applied_rate_cards.sole
+      expect(result.item).to eq(CopyToProduction::CopyService::Entry.new(item_type: "plan_rate_card", record: live_plan_rate_card))
+      expect(live_plan_rate_card).to have_attributes(units: 3, rate_card: production.rate_cards.find_by!(code: "seat_eur"))
+      expect(live_plan_rate_card.rate_phases.map(&:code)).to eq(["default"])
+    end
+  end
+
+  context "with a plan rate card whose product code is live in another category" do
+    let(:item_type) { "plan_rate_card" }
+    let(:id) { plan_rate_card.id }
+    let(:category) { create(:product_category, organization: sandbox, code: "compute") }
+    let(:product) { create(:product, :fixed, organization: sandbox, product_category: category, code: "seat") }
+    let(:plan_rate_card) do
+      create(:plan_rate_card, organization: sandbox, catalog_plan: create(:catalog_plan, organization: sandbox, code: "pro"),
+        rate_card: create(:rate_card, organization: sandbox, product:, code: "seat_eur"))
+    end
+
+    before do
+      create(:catalog_plan, organization: production, code: "pro")
+      create(:product, :fixed, :standalone, organization: production, code: "seat")
+      plan_rate_card
+    end
+
+    it "answers value_already_exist on code and copies nothing" do
+      expect { result }.not_to change { [ProductCategory.count, Product.count, RateCard.count, PlanRateCard.count] }
+
+      expect(result).to be_failure
+      expect(result.error).to be_a(BaseService::ValidationFailure)
+      expect(result.error.messages).to eq(code: ["value_already_exist"])
+    end
+  end
+
   context "with an internal item type" do
     let(:item_type) { "tax" }
     let(:tax) { create(:tax, organization: sandbox) }

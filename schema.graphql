@@ -388,6 +388,11 @@ enum ActivityTypeEnum {
   payment_request_created
 
   """
+  plan.copied_to_production
+  """
+  plan_copied_to_production
+
+  """
   plan.created
   """
   plan_created
@@ -411,6 +416,11 @@ enum ActivityTypeEnum {
   plan_entitlement.updated
   """
   plan_entitlement_updated
+
+  """
+  plan_rate_card.copied_to_production
+  """
+  plan_rate_card_copied_to_production
 
   """
   plan_rate_card.created
@@ -2315,8 +2325,10 @@ Item types a user can copy from a sandbox to its production organization
 """
 enum CopyToProductionItemTypeEnum {
   billable_metric
+  catalog_plan
   coupon
   feature
+  plan_rate_card
   product
   product_category
 }

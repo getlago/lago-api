@@ -11,16 +11,17 @@ module Types
       field :item_type, Types::CopyToProduction::ItemTypeEnum, null: false
       field :name, String, null: true
 
+      delegate :code, :name, to: :named_record
+
       def id
         object.record.id
       end
 
-      def code
-        object.record.code
-      end
+      private
 
-      def name
-        object.record.name
+      # A plan rate card is known by its rate card.
+      def named_record
+        object.record.is_a?(PlanRateCard) ? object.record.rate_card : object.record
       end
     end
   end
