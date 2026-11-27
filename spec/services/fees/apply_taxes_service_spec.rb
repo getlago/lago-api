@@ -583,6 +583,20 @@ RSpec.describe Fees::ApplyTaxesService do
           end
         end
 
+        context "when the wallet tax is zero-percent" do
+          let(:wallet_tax) { create(:tax, organization:, rate: 0) }
+
+          before { create(:plan_applied_tax, :catalog_plan, catalog_plan:, tax: tax2) }
+
+          it "applies the zero-percent wallet tax, not the plan's" do
+            result = apply_service.call
+
+            expect(result).to be_success
+            expect(result.applied_taxes.map(&:tax_code)).to eq([wallet_tax.code])
+            expect(fee).to have_attributes(taxes_amount_cents: 0, taxes_precise_amount_cents: 0.0, taxes_rate: 0)
+          end
+        end
+
         context "when the wallet is discarded" do
           let(:wallet) do
             create(:catalog_wallet, organization:, customer:, contract:, tax_application:, deleted_at: Time.current)
