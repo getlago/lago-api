@@ -78,6 +78,14 @@ RSpec.describe PlanRateCards::UpdateService do
     end
   end
 
+  context "when the plan's only contract was canceled" do
+    before { create(:contract, :canceled, catalog_plan:, organization:, customer: create(:customer, organization:)) }
+
+    it "updates the entry" do
+      expect(result).to be_success
+    end
+  end
+
   context "when the entry is missing" do
     let(:plan_rate_card) { nil }
 

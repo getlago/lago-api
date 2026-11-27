@@ -26,19 +26,21 @@ RSpec.describe Sources::AttachedToSubscriptions do
       expect(result).to eq([true, true, false])
     end
 
-    it "ignores canceled contracts, as RateCard#attached_to_subscriptions? does" do
-      canceled_plan = create(:catalog_plan, organization:)
-      customer = create(:customer, organization:)
-      canceled_contract = create(:contract, :canceled, organization:, customer:, catalog_plan: canceled_plan)
+    context "when the only contracts are canceled" do
+      let(:canceled_plan) { create(:catalog_plan, organization:) }
+      let(:direct) { create(:rate_card, organization:, product:) }
+      let(:through_plan) { create(:rate_card, organization:, product:) }
 
-      direct = create(:rate_card, organization:, product:)
-      create(:contract_rate_card, organization:, contract: canceled_contract, rate_card: direct)
+      before do
+        canceled_contract = create(:contract, :canceled, organization:, customer: create(:customer, organization:), catalog_plan: canceled_plan)
+        create(:contract_rate_card, organization:, contract: canceled_contract, rate_card: direct)
+        create(:plan_rate_card, organization:, catalog_plan: canceled_plan, rate_card: through_plan)
+      end
 
-      through_plan = create(:rate_card, organization:, product:)
-      create(:plan_rate_card, organization:, catalog_plan: canceled_plan, rate_card: through_plan)
-
-      expect(source.fetch([direct.id, through_plan.id])).to eq([false, false])
-      expect([direct, through_plan].map(&:attached_to_subscriptions?)).to eq([false, false])
+      it "ignores them, as RateCard#attached_to_subscriptions? does" do
+        expect(source.fetch([direct.id, through_plan.id])).to eq([false, false])
+        expect([direct, through_plan].map(&:attached_to_subscriptions?)).to eq([false, false])
+      end
     end
   end
 end

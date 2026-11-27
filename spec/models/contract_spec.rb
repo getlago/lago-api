@@ -450,14 +450,15 @@ RSpec.describe Contract do
     end
 
     describe ".not_canceled" do
-      it "returns every contract but a canceled one" do
-        draft = create(:contract, :draft)
-        pending = create(:contract, :pending)
-        active = create(:contract)
-        terminated = create(:contract, :terminated)
-        create(:contract, :canceled)
+      let(:kept) { %i[draft pending active terminated].map { create(:contract, status: it) } }
 
-        expect(described_class.not_canceled).to match_array([draft, pending, active, terminated])
+      before do
+        kept
+        create(:contract, :canceled)
+      end
+
+      it "returns every contract but a canceled one" do
+        expect(described_class.not_canceled).to match_array(kept)
       end
     end
 

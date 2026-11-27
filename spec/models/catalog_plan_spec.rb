@@ -67,21 +67,27 @@ RSpec.describe CatalogPlan do
       expect(catalog_plan.attached_to_contracts?).to be(true)
     end
 
-    it "ignores a canceled contract, which never took effect" do
-      catalog_plan = create(:catalog_plan)
-      customer = create(:customer, organization: catalog_plan.organization)
-      create(:contract, :canceled, organization: catalog_plan.organization, customer:, catalog_plan:)
+    context "with a single contract" do
+      let(:plan) { create(:catalog_plan) }
+      let(:status) { :canceled }
 
-      expect(catalog_plan.attached_to_contracts?).to be(false)
-    end
+      before do
+        customer = create(:customer, organization: plan.organization)
+        create(:contract, status, organization: plan.organization, customer:, catalog_plan: plan)
+      end
 
-    %i[draft pending terminated].each do |status|
-      it "counts a #{status} contract" do
-        catalog_plan = create(:catalog_plan)
-        customer = create(:customer, organization: catalog_plan.organization)
-        create(:contract, status, organization: catalog_plan.organization, customer:, catalog_plan:)
+      it "ignores a canceled contract, which never took effect" do
+        expect(plan.attached_to_contracts?).to be(false)
+      end
 
-        expect(catalog_plan.attached_to_contracts?).to be(true)
+      %i[draft pending terminated].each do |contract_status|
+        context "when it is #{contract_status}" do
+          let(:status) { contract_status }
+
+          it "counts it" do
+            expect(plan.attached_to_contracts?).to be(true)
+          end
+        end
       end
     end
   end
