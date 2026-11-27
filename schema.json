@@ -897,6 +897,12 @@
               "deprecationReason": null
             },
             {
+              "name": "product_category_copied_to_production",
+              "description": "product_category.copied_to_production",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "product_created",
               "description": "product.created",
               "isDeprecated": false,
@@ -911,6 +917,12 @@
             {
               "name": "product_deleted",
               "description": "product.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_copied_to_production",
+              "description": "product.copied_to_production",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -947,6 +959,12 @@
             {
               "name": "rate_card_deleted",
               "description": "rate_card.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate_card_copied_to_production",
+              "description": "rate_card.copied_to_production",
               "isDeprecated": false,
               "deprecationReason": null
             },
@@ -12879,6 +12897,47 @@
           "possibleTypes": null
         },
         {
+          "kind": "ENUM",
+          "name": "CopyToProductionCopyableItemTypeEnum",
+          "description": "Item types a user can copy from a sandbox to its production organization",
+          "fields": null,
+          "inputFields": null,
+          "interfaces": null,
+          "enumValues": [
+            {
+              "name": "billable_metric",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "coupon",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "feature",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_category",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            }
+          ],
+          "possibleTypes": null
+        },
+        {
           "kind": "INPUT_OBJECT",
           "name": "CopyToProductionInput",
           "description": "Copy to production input arguments",
@@ -12908,7 +12967,7 @@
                 "name": null,
                 "ofType": {
                   "kind": "ENUM",
-                  "name": "CopyToProductionItemTypeEnum",
+                  "name": "CopyToProductionCopyableItemTypeEnum",
                   "ofType": null
                 }
               },
@@ -13003,7 +13062,7 @@
         {
           "kind": "ENUM",
           "name": "CopyToProductionItemTypeEnum",
-          "description": "Item types a sandbox can move to its production organization",
+          "description": "Item types of Copy to production, including those only copied along with another item",
           "fields": null,
           "inputFields": null,
           "interfaces": null,
@@ -13015,13 +13074,43 @@
               "deprecationReason": null
             },
             {
+              "name": "coupon",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "feature",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
             },
             {
-              "name": "coupon",
+              "name": "pricing_unit",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "product_category",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "rate_card",
+              "description": null,
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "tax",
               "description": null,
               "isDeprecated": false,
               "deprecationReason": null
