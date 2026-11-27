@@ -11,16 +11,9 @@ module BillingEngineMigrations
     end
 
     def call
-      return result unless in_scope?
+      return result unless migration.shadowing? && subscription.organization_id == migration.organization_id
 
-      return skip("plan_override_not_supported") if plan_override?
-      return result if already_ended? || already_copied?
-      return skip(conflict_reason) if conflict_reason
-
-      customer_result = CopyCustomerService.call(migration:, customer: subscription.customer, update_existing: false)
-      return fail_with(customer_result, "cannot create customer") if customer_result.failure?
-
-      create_contract(customer_result.customer)
+      SubscriptionCopyLockService.call(subscription:) { copy_latest_state }
       result
     end
 
@@ -30,11 +23,87 @@ module BillingEngineMigrations
 
     delegate :shadow_organization, to: :migration
 
-    def in_scope?
-      migration.shadowing? &&
-        subscription.organization_id == migration.organization_id &&
-        subscription.active? &&
-        migration.plan_mapping.key?(subscription.plan.code)
+    def copy_latest_state
+      reload_subscription
+
+      if subscription_ended? || !mapped_plan?
+        terminate_own_contract
+      elsif subscription.active?
+        copy_active_subscription
+      end
+    end
+
+    def reload_subscription
+      plan = subscription.association(:plan).target
+      customer = subscription.association(:customer).target
+
+      subscription.reload
+
+      subscription.association(:plan).target = plan if plan&.id == subscription.plan_id
+      subscription.association(:customer).target = customer if customer&.id == subscription.customer_id
+    end
+
+    def subscription_ended?
+      subscription.terminated? || subscription.canceled?
+    end
+
+    def mapped_plan?
+      migration.plan_mapping.key?(subscription.plan.code)
+    end
+
+    def terminate_own_contract
+      terminate(own_live_contract, timestamp: subscription.terminated_at) if own_live_contract
+    end
+
+    def copy_active_subscription
+      terminate_contracts_of_ended_subscriptions
+      return if result.failure?
+
+      return if already_ended?
+      return sync_ended_at(own_live_contract) if own_live_contract
+      return skip("plan_override_not_supported") if plan_override?
+      return skip(conflict_reason) if conflict_reason
+
+      customer_result = CopyCustomerService.call(migration:, customer: subscription.customer, update_existing: false)
+      if customer_result.success?
+        create_contract(customer_result.customer)
+      else
+        fail_with(customer_result, "cannot create customer")
+      end
+    end
+
+    # A V1 plan move, or an external id reused after a termination, gives the external id to a new
+    # subscription: the contract of the ended one goes, whether or not the new one can be copied.
+    def terminate_contracts_of_ended_subscriptions
+      return if other_live_contracts.empty?
+
+      terminated_at_by_subscription_id = ended_subscriptions_terminated_at(other_live_contracts.map(&:code))
+      other_live_contracts.each do |contract|
+        next unless terminated_at_by_subscription_id.key?(contract.code)
+
+        terminate(contract, timestamp: terminated_at_by_subscription_id[contract.code])
+        break if result.failure?
+      end
+
+      @shadow_contracts = nil
+    end
+
+    def ended_subscriptions_terminated_at(subscription_ids)
+      Subscription
+        .where(organization_id: migration.organization_id, id: subscription_ids, status: %i[terminated canceled])
+        .pluck(:id, :terminated_at)
+        .to_h
+    end
+
+    def terminate(contract, timestamp:)
+      termination = Contracts::TerminateService.call(contract:, timestamp: timestamp || Time.current)
+      unless termination.success? || already_terminated?(termination.error)
+        fail_with(termination, "cannot terminate contract #{contract.code}")
+      end
+    end
+
+    def already_terminated?(error)
+      error.is_a?(BaseService::ValidationFailure) && Array(error.messages[:contract]).include?("cannot_terminate")
     end
 
     def plan_override?
@@ -45,8 +114,15 @@ module BillingEngineMigrations
       subscription.ending_at&.past?
     end
 
-    def already_copied?
-      live_shadow_contracts.any? { |contract| contract.code == subscription.id }
+    def sync_ended_at(contract)
+      return if contract.ended_at&.to_i == subscription.ending_at&.to_i
+
+      update = Contracts::UpdateService.call(contract:, params: {ended_at: subscription.ending_at&.iso8601(6)})
+      if update.success?
+        result.contract = update.contract
+      else
+        fail_with(update, "cannot update contract")
+      end
     end
 
     def conflict_reason
@@ -57,15 +133,20 @@ module BillingEngineMigrations
       end
     end
 
+    def own_live_contract
+      live_shadow_contracts.find { |contract| contract.code == subscription.id }
+    end
+
+    def other_live_contracts
+      live_shadow_contracts.reject { |contract| contract.code == subscription.id }
+    end
+
     def live_shadow_contracts
       shadow_contracts.select { |contract| Contract::LIVE_STATUSES.include?(contract.status) }
     end
 
     def shadow_contracts
-      @shadow_contracts ||= shadow_organization.contracts
-        .where(external_id: subscription.external_id)
-        .select(:id, :code, :status)
-        .to_a
+      @shadow_contracts ||= shadow_organization.contracts.where(external_id: subscription.external_id).to_a
     end
 
     def create_contract(shadow_customer)
@@ -76,6 +157,7 @@ module BillingEngineMigrations
 
       if contract_result.success?
         result.contract = contract_result.contract
+        EnqueueSubscriptionAlertsCopyService.call(subscription:, migration:)
       elsif unique_conflict?(contract_result.error)
         resolve_conflict(contract_result)
       else
@@ -85,7 +167,7 @@ module BillingEngineMigrations
 
     def resolve_conflict(contract_result)
       @shadow_contracts = nil
-      return if already_copied?
+      return if own_live_contract
 
       conflict_reason ? skip(conflict_reason) : fail_with(contract_result, "cannot create contract")
     end
