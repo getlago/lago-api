@@ -38,8 +38,7 @@ module Types
         dataloader.with(Sources::CountByForeignKey, Contract, :catalog_plan_id).load(object.id)
       end
 
-      # Counts every contract but a canceled one, as CatalogPlan#attached_to_contracts? does,
-      # so it no longer derives from contracts_count.
+      # Every contract but a canceled one, which never took effect, as CatalogPlan#attached_to_contracts?.
       def attached_to_contracts
         dataloader.with(Sources::CountByForeignKey, Contract, :catalog_plan_id, :not_canceled).load(object.id).positive?
       end
