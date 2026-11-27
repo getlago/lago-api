@@ -25,11 +25,15 @@ module Entitlement
 
     def call
       return result.not_found_failure!(resource: "subscription") unless owner
-      return result.not_found_failure!(resource: "feature") unless feature
+      # A contract checks its status first, so a contract that cannot be edited refuses any feature code.
+      return result.not_found_failure!(resource: "feature") unless contract || feature
 
       ActiveRecord::Base.transaction do
         lock_override_owner!(owner)
-        find_contract_entitlement! if contract
+        if contract
+          lock_feature!
+          find_contract_entitlement!
+        end
         delete_subscription_entitlement_if_exists
         delete_privilege_removals_if_exists
         add_feature_removal_if_feature_is_in_plan
@@ -55,6 +59,13 @@ module Entitlement
 
     def contract
       owner if owner.is_a?(Contract)
+    end
+
+    # FOR KEY SHARE waits for a feature delete in progress, which discards the contract removals of the feature, so
+    # no removal is stored for a deleted feature. lock! reloads unscoped, hence the discarded? check.
+    def lock_feature!
+      feature&.lock!("FOR KEY SHARE")
+      result.not_found_failure!(resource: "feature").raise_if_error! if feature.nil? || feature.discarded?
     end
 
     # Read under the contract lock, so that of two concurrent removals the second one finds nothing.

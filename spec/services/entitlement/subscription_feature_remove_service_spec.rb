@@ -408,6 +408,65 @@ RSpec.describe Entitlement::SubscriptionFeatureRemoveService do
           expect(result.error.messages).to eq(base: ["contract_not_editable"])
           expect(contract.entitlement_removals).to be_empty
         end
+
+        context "with an unknown feature" do
+          let(:feature_code) { "unknown" }
+
+          it "refuses the write as for a known feature" do
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq(base: ["contract_not_editable"])
+          end
+        end
+      end
+    end
+
+    context "with an unknown feature" do
+      let(:feature_code) { "unknown" }
+
+      it "fails with a feature not found" do
+        expect(result).not_to be_success
+        expect(result.error.resource).to eq("feature")
+      end
+    end
+
+    context "when the feature is deleted while the removal waits for it", transaction: false do
+      let(:locked) { Queue.new }
+      let(:release) { Queue.new }
+
+      before do
+        create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature:)
+        contract
+      end
+
+      # Frees the lock holder left waiting by a failed expectation.
+      after { release << true }
+
+      it "fails with a feature not found, stores no removal and sends nothing" do
+        deleter = Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            ActiveRecord::Base.transaction do
+              Entitlement::Feature.lock.find(feature.id).discard!
+              locked << true
+              release.pop
+            end
+          end
+        end
+        locked.pop
+
+        remover = Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            described_class.call(owner: Contract.find(contract.id), feature_code:)
+          end
+        end
+        # The removal found the feature before the delete committed, then waits on its lock.
+        expect(remover.join(0.5)).to be_nil
+
+        release << true
+        deleter.join
+
+        expect(remover.value.error.resource).to eq("feature")
+        expect(Entitlement::SubscriptionFeatureRemoval.where(contract_id: contract.id, entitlement_feature_id: feature.id)).to be_empty
+        expect(sent_webhooks).to be_empty
       end
     end
 
