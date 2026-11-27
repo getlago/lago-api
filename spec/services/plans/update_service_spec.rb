@@ -1368,6 +1368,177 @@ RSpec.describe Plans::UpdateService do
     end
 
     context "with bill_charges_monthly functionality" do
+      context "when the plan is semiannual and the update sends neither interval nor the flags" do
+        let(:plan) do
+          create(:plan, organization:, interval: :semiannual, bill_charges_monthly: true, bill_fixed_charges_monthly: false)
+        end
+        let(:update_args) { {name: plan_name} }
+
+        it "keeps the stored flags" do
+          result = plans_service.call
+
+          expect(result).to be_success
+          expect(result.plan.reload).to have_attributes(
+            name: plan_name,
+            bill_charges_monthly: true,
+            bill_fixed_charges_monthly: false
+          )
+        end
+      end
+
+      context "when the plan is semiannual and the update sends only charges" do
+        let(:plan) do
+          create(:plan, organization:, interval: :semiannual, bill_charges_monthly: true, bill_fixed_charges_monthly: false)
+        end
+        let(:update_args) { {charges: charges_args} }
+
+        it "keeps the stored flags" do
+          result = plans_service.call
+
+          expect(result).to be_success
+          expect(result.plan.reload).to have_attributes(
+            interval: "semiannual",
+            bill_charges_monthly: true,
+            bill_fixed_charges_monthly: false
+          )
+        end
+      end
+
+      context "when the plan is yearly and the update sends only the name" do
+        let(:plan) do
+          create(:plan, organization:, interval: :yearly, bill_charges_monthly: true, bill_fixed_charges_monthly: false)
+        end
+        let(:update_args) { {name: plan_name} }
+
+        it "keeps the stored flags" do
+          result = plans_service.call
+
+          expect(result).to be_success
+          expect(result.plan.reload).to have_attributes(
+            name: plan_name,
+            bill_charges_monthly: true,
+            bill_fixed_charges_monthly: false
+          )
+        end
+      end
+
+      context "when the plan is yearly and the update sends both flags without interval" do
+        let(:plan) do
+          create(:plan, organization:, interval: :yearly, bill_charges_monthly: nil, bill_fixed_charges_monthly: nil)
+        end
+        let(:update_args) { {bill_charges_monthly: true, bill_fixed_charges_monthly: true} }
+
+        it "saves both flags" do
+          result = plans_service.call
+
+          expect(result).to be_success
+          expect(result.plan.reload).to have_attributes(bill_charges_monthly: true, bill_fixed_charges_monthly: true)
+        end
+
+        context "when the stored flags are false" do
+          let(:plan) do
+            create(:plan, organization:, interval: :yearly, bill_charges_monthly: false, bill_fixed_charges_monthly: false)
+          end
+
+          it "saves both flags" do
+            result = plans_service.call
+
+            expect(result).to be_success
+            expect(result.plan.reload).to have_attributes(bill_charges_monthly: true, bill_fixed_charges_monthly: true)
+          end
+        end
+      end
+
+      context "when a yearly plan is updated to monthly" do
+        let(:plan) do
+          create(:plan, organization:, interval: :yearly, bill_charges_monthly: true, bill_fixed_charges_monthly: true)
+        end
+        let(:update_args) { {interval: "monthly"} }
+
+        it "clears both flags" do
+          result = plans_service.call
+
+          expect(result).to be_success
+          expect(result.plan.reload).to have_attributes(
+            interval: "monthly",
+            bill_charges_monthly: nil,
+            bill_fixed_charges_monthly: nil
+          )
+        end
+      end
+
+      context "when a monthly plan is updated with bill_charges_monthly and without interval" do
+        let(:plan) { create(:plan, organization:, interval: :monthly) }
+        let(:update_args) { {bill_charges_monthly: true} }
+
+        it "keeps both flags nil" do
+          result = plans_service.call
+
+          expect(result).to be_success
+          expect(result.plan.reload).to have_attributes(bill_charges_monthly: nil, bill_fixed_charges_monthly: nil)
+        end
+      end
+
+      context "when a monthly plan is updated to yearly without the flags" do
+        let(:plan) { create(:plan, organization:, interval: :monthly) }
+        let(:update_args) { {interval: "yearly"} }
+
+        it "sets both flags to false" do
+          result = plans_service.call
+
+          expect(result).to be_success
+          expect(result.plan.reload).to have_attributes(
+            interval: "yearly",
+            bill_charges_monthly: false,
+            bill_fixed_charges_monthly: false
+          )
+        end
+      end
+
+      context "when a yearly plan is updated with interval yearly and without the flag" do
+        let(:plan) do
+          create(:plan, organization:, interval: :yearly, bill_charges_monthly: true, bill_fixed_charges_monthly: false)
+        end
+        let(:update_args) { {interval: "yearly"} }
+
+        it "keeps the stored flags" do
+          result = plans_service.call
+
+          expect(result).to be_success
+          expect(result.plan.reload).to have_attributes(bill_charges_monthly: true, bill_fixed_charges_monthly: false)
+        end
+      end
+
+      context "when a yearly plan is updated with bill_charges_monthly set to nil" do
+        let(:plan) do
+          create(:plan, organization:, interval: :yearly, bill_charges_monthly: true, bill_fixed_charges_monthly: true)
+        end
+        let(:update_args) { {bill_charges_monthly: nil} }
+
+        it "saves bill_charges_monthly as false" do
+          result = plans_service.call
+
+          expect(result).to be_success
+          expect(result.plan.reload).to have_attributes(bill_charges_monthly: false, bill_fixed_charges_monthly: true)
+        end
+      end
+
+      context "when a yearly plan is attached to a subscription" do
+        let(:plan) do
+          create(:plan, organization:, interval: :yearly, bill_charges_monthly: true, bill_fixed_charges_monthly: false)
+        end
+        let(:update_args) { {bill_charges_monthly: false, bill_fixed_charges_monthly: true} }
+
+        before { create(:subscription, plan:) }
+
+        it "keeps the stored flags" do
+          result = plans_service.call
+
+          expect(result).to be_success
+          expect(result.plan.reload).to have_attributes(bill_charges_monthly: true, bill_fixed_charges_monthly: false)
+        end
+      end
+
       context "when interval is yearly and bill_fixed_charges_monthly is sent" do
         let(:update_args) do
           {
@@ -1448,6 +1619,46 @@ RSpec.describe Plans::UpdateService do
     end
 
     context "with bill_fixed_charges_monthly functionality" do
+      context "when a yearly plan is updated with bill_fixed_charges_monthly set to nil" do
+        let(:plan) do
+          create(:plan, organization:, interval: :yearly, bill_charges_monthly: true, bill_fixed_charges_monthly: true)
+        end
+        let(:update_args) { {bill_fixed_charges_monthly: nil} }
+
+        it "saves bill_fixed_charges_monthly as false" do
+          result = plans_service.call
+
+          expect(result).to be_success
+          expect(result.plan.reload).to have_attributes(bill_charges_monthly: true, bill_fixed_charges_monthly: false)
+        end
+      end
+
+      context "when a yearly plan with a nil bill_fixed_charges_monthly is updated without it" do
+        let(:plan) do
+          create(:plan, organization:, interval: :yearly, bill_charges_monthly: true, bill_fixed_charges_monthly: nil)
+        end
+        let(:update_args) { {name: plan_name} }
+
+        it "sets bill_fixed_charges_monthly to false" do
+          result = plans_service.call
+
+          expect(result).to be_success
+          expect(result.plan.reload).to have_attributes(bill_charges_monthly: true, bill_fixed_charges_monthly: false)
+        end
+      end
+
+      context "when a monthly plan is updated with bill_fixed_charges_monthly and without interval" do
+        let(:plan) { create(:plan, organization:, interval: :monthly) }
+        let(:update_args) { {bill_fixed_charges_monthly: true} }
+
+        it "keeps both flags nil" do
+          result = plans_service.call
+
+          expect(result).to be_success
+          expect(result.plan.reload).to have_attributes(bill_charges_monthly: nil, bill_fixed_charges_monthly: nil)
+        end
+      end
+
       context "when interval is yearly and bill_fixed_charges_monthly is sent" do
         let(:update_args) do
           {

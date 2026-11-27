@@ -869,6 +869,62 @@ RSpec.describe Mutations::Plans::Update do
       expect(result_data["billChargesMonthly"]).to be true
       expect(result_data["billFixedChargesMonthly"]).to be true
     end
+
+    context "when the plan is yearly with bill_charges_monthly and has no subscription" do
+      let(:yearly_plan) do
+        create(:plan, organization:, interval: :yearly, bill_charges_monthly: true, bill_fixed_charges_monthly: false)
+      end
+      let(:input) do
+        {
+          id: yearly_plan.id,
+          name: "Updated plan",
+          code: "updated_yearly_plan",
+          interval: "yearly",
+          payInAdvance: false,
+          amountCents: 200,
+          amountCurrency: "EUR"
+        }
+      end
+      let(:result) do
+        execute_graphql(
+          current_user: membership.user,
+          current_organization: membership.organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {input:}
+        )
+      end
+
+      it "keeps bill_charges_monthly when billChargesMonthly is left out" do
+        result_data = result["data"]["updatePlan"]
+
+        expect(result_data["billChargesMonthly"]).to be true
+        expect(result_data["billFixedChargesMonthly"]).to be false
+        expect(yearly_plan.reload).to have_attributes(bill_charges_monthly: true, bill_fixed_charges_monthly: false)
+      end
+
+      context "when billChargesMonthly is false" do
+        let(:input) do
+          {
+            id: yearly_plan.id,
+            name: "Updated plan",
+            code: "updated_yearly_plan",
+            interval: "yearly",
+            payInAdvance: false,
+            amountCents: 200,
+            amountCurrency: "EUR",
+            billChargesMonthly: false
+          }
+        end
+
+        it "saves bill_charges_monthly as false" do
+          result_data = result["data"]["updatePlan"]
+
+          expect(result_data["billChargesMonthly"]).to be false
+          expect(yearly_plan.reload).to have_attributes(bill_charges_monthly: false, bill_fixed_charges_monthly: false)
+        end
+      end
+    end
   end
 
   context "with metadata" do

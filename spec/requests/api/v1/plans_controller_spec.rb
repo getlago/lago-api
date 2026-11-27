@@ -488,6 +488,26 @@ RSpec.describe Api::V1::PlansController do
       expect(json[:plan][:entitlements]).to be_empty
     end
 
+    context "when the plan is yearly with monthly billing flags and the update sends only the name" do
+      let(:plan) do
+        create(:plan, organization:, interval: :yearly, bill_charges_monthly: true, bill_fixed_charges_monthly: false)
+      end
+
+      it "keeps the stored flags" do
+        put_with_token(organization, "/api/v1/plans/#{plan.code}", {plan: {name: "New name"}})
+        expect(response).to have_http_status(:success)
+
+        get_with_token(organization, "/api/v1/plans/#{plan.code}")
+
+        expect(response).to have_http_status(:success)
+        expect(json[:plan]).to include(
+          name: "New name",
+          bill_charges_monthly: true,
+          bill_fixed_charges_monthly: false
+        )
+      end
+    end
+
     context "when plan does not exist" do
       let(:plan_code) { SecureRandom.uuid }
 

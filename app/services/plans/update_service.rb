@@ -44,8 +44,7 @@ module Plans
         plan.pay_in_advance = params[:pay_in_advance] if params.key?(:pay_in_advance)
         plan.amount_currency = params[:amount_currency] if params.key?(:amount_currency)
         plan.trial_period = params[:trial_period] if params.key?(:trial_period)
-        plan.bill_charges_monthly = bill_charges_monthly?
-        plan.bill_fixed_charges_monthly = bill_fixed_charges_monthly?
+        assign_monthly_billing_flags
       end
 
       chargeables_validation_result = Plans::ChargeablesValidationService.call(
@@ -135,20 +134,21 @@ module Plans
       @metadata_changed = result.metadata_changed
     end
 
-    def bill_charges_monthly?
-      return unless billable_monthly?
-
-      params[:bill_charges_monthly] || false
-    end
-
-    def bill_fixed_charges_monthly?
-      return unless billable_monthly?
-
-      params[:bill_fixed_charges_monthly] || false
-    end
-
-    def billable_monthly?
-      @billable_monthly ||= params[:interval]&.to_sym == :yearly || params[:interval]&.to_sym == :semiannual
+    # Uses the effective interval (sent or stored): a flag left out keeps its stored value.
+    def assign_monthly_billing_flags
+      if plan.yearly? || plan.semiannual?
+        if params.key?(:bill_charges_monthly)
+          plan.bill_charges_monthly = params[:bill_charges_monthly]
+        end
+        if params.key?(:bill_fixed_charges_monthly)
+          plan.bill_fixed_charges_monthly = params[:bill_fixed_charges_monthly]
+        end
+        plan.bill_charges_monthly ||= false
+        plan.bill_fixed_charges_monthly ||= false
+      else
+        plan.bill_charges_monthly = nil
+        plan.bill_fixed_charges_monthly = nil
+      end
     end
 
     def cascade_needed?
