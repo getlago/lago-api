@@ -7,7 +7,7 @@ RSpec.describe PaymentProviders::Adyen::Webhooks::ChargebackService do
 
   let(:organization_id) { organization.id }
   let(:membership) { create(:membership, organization:) }
-  let(:payment) { create(:payment, payable: invoice, provider_payment_id: "9915555555555555") }
+  let(:payment) { create(:payment, payable: invoice, provider_payment_id: "9913333333333333") }
   let(:invoice) { create(:invoice, customer:, organization:, status:, payment_status: "succeeded") }
 
   let_it_be(:organization) { create_default(:organization) }
@@ -19,7 +19,7 @@ RSpec.describe PaymentProviders::Adyen::Webhooks::ChargebackService do
     context "when dispute is lost" do
       let(:event_json) do
         path = Rails.root.join("spec/fixtures/adyen/chargeback_lost_event.json")
-        File.read(path)
+        JSON.parse(File.read(path))["notificationItems"].first["NotificationRequestItem"].to_json
       end
 
       context "when payment belongs to another organization" do
@@ -30,6 +30,18 @@ RSpec.describe PaymentProviders::Adyen::Webhooks::ChargebackService do
           result = service.call
 
           expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(invoice.reload.payment_dispute_lost_at).to be_nil
+        end
+      end
+
+      context "when only the dispute reference matches a payment" do
+        let(:status) { "finalized" }
+        let(:payment) { create(:payment, payable: invoice, provider_payment_id: "9915555555555555") }
+
+        it "does not mark the invoice payment dispute as lost" do
+          result = service.call
+
           expect(result.error).to be_a(BaseService::NotFoundFailure)
           expect(invoice.reload.payment_dispute_lost_at).to be_nil
         end
@@ -76,7 +88,7 @@ RSpec.describe PaymentProviders::Adyen::Webhooks::ChargebackService do
     context "when dispute is won" do
       let(:event_json) do
         path = Rails.root.join("spec/fixtures/adyen/chargeback_won_event.json")
-        File.read(path)
+        JSON.parse(File.read(path))["notificationItems"].first["NotificationRequestItem"].to_json
       end
 
       context "when invoice is draft" do
