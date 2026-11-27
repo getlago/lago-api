@@ -29,8 +29,30 @@ RSpec.describe ContractRateCards::CreateService do
     expect(card.terms.sole).to have_attributes(units: 10, effective_date: card.effective_date)
     expect(card.effective_date).to eq(contract.started_at.in_time_zone(customer.applicable_timezone).to_date)
     expect(card.billing_anchor_date).to eq(contract.effective_billing_anchor_date)
-    expect(card.next_billing_at).to eq(contract.started_at)
+    expect(card.next_billing_at).to be_nil
     expect(card.rate_phases.sole.code).to eq("default")
+  end
+
+  context "when the rate card has a price" do
+    let(:contract) do
+      create(
+        :contract, :pending, organization:, customer:, catalog_plan:,
+        started_at: Time.utc(2026, 1, 15, 14, 30),
+        billing_anchor_date: Date.new(2026, 1, 1)
+      )
+    end
+
+    around { |example| travel_to(Time.utc(2026, 1, 1)) { example.run } }
+
+    before do
+      create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2025, 1, 1))
+    end
+
+    it "sets the clock to the first priced arrears obligation" do
+      expect(result).to be_success
+      expect(result.contract_rate_card.next_billing_at).to eq(Time.utc(2026, 2, 1))
+      expect(result.contract_rate_card.billing_operations).to be_empty
+    end
   end
 
   context "when units are omitted" do
@@ -142,6 +164,8 @@ RSpec.describe ContractRateCards::CreateService do
     it "creates the card without persisting an event-pricing segment" do
       expect { result }.not_to change(LegacyBillingSegment, :count)
       expect(LegacyBillingSegment.where(contract_rate_card_id: result.contract_rate_card.id)).to be_empty
+      expect(result.contract_rate_card.next_billing_at).to be_nil
+      expect(result.contract_rate_card.billing_operations).to be_empty
     end
   end
 
