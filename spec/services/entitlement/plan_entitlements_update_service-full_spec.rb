@@ -246,14 +246,9 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         }
       end
 
-      it "stores the boolean as true, a value it accepts again" do
+      it "stores the boolean as true" do
         expect(result).to be_success
-        entitlement_value = plan.entitlements.first.values.first
-        expect(entitlement_value.value).to eq("true")
-
-        replay = described_class.call(organization:, plan:, entitlements_params: {"seats" => {"enabled" => entitlement_value.value}}, partial: false)
-        expect(replay).to be_success
-        expect(entitlement_value.reload.value).to eq("true")
+        expect(plan.entitlements.first.values.first.value).to eq("true")
       end
 
       context "when false" do
@@ -262,6 +257,38 @@ RSpec.describe Entitlement::PlanEntitlementsUpdateService do
         it "stores false" do
           expect(result).to be_success
           expect(plan.entitlements.first.values.first.value).to eq("false")
+        end
+      end
+
+      context "when a value stored as t is sent back" do
+        let(:entitlement) { create(:entitlement, organization:, plan:, feature:) }
+        let(:stored_value) { create(:entitlement_value, organization:, entitlement:, privilege:, value: true) }
+        let(:entitlements_params) { {"seats" => {"enabled" => stored_value.value}} }
+
+        it "accepts it and stores true" do
+          expect(stored_value.value).to eq("t")
+
+          expect(result).to be_success
+          expect(stored_value.reload.value).to eq("true")
+        end
+      end
+
+      context "when f is sent" do
+        let(:entitlements_params) { {"seats" => {"enabled" => "f"}} }
+
+        it "stores false" do
+          expect(result).to be_success
+          expect(plan.entitlements.first.values.first.value).to eq("false")
+        end
+      end
+
+      context "when the value is not a boolean" do
+        let(:entitlements_params) { {"seats" => {"enabled" => "yes"}} }
+
+        it "fails with value_is_invalid" do
+          expect(result).to be_failure
+          expect(result.error.messages).to eq({enabled_privilege_value: ["value_is_invalid"]})
+          expect(result.error.codes).to eq({"entitlements.seats.enabled": ["value_is_invalid"]})
         end
       end
     end

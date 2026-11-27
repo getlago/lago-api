@@ -35,7 +35,7 @@ fe_sub = Entitlement::Entitlement.create!(organization:, feature: seats, subscri
 
 # Subscription override for max, root does not exist in the plan
 Entitlement::EntitlementValue.create!(organization:, entitlement: fe_sub, privilege: max, value: 99)
-Entitlement::EntitlementValue.create!(organization:, entitlement: fe_sub, privilege: root, value: true)
+Entitlement::EntitlementValue.create!(organization:, entitlement: fe_sub, privilege: root, value: "true")
 
 # == analytics_api - Feature in the plan, without any privilege
 analytics_api_feature = Entitlement::Feature.create_with(

@@ -320,6 +320,19 @@ RSpec.describe Resolvers::PlanResolver do
         feat = result["data"]["plan"]["entitlements"].find { |e| e["code"] == feature.code }
         expect(feat["privileges"].map { |p| p["value"] }).to contain_exactly("10", "true", "false")
       end
+
+      context "when the values are stored as words" do
+        let(:enabled_value) { create(:entitlement_value, entitlement:, privilege: enabled, value: "true") }
+        let(:beta_value) { create(:entitlement_value, entitlement:, privilege: beta, value: "false") }
+
+        it "returns them as they are" do
+          enabled_value
+          beta_value
+
+          feat = result["data"]["plan"]["entitlements"].find { |e| e["code"] == feature.code }
+          expect(feat["privileges"].map { |p| p["value"] }).to contain_exactly("10", "true", "false")
+        end
+      end
     end
 
     context "when plan is an override" do
