@@ -19,6 +19,28 @@ RSpec.describe "exports_fees view" do # rubocop:disable RSpec/DescribeClass
     ActiveRecord::Base.connection.select_values("SELECT lago_id FROM exports_fees")
   end
 
+  # Read the item JSON through ->> so the assertions do not depend on how the
+  # adapter casts a json column.
+  def item_for(id)
+    ActiveRecord::Base.connection.select_one(<<~SQL.squish)
+      SELECT item->>'type' AS type,
+             item->>'code' AS code,
+             item->>'name' AS name,
+             item->>'description' AS description,
+             item->>'item_type' AS item_type,
+             item->>'lago_item_id' AS lago_item_id,
+             item->>'invoice_display_name' AS invoice_display_name
+      FROM exports_fees
+      WHERE lago_id = #{ActiveRecord::Base.connection.quote(id)}
+    SQL
+  end
+
+  def row_for(id)
+    ActiveRecord::Base.connection.select_one(
+      "SELECT * FROM exports_fees WHERE lago_id = #{ActiveRecord::Base.connection.quote(id)}"
+    )
+  end
+
   it "excludes fees on deleted invoices while keeping finalized and invoice-less fees" do
     expect(exported_fee_ids).to include(finalized_fee.id, invoiceless_fee.id)
     expect(exported_fee_ids).not_to include(deleted_fee.id)
@@ -68,28 +90,6 @@ RSpec.describe "exports_fees view" do # rubocop:disable RSpec/DescribeClass
         subscription:,
         fixed_charge:,
         invoice_display_name: nil
-      )
-    end
-
-    # Read the item JSON through ->> so the assertions do not depend on how the
-    # adapter casts a json column.
-    def item_for(id)
-      ActiveRecord::Base.connection.select_one(<<~SQL.squish)
-        SELECT item->>'type' AS type,
-               item->>'code' AS code,
-               item->>'name' AS name,
-               item->>'description' AS description,
-               item->>'item_type' AS item_type,
-               item->>'lago_item_id' AS lago_item_id,
-               item->>'invoice_display_name' AS invoice_display_name
-        FROM exports_fees
-        WHERE lago_id = #{ActiveRecord::Base.connection.quote(id)}
-      SQL
-    end
-
-    def row_for(id)
-      ActiveRecord::Base.connection.select_one(
-        "SELECT * FROM exports_fees WHERE lago_id = #{ActiveRecord::Base.connection.quote(id)}"
       )
     end
 
@@ -150,26 +150,6 @@ RSpec.describe "exports_fees view" do # rubocop:disable RSpec/DescribeClass
         rate_card_rate:,
         product_filter:,
         invoice_display_name: nil
-      )
-    end
-
-    def item_for(id)
-      ActiveRecord::Base.connection.select_one(<<~SQL.squish)
-        SELECT item->>'type' AS type,
-               item->>'code' AS code,
-               item->>'name' AS name,
-               item->>'description' AS description,
-               item->>'item_type' AS item_type,
-               item->>'lago_item_id' AS lago_item_id,
-               item->>'invoice_display_name' AS invoice_display_name
-        FROM exports_fees
-        WHERE lago_id = #{ActiveRecord::Base.connection.quote(id)}
-      SQL
-    end
-
-    def row_for(id)
-      ActiveRecord::Base.connection.select_one(
-        "SELECT * FROM exports_fees WHERE lago_id = #{ActiveRecord::Base.connection.quote(id)}"
       )
     end
 
@@ -280,6 +260,41 @@ RSpec.describe "exports_fees view" do # rubocop:disable RSpec/DescribeClass
         expect(row["lago_product_filter_id"]).to eq(product_filter.id)
         expect(item_for(product_fee.id)["code"]).to eq("storage")
       end
+    end
+  end
+
+  describe "credit purchase fees" do
+    let(:wallet_transaction) do
+      create(:catalog_wallet_transaction, :pending, organization:, purchase_amount_cents: 8_000)
+    end
+    let(:purchase_invoice) { create(:invoice, :credit_purchase, status: :finalized, organization:, customer:) }
+    let!(:purchase_fee) do
+      create(
+        :credit_purchase_fee,
+        invoice: purchase_invoice,
+        organization:,
+        wallet_transaction:,
+        invoice_display_name: nil
+      )
+    end
+
+    it "serializes the wallet transaction as the item" do
+      expect(item_for(purchase_fee.id)).to eq(
+        "type" => "credit_purchase",
+        "code" => "credit_purchase",
+        "name" => "credit_purchase",
+        "description" => "credit_purchase",
+        "item_type" => "wallet_transaction",
+        "lago_item_id" => wallet_transaction.id,
+        "invoice_display_name" => "credit_purchase"
+      )
+    end
+
+    it "leaves the customer and the contract null" do
+      expect(row_for(purchase_fee.id).slice("lago_customer_id", "lago_contract_id")).to eq(
+        "lago_customer_id" => nil,
+        "lago_contract_id" => nil
+      )
     end
   end
 end
