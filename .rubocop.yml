@@ -102,7 +102,11 @@ Lago/MigrationsIfNotExists:
 Lago/ServiceNewCall:
   SafeAutoCorrect: false
   AllowedReceivers:
+    # Dates services return a dates object, not a result, which the middlewares cannot read.
     - Subscriptions::TerminatedDatesService
+    - Commitments::DatesService
+    - Commitments::Minimum::InAdvance::DatesService
+    - Commitments::Minimum::InArrears::DatesService
   Exclude:
     - "spec/services/webhooks/**/*.rb"
 
