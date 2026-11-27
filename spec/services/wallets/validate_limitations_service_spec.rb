@@ -38,6 +38,19 @@ RSpec.describe Wallets::ValidateLimitationsService do
       end
     end
 
+    context "when the fee type is credit_purchase" do
+      let(:limitations) do
+        {
+          fee_types: %w[credit_purchase]
+        }
+      end
+
+      it "returns false and result has errors" do
+        expect(validate_service).not_to be_valid
+        expect(result.error.messages[:allowed_fee_types]).to eq(["invalid_fee_types"])
+      end
+    end
+
     context "with billable metric limitations" do
       let(:billable_metric) { create(:billable_metric, organization:) }
       let(:billable_metric_identifiers) { [billable_metric.id, "invalid"] }

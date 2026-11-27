@@ -34,7 +34,7 @@ RSpec.describe Invoice do
   describe "enums" do
     it do
       expect(invoice).to define_enum_for(:invoice_type)
-        .with_values(subscription: 0, add_on: 1, credit: 2, one_off: 3, advance_charges: 4, progressive_billing: 5, contract: 6)
+        .with_values(subscription: 0, add_on: 1, credit: 2, one_off: 3, advance_charges: 4, progressive_billing: 5, contract: 6, credit_purchase: 7)
     end
   end
 
@@ -594,6 +594,14 @@ RSpec.describe Invoice do
       it { expect(described_class.product_catalog).to eq([invoice]) }
     end
 
+    context "when the invoice is a credit purchase invoice" do
+      let(:invoice_type) { :credit_purchase }
+
+      before { invoice }
+
+      it { expect(described_class.product_catalog).to eq([invoice]) }
+    end
+
     context "when a contract invoice also holds a contract fee" do
       let(:invoice_type) { :contract }
 
@@ -637,6 +645,23 @@ RSpec.describe Invoice do
       let(:invoice_type) { :contract }
 
       it { expect(invoice).to be_product_catalog }
+    end
+
+    context "when the invoice is a credit purchase invoice" do
+      let(:invoice_type) { :credit_purchase }
+
+      it { expect(invoice).to be_product_catalog }
+
+      context "when its fees are already loaded" do
+        before { create(:credit_purchase_fee, invoice:, organization:) }
+
+        it "reads its type without querying" do
+          loaded_invoice = described_class.includes(:fees).find(invoice.id)
+
+          expect(capture_sql { loaded_invoice.product_catalog? }).to be_empty
+          expect(loaded_invoice).to be_product_catalog
+        end
+      end
     end
 
     context "when the invoice has a fee attached to a contract" do

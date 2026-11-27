@@ -7855,6 +7855,7 @@ enum FeeTypesEnum {
   charge
   commitment
   credit
+  credit_purchase
   fixed_charge
   product
   subscription
@@ -8796,6 +8797,7 @@ enum InvoiceTypeEnum {
   advance_charges
   contract
   credit
+  credit_purchase
   one_off
   progressive_billing
   subscription

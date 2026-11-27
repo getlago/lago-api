@@ -11,6 +11,13 @@ RSpec.describe Fee do
   let_it_be(:plan) { create_default(:plan) }
   let_it_be(:customer) { create_default(:customer) }
 
+  describe "enums" do
+    it do
+      expect(subject).to define_enum_for(:fee_type)
+        .with_values(charge: 0, add_on: 1, subscription: 2, credit: 3, commitment: 4, fixed_charge: 5, product: 6, credit_purchase: 7)
+    end
+  end
+
   describe "associations" do
     it do
       expect(subject).to belong_to(:invoice).optional

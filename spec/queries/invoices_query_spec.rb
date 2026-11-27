@@ -334,17 +334,19 @@ RSpec.describe InvoicesQuery do
     let(:filters) { {product_catalog: true} }
     let(:contract_invoice) { create(:invoice, organization:, customer: customer_first, invoice_type: :contract, number: "7777777777") }
     let(:invoice_with_product_fee) { create(:invoice, organization:, customer: customer_first, number: "8888888888") }
+    let(:credit_purchase_invoice) { create(:invoice, :credit_purchase, organization:, customer: customer_first, number: "9999999999") }
     let(:contract_rate_card) { create(:contract_rate_card, organization:, contract: create(:contract, organization:, customer: customer_first)) }
 
     before do
       contract_invoice
+      credit_purchase_invoice
       create(:fee, invoice: invoice_with_product_fee, subscription: nil, fee_type: :product,
         invoiceable: contract_rate_card.rate_card.product, contract: contract_rate_card.contract, contract_rate_card:,
         rate_card_rate: create(:rate_card_rate, organization:, rate_card: contract_rate_card.rate_card))
     end
 
     it "returns the invoices billed from the product catalog" do
-      expect(returned_ids).to match_array([contract_invoice.id, invoice_with_product_fee.id])
+      expect(returned_ids).to match_array([contract_invoice.id, invoice_with_product_fee.id, credit_purchase_invoice.id])
     end
 
     context "when searching" do

@@ -16,6 +16,8 @@ module QuoteVersions
         RULE_INTERVALS = RecurringTransactionRule::INTERVALS.map(&:to_s).freeze
         RULE_METHODS = RecurringTransactionRule::METHODS.map(&:to_s).freeze
 
+        WALLET_FEE_TYPES = Wallet::LIMITATION_FEE_TYPES
+
         UPDATE_DEFINITION = {
           "type" => "object",
           "additionalProperties" => {"not" => {}, "x-error" => "unsupported_key"},
@@ -468,7 +470,7 @@ module QuoteVersions
                             "x-error" => {"type" => "invalid_type"},
                             "items" => {
                               "type" => "string",
-                              "enum" => Fee::FEE_TYPES.map(&:to_s),
+                              "enum" => WALLET_FEE_TYPES,
                               "x-error" => {"type" => "invalid_type", "enum" => "invalid_value"}
                             }
                           },

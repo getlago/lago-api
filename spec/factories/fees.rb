@@ -192,4 +192,17 @@ FactoryBot.define do
     subscription { nil }
     charge { nil }
   end
+
+  factory :credit_purchase_fee, parent: :fee do
+    transient do
+      wallet_transaction { association(:catalog_wallet_transaction, :pending, organization:) }
+    end
+    fee_type { "credit_purchase" }
+    invoiceable_id { wallet_transaction.id }
+    invoiceable_type { "CatalogWalletTransaction" }
+    subscription { nil }
+    charge { nil }
+    taxes_amount_cents { 0 }
+    taxes_precise_amount_cents { 0 }
+  end
 end

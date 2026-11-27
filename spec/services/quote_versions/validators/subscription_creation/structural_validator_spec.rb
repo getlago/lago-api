@@ -904,6 +904,29 @@ RSpec.describe QuoteVersions::Validators::SubscriptionCreation::StructuralValida
       end
     end
 
+    context "when the wallet credit appliesTo carries the credit_purchase fee type" do
+      let(:wallet_credit_payload) do
+        super().merge("appliesTo" => {"feeTypes" => ["credit_purchase"], "billableMetricCodes" => []})
+      end
+
+      it "returns an invalid_value error" do
+        expect(validator).not_to be_valid
+        expect(result.error.messages).to eq(
+          {"billing_items.walletCredits.0.payload.appliesTo.feeTypes.0": ["invalid_value"]}
+        )
+      end
+    end
+
+    context "when the wallet credit appliesTo carries the charge fee type" do
+      let(:wallet_credit_payload) do
+        super().merge("appliesTo" => {"feeTypes" => ["charge"], "billableMetricCodes" => []})
+      end
+
+      it "is valid" do
+        expect(validator).to be_valid
+      end
+    end
+
     context "when the wallet credit carries two recurring rules" do
       let(:wallet_credit_payload) { super().merge("recurringTransactionRules" => [recurring_rule, recurring_rule]) }
 
