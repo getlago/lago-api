@@ -58,17 +58,70 @@ RSpec.describe DatabaseMigrations::BackfillEntitlementBooleanValuesJob do
     it "chains to the next batch from the last id" do
       first_id = [enabled_value.id, beta_value.id].min
 
-      expect { perform_job }.to have_enqueued_job(described_class).with(first_id)
+      expect { perform_job }.to have_enqueued_job(described_class).with(first_id, 1)
     end
   end
 
-  context "when values are still stored as t or f after the walk" do
-    it "reports instead of finishing silently" do
-      allow(Rails.logger).to receive(:error)
+  context "when values are still stored as t or f after the first walk" do
+    it "walks again from the beginning" do
+      expect { described_class.perform_now([enabled_value.id, beta_value.id].max) }
+        .to have_enqueued_job(described_class).with(nil, 2)
+    end
+  end
 
-      described_class.perform_now([enabled_value.id, beta_value.id].max)
+  context "when values are still stored as t or f after the second walk" do
+    before { allow(Rails.logger).to receive(:error) }
+
+    it "reports instead of finishing silently" do
+      described_class.perform_now([enabled_value.id, beta_value.id].max, 2)
 
       expect(Rails.logger).to have_received(:error).with(/still stored as t or f/)
+    end
+  end
+
+  context "when a request holds a value", transaction: false do
+    it "skips it without waiting and leaves it to the second walk" do
+      locked = Queue.new
+      release = Queue.new
+      holder = Thread.new do
+        ActiveRecord::Base.connection_pool.with_connection do
+          ActiveRecord::Base.transaction do
+            Entitlement::EntitlementValue.lock.find(enabled_value.id)
+            locked << true
+            release.pop
+          end
+        end
+      end
+      locked.pop
+
+      expect { perform_job }.to have_enqueued_job(described_class).with(nil, 2)
+
+      release << true
+      holder.join
+      expect(stored_value(enabled_value)).to eq("t")
+      expect(stored_value(beta_value)).to eq("false")
+    end
+  end
+
+  context "when a batch dies" do
+    around do |example|
+      ActiveJob::Uniqueness.reset_manager!
+      example.run
+    ensure
+      ActiveJob::Uniqueness.unlock!(job_class_name: described_class.name)
+      ActiveJob::Uniqueness.test_mode!
+    end
+
+    it "is unlocked by the death handler, so that it can be enqueued again" do
+      job = described_class.perform_later(enabled_value.id)
+      expect(described_class.perform_later(enabled_value.id)).to be(false)
+
+      ActiveJob::Uniqueness.unlock_sidekiq_job!(
+        "class" => "ActiveJob::QueueAdapters::SidekiqAdapter::JobWrapper",
+        "args" => [job.serialize]
+      )
+
+      expect(described_class.perform_later(enabled_value.id)).to be_a(described_class)
     end
   end
 end

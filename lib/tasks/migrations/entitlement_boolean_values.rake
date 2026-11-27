@@ -23,7 +23,10 @@ namespace :migrations do
     puts "Starting #{start_after ? "after entitlement value #{start_after}" : "from the beginning"}"
     puts "=" * 50
 
-    DatabaseMigrations::BackfillEntitlementBooleanValuesJob.perform_later(start_after)
+    # The uniqueness lock refuses a batch already enqueued or running: perform_later then returns false.
+    unless DatabaseMigrations::BackfillEntitlementBooleanValuesJob.perform_later(start_after)
+      abort "Not enqueued: a backfill job is already enqueued or running for this START_AFTER"
+    end
 
     puts "Enqueued DatabaseMigrations::BackfillEntitlementBooleanValuesJob"
     puts "- Make sure a Sidekiq worker is draining the low_priority queue"

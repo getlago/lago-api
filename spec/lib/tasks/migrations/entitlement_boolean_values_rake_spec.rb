@@ -45,6 +45,24 @@ RSpec.describe "migrations:backfill_entitlement_boolean_values" do # rubocop:dis
     end
   end
 
+  context "when the backfill is already enqueued" do
+    around do |example|
+      ActiveJob::Uniqueness.reset_manager!
+      example.run
+    ensure
+      ActiveJob::Uniqueness.unlock!(job_class_name: job.name)
+      ActiveJob::Uniqueness.test_mode!
+    end
+
+    before { job.perform_later(nil) }
+
+    it "aborts instead of reporting it enqueued" do
+      expect { task.invoke }.to raise_error(SystemExit).and output(/Not enqueued/).to_stderr
+
+      expect(job).to have_been_enqueued.once
+    end
+  end
+
   context "when START_AFTER is unknown" do
     around do |example|
       ENV["START_AFTER"] = SecureRandom.uuid
