@@ -5,6 +5,8 @@ require "rails_helper"
 RSpec.describe Organizations::ActivateService do
   subject(:result) { described_class.call(organization:) }
 
+  include_context "with mocked security logger"
+
   let(:organization) { create(:organization, :self_serve, activation_status: "pending_payment_method") }
 
   before { allow(ApiKeys::CacheService).to receive(:expire_all_cache) }
@@ -12,16 +14,48 @@ RSpec.describe Organizations::ActivateService do
   it "opens the organization and clears its API key cache" do
     expect(result).to be_success
     expect(result.organization).to eq(organization)
+    expect(result.activated).to be(true)
     expect(organization.reload.activation_status).to eq("active")
     expect(ApiKeys::CacheService).to have_received(:expire_all_cache).with(organization).once
+  end
+
+  it "produces one security log naming billing-accounts" do
+    result
+
+    expect(security_logger).to have_received(:produce).once.with(
+      organization:,
+      log_type: "organization",
+      log_event: "organization.activated",
+      user: nil,
+      resources: {activated_by: "billing_accounts"}
+    )
+  end
+
+  context "with a CS admin" do
+    subject(:result) { described_class.call(organization:, actor:, reason: "Opened for a sales prospect") }
+
+    let(:actor) { create(:user, cs_admin: true) }
+
+    it "produces one security log naming the CS admin and the reason" do
+      expect(result).to be_success
+
+      expect(security_logger).to have_received(:produce).once.with(
+        organization:,
+        log_type: "organization",
+        log_event: "organization.activated",
+        user: actor,
+        resources: {activated_by: "cs_admin", reason: "Opened for a sales prospect"}
+      )
+    end
   end
 
   it "reads the organization again under the lock, so a stale copy is not activated twice" do
     stale = Organization.find(organization.id)
     organization.update!(activation_status: "active")
 
-    expect(described_class.call(organization: stale)).to be_success
+    expect(described_class.call(organization: stale)).to have_attributes(success?: true, activated: false)
     expect(ApiKeys::CacheService).not_to have_received(:expire_all_cache)
+    expect(security_logger).not_to have_received(:produce)
   end
 
   context "with an organization that no longer passes its validations" do
@@ -42,9 +76,12 @@ RSpec.describe Organizations::ActivateService do
       expect { result }.not_to change { organization.reload.updated_at }
 
       expect(result).to be_success
+      expect(result.activated).to be(false)
       expect(organization.reload.activation_status).to eq("active")
       expect(ApiKeys::CacheService).not_to have_received(:expire_all_cache)
     end
+
+    it_behaves_like "does not produce a security log"
   end
 
   context "with an organization that is not self-serve" do
@@ -54,6 +91,7 @@ RSpec.describe Organizations::ActivateService do
       expect(result).to be_failure
       expect(result.error).to be_a(BaseService::ForbiddenFailure)
       expect(result.error.code).to eq("organization_not_self_serve_production")
+      expect(security_logger).not_to have_received(:produce)
     end
   end
 
@@ -121,6 +159,7 @@ RSpec.describe Organizations::ActivateService do
       expect([first.value, second.value]).to all(be_success)
       expect(organization.reload.activation_status).to eq("active")
       expect(ApiKeys::CacheService).to have_received(:expire_all_cache).once
+      expect(security_logger).to have_received(:produce).once
     end
   end
 end

@@ -204,6 +204,20 @@ RSpec.describe Admin::RollbackService do
       end
     end
 
+    context "when the audit log is an organization activation" do
+      subject(:service) { described_class.new(actor:, audit_log: original_log, reason: "Trying to undo an activation") }
+
+      let(:original_log) do
+        create(:cs_admin_audit_log, actor_user: actor, action: :organization_activated, organization:,
+          feature_type: :organization, feature_key: organization.id, before_value: false, after_value: true,
+          reason: "Opened for a sales prospect")
+      end
+
+      it "refuses it with its own code" do
+        expect(service.call.error.messages[:feature_type]).to eq(["cannot_rollback_organization_activation"])
+      end
+    end
+
     context "when the audit log was already rolled back" do
       subject(:service) do
         described_class.new(

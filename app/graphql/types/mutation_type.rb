@@ -350,6 +350,7 @@ module Types
     field :destroy_x402_connection, mutation: Mutations::X402::Connections::Destroy
     field :update_x402_connection, mutation: Mutations::X402::Connections::Update
 
+    field :admin_activate_organization, mutation: Mutations::Admin::ActivateOrganization
     field :admin_create_organization, mutation: Mutations::Admin::CreateOrganization
     field :admin_link_sandbox_organization, mutation: Mutations::Admin::LinkSandboxOrganization
     field :admin_rollback_change, mutation: Mutations::Admin::RollbackChange
