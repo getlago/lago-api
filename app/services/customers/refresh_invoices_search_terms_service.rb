@@ -16,7 +16,7 @@ module Customers
       return result.not_found_failure!(resource: "customer") if customer.nil?
 
       customer.invoices.in_batches(of: BATCH_SIZE) do |batch|
-        batch.update_all("search_terms = #{Invoice::SearchTerms::SQL}") # rubocop:disable Rails/SkipsModelValidations
+        batch.update_all("search_terms = #{Invoice::SearchTerms::SQL}, updated_at = NOW()") # rubocop:disable Rails/SkipsModelValidations
       end
 
       result.customer = customer

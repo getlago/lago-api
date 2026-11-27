@@ -62,7 +62,7 @@ module UsageThresholds
     end
 
     def delete_all_thresholds
-      model.usage_thresholds.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      model.usage_thresholds.update_all(deleted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     end
 
     def update_recurring_threshold

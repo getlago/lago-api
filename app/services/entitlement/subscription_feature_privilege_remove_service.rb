@@ -52,7 +52,7 @@ module Entitlement
     def delete_subscription_entitlement_value_if_exists
       entitlement = subscription.entitlements.find_by(feature: feature)
       return unless entitlement
-      entitlement.values.where(privilege:).update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      entitlement.values.where(privilege:).update_all(deleted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     end
 
     def add_privilege_removal_if_privilege_is_in_plan

@@ -17,8 +17,8 @@ module BillableMetricFilters
 
       billable_metric.filters.unscope(:order).find_each do |filter|
         # rubocop:disable Rails/SkipsModelValidations
-        filter.filter_values.update_all(deleted_at: deleted_at)
-        filter.charge_filters.update_all(deleted_at: deleted_at)
+        filter.filter_values.update_all(deleted_at:, updated_at: deleted_at)
+        filter.charge_filters.update_all(deleted_at:, updated_at: deleted_at)
         # rubocop:enable Rails/SkipsModelValidations
 
         filter.discard!

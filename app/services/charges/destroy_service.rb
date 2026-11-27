@@ -19,8 +19,8 @@ module Charges
 
         deleted_at = Time.current
         # rubocop:disable Rails/SkipsModelValidations
-        charge.filter_values.update_all(deleted_at:)
-        charge.filters.update_all(deleted_at:)
+        charge.filter_values.update_all(deleted_at:, updated_at: deleted_at)
+        charge.filters.update_all(deleted_at:, updated_at: deleted_at)
         # rubocop:enable Rails/SkipsModelValidations
 
         result.charge = charge

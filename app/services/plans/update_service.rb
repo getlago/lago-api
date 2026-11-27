@@ -124,7 +124,7 @@ module Plans
         .select(:id)
 
       Invoice.where(id: invoice_ids)
-        .update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
+        .update_all(ready_to_be_refreshed: true, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     end
 
     def update_metadata!

@@ -58,7 +58,7 @@ module Events
         code: code,
         subscription_id: subscription_ids
       ).where("events.created_at <= ?", deleted_at)
-        .in_batches.update_all(deleted_at:) # rubocop:disable Rails/SkipsModelValidations
+        .in_batches.update_all(deleted_at:, updated_at: deleted_at) # rubocop:disable Rails/SkipsModelValidations
 
       # Delete events using the new `external_subscription_id`
       Event.where(
@@ -66,7 +66,7 @@ module Events
         code: code,
         external_subscription_id: external_subscription_ids
       ).where("events.created_at <= ?", deleted_at)
-        .in_batches.update_all(deleted_at:) # rubocop:disable Rails/SkipsModelValidations
+        .in_batches.update_all(deleted_at:, updated_at: deleted_at) # rubocop:disable Rails/SkipsModelValidations
     end
 
     # Delete clickhouse events using async mutations to avoid blocking or

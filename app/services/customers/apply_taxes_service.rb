@@ -25,7 +25,7 @@ module Customers
           .find_or_create_by!(tax: taxes.find_by(code: tax_code))
       end
 
-      customer.invoices.draft.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
+      customer.invoices.draft.update_all(ready_to_be_refreshed: true, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
 
       result
     rescue ActiveRecord::RecordInvalid => e

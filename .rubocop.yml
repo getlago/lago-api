@@ -23,6 +23,7 @@ require:
   - ./dev/cops/stub_perform_all_later_cop.rb
   - ./dev/cops/no_expect_receive_on_job_cop.rb
   - ./dev/cops/v2_timestamp_format_cop.rb
+  - ./dev/cops/update_all_updated_at_cop.rb
 
 inherit_gem:
   standard: config/base.yml
@@ -95,6 +96,18 @@ Lago/MigrationsIfNotExists:
     - "db/migrate/202[0-5]*.rb"
     - "db/migrate/20260[0-8]*.rb"
     - "db/migrate/202609[0-2]*.rb"
+
+# Specs force test state with `update_all`. Existing migrations are immutable; check migrations dated
+# November 28, 2026 or later. The autocorrection breaks on a table without `updated_at`.
+Lago/UpdateAllUpdatedAt:
+  SafeAutoCorrect: false
+  Exclude:
+    - "spec/**/*.rb"
+    - "db/migrate/202[0-5]*.rb"
+    - "db/migrate/20260*.rb"
+    - "db/migrate/202610*.rb"
+    - "db/migrate/202611[01]*.rb"
+    - "db/migrate/2026112[0-7]*.rb"
 
 # TODO: Fix these services
 Lago/ServiceCall:

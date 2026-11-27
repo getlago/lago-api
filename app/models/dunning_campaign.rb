@@ -43,7 +43,8 @@ class DunningCampaign < ApplicationRecord
     customers.update_all( # rubocop:disable Rails/SkipsModelValidations
       dunning_currency_attempts: {},
       last_dunning_campaign_attempt: 0,
-      last_dunning_campaign_attempt_at: nil
+      last_dunning_campaign_attempt_at: nil,
+      updated_at: Time.current
     )
 
     # NOTE: Reset last attempt on customers falling back to the billing_entity campaign

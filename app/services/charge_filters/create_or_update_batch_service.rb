@@ -242,7 +242,7 @@ module ChargeFilters
     end
 
     def remove_filter(filter)
-      filter.values.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      filter.values.update_all(deleted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
       filter.discard!
     end
 

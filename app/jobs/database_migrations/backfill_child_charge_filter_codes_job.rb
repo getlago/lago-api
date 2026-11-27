@@ -92,7 +92,7 @@ module DatabaseMigrations
     def write_codes(ids_by_code)
       ids_by_code.each do |code, ids|
         ids.each_slice(IDS_PER_UPDATE) do |slice|
-          ChargeFilter.where(id: slice, code: nil).update_all(code:) # rubocop:disable Rails/SkipsModelValidations
+          ChargeFilter.where(id: slice, code: nil).update_all(code:, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
         end
       end
     end

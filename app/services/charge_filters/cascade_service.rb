@@ -209,7 +209,7 @@ module ChargeFilters
     def destroy_child_filter(child_filter)
       return unless child_filter
 
-      child_filter.values.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      child_filter.values.update_all(deleted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
       child_filter.discard!
     end
 

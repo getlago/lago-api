@@ -19,7 +19,7 @@ module DatabaseMigrations
                             WHERE subscriptions.id = fees.subscription_id),
            billing_entity_id = (SELECT customers.organization_id FROM subscriptions
                               JOIN customers ON customers.id = subscriptions.customer_id
-                              WHERE subscriptions.id = fees.subscription_id)"
+                              WHERE subscriptions.id = fees.subscription_id), updated_at = NOW()"
         )
         # rubocop:enable Rails/SkipsModelValidations
         # Queue the next batch

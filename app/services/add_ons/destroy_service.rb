@@ -14,7 +14,7 @@ module AddOns
 
       ActiveRecord::Base.transaction do
         add_on.discard!
-        add_on.fixed_charges.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+        add_on.fixed_charges.update_all(deleted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
       end
 
       result.add_on = add_on
