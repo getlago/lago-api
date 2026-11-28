@@ -546,6 +546,54 @@ describe Clockwork do
     end
   end
 
+  describe "schedule:refresh_flagged_contracts" do
+    let(:job) { "schedule:refresh_flagged_contracts" }
+    let(:start_time) { Time.zone.parse("2025-03-27T00:05:00") }
+    let(:end_time) { Time.zone.parse("2025-03-27T00:06:00") }
+
+    context "with the redis store and ClickHouse configured" do
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("LAGO_REDIS_STORE_URL").and_return("redis:6379")
+        allow(ENV).to receive(:[]).with("LAGO_CLICKHOUSE_ENABLED").and_return("true")
+      end
+
+      it "enqueues a refresh flagged contracts job every 10 seconds" do
+        Clockwork::Test.run(
+          file: clock_file,
+          start_time:,
+          end_time:,
+          tick_speed: 1.second
+        )
+
+        expect(Clockwork::Test).to be_ran_job(job)
+        expect(Clockwork::Test.times_run(job)).to eq(6)
+
+        Clockwork::Test.block_for(job).call
+        expect(Clock::ConsumeContractRefreshedQueueJob).to have_been_enqueued.once
+      end
+    end
+
+    context "without ClickHouse" do
+      before do
+        allow(ENV).to receive(:[]).and_call_original
+        allow(ENV).to receive(:[]).with("LAGO_REDIS_STORE_URL").and_return("redis:6379")
+        allow(ENV).to receive(:[]).with("LAGO_CLICKHOUSE_ENABLED").and_return(nil)
+      end
+
+      it "does not schedule the job" do
+        Clockwork::Test.run(
+          file: clock_file,
+          start_time:,
+          end_time:,
+          tick_speed: 1.second
+        )
+
+        expect(Clockwork::Test).not_to be_ran_job(job)
+      end
+    end
+  end
+
   describe "schedule:process_dedicated_orgs_subscription_activities" do
     let(:job) { "schedule:process_dedicated_orgs_subscription_activities" }
     let(:start_time) { Time.zone.parse("2025-03-27T00:05:00") }
