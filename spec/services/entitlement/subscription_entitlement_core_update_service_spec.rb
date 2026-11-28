@@ -234,6 +234,68 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
         end
       end
 
+      context "when a value is invalid but casts to the plan value" do
+        let(:partial) { false }
+        let(:privilege_params) { {seats_signin.code => "okta", seats_reset.code => "off", seats_max.code => 2} }
+
+        it "raises a validation failure" do
+          expect { result }.to raise_error(BaseService::ValidationFailure) do |error|
+            expect(error.messages).to eq({reset_privilege_value: ["value_is_invalid"]})
+          end
+        end
+      end
+
+      context "when an integer value is invalid but casts to the plan value" do
+        let(:partial) { true }
+        let(:privilege_params) { {seats_max.code => "2 seats"} }
+
+        it "raises a validation failure" do
+          expect { result }.to raise_error(BaseService::ValidationFailure) do |error|
+            expect(error.messages).to eq({max_privilege_value: ["value_is_invalid"]})
+          end
+        end
+      end
+
+      context "when an integer value is invalid but casts to the subscription override" do
+        let(:partial) { true }
+        let(:privilege_params) { {seats_max.code => "50 seats"} }
+        let(:sub_entitlement) { create(:entitlement, feature: seats, subscription:, plan: nil) }
+        let(:sub_max_value) { create(:entitlement_value, entitlement: sub_entitlement, privilege: seats_max, value: 50) }
+
+        before { sub_max_value }
+
+        it "raises a validation failure and keeps the override" do
+          expect { result }.to raise_error(BaseService::ValidationFailure) do |error|
+            expect(error.messages).to eq({max_privilege_value: ["value_is_invalid"]})
+          end
+          expect(sub_max_value.reload.value).to eq "50"
+        end
+      end
+
+      [true, [], {}].each do |value|
+        context "when an integer value is #{value.inspect}" do
+          let(:partial) { true }
+          let(:privilege_params) { {seats_max.code => value} }
+
+          it "raises a validation failure" do
+            expect { result }.to raise_error(BaseService::ValidationFailure) do |error|
+              expect(error.messages).to eq({max_privilege_value: ["value_is_invalid"]})
+            end
+          end
+        end
+      end
+
+      context "when the privilege values are not a map" do
+        let(:partial) { true }
+        let(:privilege_params) { true }
+
+        it "raises a validation failure" do
+          expect { result }.to raise_error(BaseService::ValidationFailure) do |error|
+            expect(error.messages).to eq({"entitlements.seats": ["value_is_invalid"]})
+          end
+        end
+      end
+
       context "when re-adding a removed privilege at the plan default value" do
         let(:privilege_params) { {seats_max.code => 2} }
         let(:max_removal) { create(:subscription_feature_removal, privilege: seats_max, subscription:) }

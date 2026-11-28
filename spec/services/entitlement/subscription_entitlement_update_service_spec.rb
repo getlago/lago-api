@@ -224,5 +224,33 @@ RSpec.describe Entitlement::SubscriptionEntitlementUpdateService do
         expect(result.error.messages).to eq({max_privilege_value: ["value_is_invalid"]})
       end
     end
+
+    context "when a string value is empty" do
+      let(:privilege) { create(:privilege, organization:, feature:, code: "max", value_type: "string") }
+      let(:privilege_params) { {"max" => ""} }
+
+      it "returns a validation failure with privilege-prefixed errors" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({"privilege.value": ["value_is_mandatory"]})
+      end
+    end
+
+    context "when a record other than a value is invalid" do
+      let(:invalid_entitlement) do
+        Entitlement::Entitlement.new.tap { it.errors.add(:feature, "value_is_mandatory") }
+      end
+
+      before do
+        allow(Entitlement::SubscriptionEntitlementCoreUpdateService).to receive(:call!)
+          .and_raise(ActiveRecord::RecordInvalid.new(invalid_entitlement))
+      end
+
+      it "returns a validation failure with the record errors" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ValidationFailure)
+        expect(result.error.messages).to eq({feature: ["value_is_mandatory"]})
+      end
+    end
   end
 end

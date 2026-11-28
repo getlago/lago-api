@@ -296,6 +296,17 @@ RSpec.describe Api::V1::Subscriptions::EntitlementsController do
       end
     end
 
+    context "when the privilege values of a feature are not a map" do
+      let(:params) { {"entitlements" => {"seats" => true}} }
+
+      it "returns a validation error" do
+        subject
+
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:error_details]).to eq({"entitlements.seats": ["value_is_invalid"]})
+      end
+    end
+
     context "when subscription does not exist" do
       it "returns not found error" do
         patch_with_token organization, "/api/v1/subscriptions/invalid_subscription/entitlements", params

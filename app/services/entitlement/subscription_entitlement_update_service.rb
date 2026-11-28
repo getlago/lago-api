@@ -49,6 +49,12 @@ module Entitlement
       result.fail_with_error!(e)
     rescue ActiveRecord::RecordNotUnique => e
       unique_index_failure!(e, SUBSCRIPTION_UNIQUE_INDEXES)
+    rescue ActiveRecord::RecordInvalid => e
+      if e.record.is_a?(EntitlementValue)
+        result.record_validation_failure!(record: e.record) { :"privilege.#{it}" }
+      else
+        result.record_validation_failure!(record: e.record)
+      end
     rescue ActiveRecord::RecordNotFound => e
       if e.message.include?("Entitlement::Feature")
         result.not_found_failure!(resource: "feature")
