@@ -49,6 +49,9 @@ RSpec.describe Memberships::SyncSandboxService do
 
     it "gives the sandbox membership the same roles" do
       expect(result.sandbox_membership.roles.reload).to eq([admin])
+      removed_links = MembershipRole.with_discarded.discarded.where(membership: result.sandbox_membership).to_a
+      expect(removed_links.size).to eq(1)
+      expect(removed_links.map(&:updated_at)).to eq(removed_links.map(&:deleted_at))
       expect(security_logger).to have_received(:produce).with(organization: sandbox, log_type: "user",
         log_event: "user.role_edited", user: actor, resources: {email: user.email, roles: {added: ["admin"], deleted: ["finance"]}})
     end

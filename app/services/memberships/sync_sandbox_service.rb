@@ -65,7 +65,8 @@ module Memberships
 
       added.each { MembershipRole.create!(organization: sandbox, membership: target, role: it) }
       if deleted.any?
-        MembershipRole.where(membership: target, role: deleted).update_all(deleted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+        deleted_at = Time.current
+        MembershipRole.where(membership: target, role: deleted).update_all(deleted_at:, updated_at: deleted_at) # rubocop:disable Rails/SkipsModelValidations
       end
 
       result.sandbox_membership = target

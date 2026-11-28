@@ -163,7 +163,8 @@ module Contracts
     def discard_wallets
       UsageMonitoring::CatalogWalletAlerts::DeleteAllService.call!(catalog_wallets: contract.wallets)
       contract.wallets.find_each do |wallet|
-        wallet.credit_allocations.update_all(deleted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+        deleted_at = Time.current
+        wallet.credit_allocations.update_all(deleted_at:, updated_at: deleted_at) # rubocop:disable Rails/SkipsModelValidations
         wallet.discard!
       end
     end

@@ -35,9 +35,9 @@ RSpec.describe LifetimeUsages::FlagRefreshFromPlanUpdateService do
       end
 
       it "flags only lifetime usages of active subscriptions for recalculation" do
-        expect(result.updated_lifetime_usages).to eq(2)
+        expect { expect(result.updated_lifetime_usages).to eq(2) }.not_to change { lifetime_usage1.reload.updated_at }
 
-        expect(lifetime_usage1.reload.recalculate_invoiced_usage).to be_truthy
+        expect(lifetime_usage1.recalculate_invoiced_usage).to be_truthy
         expect(lifetime_usage2.reload.recalculate_invoiced_usage).to be_truthy
         expect(lifetime_usage3.reload.recalculate_invoiced_usage).to be_falsey
       end

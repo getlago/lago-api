@@ -42,6 +42,18 @@ RSpec.describe PaymentProviders::MoneyhashService do
       expect(result.moneyhash_provider.flow_id).to eq("updated_flow_id")
     end
 
+    it "updates the payment provider code of its customers when the code changes" do
+      customer = create(:customer, organization:, payment_provider: "moneyhash", payment_provider_code: moneyhash_provider.code, updated_at: 1.day.ago)
+      create(:moneyhash_customer, customer:, payment_provider: moneyhash_provider)
+
+      freeze_time do
+        result = described_class.new.create_or_update(organization:, id: moneyhash_provider.id, code: "new_code")
+
+        expect(result).to be_success
+        expect(customer.reload).to have_attributes(payment_provider_code: "new_code", updated_at: Time.current)
+      end
+    end
+
     it "keeps the api key when the masked value is sent back" do
       moneyhash_provider.update!(signature_key: "same_signature_key")
       api_key = moneyhash_provider.api_key

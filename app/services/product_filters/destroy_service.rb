@@ -51,7 +51,8 @@ module ProductFilters
       alert_ids = product_filter.contract_alerts.order(:id).lock.pluck(:id)
 
       UsageMonitoring::ContractAlertThreshold.where(contract_alert_id: alert_ids).delete_all
-      UsageMonitoring::ContractAlert.where(id: alert_ids).update_all(deleted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      deleted_at = Time.current
+      UsageMonitoring::ContractAlert.where(id: alert_ids).update_all(deleted_at:, updated_at: deleted_at) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 end

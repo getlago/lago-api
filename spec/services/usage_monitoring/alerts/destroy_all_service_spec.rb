@@ -30,6 +30,7 @@ RSpec.describe UsageMonitoring::Alerts::DestroyAllService do
 
         expect(alert1.reload).to be_discarded
         expect(alert2.reload).to be_discarded
+        expect(alert1.updated_at).to eq(alert1.deleted_at)
         expect(other_alert.reload).not_to be_discarded
       end
 

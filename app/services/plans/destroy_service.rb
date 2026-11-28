@@ -35,8 +35,9 @@ module Plans
         plan.lock!("FOR NO KEY UPDATE")
 
         # rubocop:disable Rails/SkipsModelValidations
-        plan.entitlement_values.update_all(deleted_at: Time.current)
-        plan.entitlements.update_all(deleted_at: Time.current)
+        deleted_at = Time.current
+        plan.entitlement_values.update_all(deleted_at:, updated_at: deleted_at)
+        plan.entitlements.update_all(deleted_at:, updated_at: deleted_at)
         # rubocop:enable Rails/SkipsModelValidations
 
         plan.pending_deletion = false

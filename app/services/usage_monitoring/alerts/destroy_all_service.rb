@@ -20,7 +20,8 @@ module UsageMonitoring
           Alert.where(id: alert_ids).order(:id).lock.pluck(:id)
 
           AlertThreshold.where(usage_monitoring_alert_id: alert_ids).delete_all
-          Alert.where(id: alert_ids).update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+          deleted_at = Time.current
+          Alert.where(id: alert_ids).update_all(deleted_at:, updated_at: deleted_at) # rubocop:disable Rails/SkipsModelValidations
         end
 
         result

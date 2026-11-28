@@ -49,7 +49,8 @@ RSpec.describe "migrations:backfill_shared_invoice_lifetime_usages" do # rubocop
       ENV["DRY_RUN"] = "false"
 
       expect { task.invoke }.to output(/Done/).to_stdout
-      expect(lifetime_usage.reload.recalculate_invoiced_usage).to be true
+        .and not_change { lifetime_usage.reload.updated_at }
+      expect(lifetime_usage.recalculate_invoiced_usage).to be true
     end
   end
 

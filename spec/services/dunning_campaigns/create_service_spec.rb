@@ -114,6 +114,18 @@ RSpec.describe DunningCampaigns::CreateService do
             end
           end
 
+          it "unsets the legacy applied_to_organization column of the previous campaign" do
+            previous_campaign = create(:dunning_campaign, organization:)
+            # The model ignores the column, so the spec writes it directly.
+            DunningCampaign.where(id: previous_campaign.id).update_all(applied_to_organization: true, updated_at: 1.day.ago) # rubocop:disable Rails/SkipsModelValidations
+
+            freeze_time do
+              expect { create_service.call }
+                .to change { DunningCampaign.where(id: previous_campaign.id, applied_to_organization: true).exists? }.from(true).to(false)
+                .and change { previous_campaign.reload.updated_at }.to(Time.current)
+            end
+          end
+
           it "stops and resets counters on customers" do
             customer = create(:customer, organization:, last_dunning_campaign_attempt: 1, last_dunning_campaign_attempt_at: Time.current)
 

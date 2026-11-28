@@ -31,7 +31,7 @@ module Fees
 
     def attach_charge_fees
       if RegroupingChargeService.call!(billing_contexts: invoice_billing_contexts).regrouping_charge
-        charge_fees.update_all(invoice_id: invoice.id) # rubocop:disable Rails/SkipsModelValidations
+        charge_fees.update_all(invoice_id: invoice.id, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
       end
     end
 
@@ -54,7 +54,7 @@ module Fees
       fees = resolver.call
       result.invoiced_metered_items = resolver.metered_items_with_fees(fees)
 
-      fees.update_all(invoice_id: invoice.id) # rubocop:disable Rails/SkipsModelValidations
+      fees.update_all(invoice_id: invoice.id, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 end

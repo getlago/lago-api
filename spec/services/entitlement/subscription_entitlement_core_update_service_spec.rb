@@ -70,6 +70,19 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
             expect(sub_ent.values.map { it.privilege.code }).to match_array privilege_params.keys
           end
         end
+
+        context "when the subscription has removed the feature" do
+          let(:partial) { true }
+          let(:feature_removal) { create(:subscription_feature_removal, feature: seats, subscription:) }
+
+          before { feature_removal }
+
+          it "discards the feature removal" do
+            expect(result).to be_success
+            expect(feature_removal.reload).to be_discarded
+            expect(feature_removal.updated_at).to eq(feature_removal.deleted_at)
+          end
+        end
       end
 
       context "when subscription already has feature" do
@@ -161,7 +174,21 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
             expect(result).to be_success
             expect(sub_entitlement.reload).to be_discarded
             expect(sub_max_value.reload).to be_discarded
+            expect(sub_max_value.updated_at).to eq(sub_max_value.deleted_at)
           end
+        end
+      end
+
+      context "when the subscription has removed the feature" do
+        let(:partial) { true }
+        let(:feature_removal) { create(:subscription_feature_removal, feature: seats, subscription:) }
+
+        before { feature_removal }
+
+        it "discards the feature removal" do
+          expect(result).to be_success
+          expect(feature_removal.reload).to be_discarded
+          expect(feature_removal.updated_at).to eq(feature_removal.deleted_at)
         end
       end
 
@@ -246,6 +273,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
           it "discards the privilege removal so the plan default is restored" do
             expect(result).to be_success
             expect(max_removal.reload).to be_discarded
+            expect(max_removal.updated_at).to eq(max_removal.deleted_at)
             expect(subscription.entitlement_removals.where(privilege: seats_max)).not_to exist
 
             ent = Entitlement::SubscriptionEntitlement.for_subscription(subscription).find { it.code == "seats" }
@@ -280,6 +308,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
 
             expect(max_removal.reload).to be_discarded
             expect(reset_removal.reload).to be_discarded
+            expect(max_removal.updated_at).to eq(max_removal.deleted_at)
 
             # QUESTION: Feature is not in plan, should this be cleaned up?
             expect(signin_removal.reload).not_to be_discarded
@@ -300,6 +329,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementCoreUpdateService do
 
             expect(max_removal.reload).to be_discarded
             expect(reset_removal.reload).to be_discarded
+            expect(max_removal.updated_at).to eq(max_removal.deleted_at)
 
             # QUESTION: Feature is not in plan, should this be cleaned up?
             expect(signin_removal.reload).not_to be_discarded

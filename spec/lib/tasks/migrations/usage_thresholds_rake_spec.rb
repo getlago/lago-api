@@ -41,6 +41,7 @@ RSpec.describe "migrations:migrate_usage_thresholds" do # rubocop:disable RSpec/
       expect { task.invoke(organization.id) }.to output(/Done/).to_stdout
 
       expect(child_threshold.reload.deleted_at).not_to be_nil
+      expect(child_threshold.updated_at).to eq(child_threshold.deleted_at)
       expect(parent_threshold.reload.deleted_at).to be_nil
     end
 
@@ -78,6 +79,7 @@ RSpec.describe "migrations:migrate_usage_thresholds" do # rubocop:disable RSpec/
       expect { task.invoke(organization.id) }.to output(/Done/).to_stdout
 
       expect(child_threshold.reload.deleted_at).not_to be_nil
+      expect(child_threshold.updated_at).to eq(child_threshold.deleted_at)
     end
   end
 

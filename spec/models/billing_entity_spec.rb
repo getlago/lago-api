@@ -408,13 +408,15 @@ RSpec.describe BillingEntity do
     let(:campaign) { create(:dunning_campaign, organization: billing_entity.organization) }
 
     it "resets the last dunning campaign attempt for customers with fallback dunning_campaign" do
-      customer1 = create(:customer, billing_entity:, last_dunning_campaign_attempt: 1, last_dunning_campaign_attempt_at:, dunning_currency_attempts: {"EUR" => 1})
+      freeze_time
+      customer1 = create(:customer, billing_entity:, last_dunning_campaign_attempt: 1, last_dunning_campaign_attempt_at:, dunning_currency_attempts: {"EUR" => 1}, updated_at: 1.day.ago)
       customer2 = create(:customer, billing_entity:, last_dunning_campaign_attempt: 1, last_dunning_campaign_attempt_at:, dunning_currency_attempts: {"EUR" => 1}, applied_dunning_campaign: campaign)
 
       expect { billing_entity.reset_customers_last_dunning_campaign_attempt }
         .to change { customer1.reload.last_dunning_campaign_attempt }.from(1).to(0)
         .and change(customer1, :last_dunning_campaign_attempt_at).from(last_dunning_campaign_attempt_at).to(nil)
         .and change(customer1, :dunning_currency_attempts).from({"EUR" => 1}).to({})
+        .and change(customer1, :updated_at).to(Time.current)
       expect(customer2.reload.last_dunning_campaign_attempt).to eq(1)
       expect(customer2.dunning_currency_attempts).to eq({"EUR" => 1})
     end

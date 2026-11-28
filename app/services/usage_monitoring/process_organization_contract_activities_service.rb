@@ -33,7 +33,7 @@ module UsageMonitoring
         end
 
         ActiveRecord::Base.transaction do
-          batch.update_all(enqueued: true, enqueued_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+          batch.update_all(enqueued: true, enqueued_at: Time.current) # rubocop:disable Rails/SkipsModelValidations, Lago/UpdateAllUpdatedAt -- the table has no updated_at
           after_commit { ApplicationJob.perform_all_later(jobs) }
         end
 

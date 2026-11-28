@@ -15,7 +15,7 @@ module Plans
 
       ActiveRecord::Base.transaction do
         plan.update!(pending_deletion: true)
-        plan.children.update_all(pending_deletion: true) # rubocop:disable Rails/SkipsModelValidations
+        plan.children.update_all(pending_deletion: true, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
         Plans::DestroyJob.perform_later(plan)
       end
 

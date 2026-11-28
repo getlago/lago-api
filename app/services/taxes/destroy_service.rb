@@ -42,7 +42,7 @@ module Taxes
         tax.save!
       end
 
-      Invoice.where(id: draft_invoice_ids).update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
+      Invoice.where(id: draft_invoice_ids).update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations, Lago/UpdateAllUpdatedAt -- refresh flag, the job that clears it writes the change
 
       result
     end

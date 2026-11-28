@@ -98,7 +98,7 @@ namespace :entitlements do
       ids_to_delete.each_slice(write_batch_size) do |batch_ids|
         deleted_count = Entitlement::Entitlement
           .where(id: batch_ids)
-          .update_all(deleted_at: deleted_at) # rubocop:disable Rails/SkipsModelValidations
+          .update_all(deleted_at:, updated_at: deleted_at) # rubocop:disable Rails/SkipsModelValidations
         total_deleted += deleted_count
         puts "  Progress: #{total_deleted} entitlements soft-deleted..."
       end

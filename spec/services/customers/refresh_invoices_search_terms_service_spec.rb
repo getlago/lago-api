@@ -26,10 +26,10 @@ RSpec.describe Customers::RefreshInvoicesSearchTermsService do
         Invoice.where(id: [invoice.id, other_invoice.id]).update_all(search_terms: nil) # rubocop:disable Rails/SkipsModelValidations
       end
 
-      it "refreshes every invoice of the customer" do
-        refresh_service.call
+      it "refreshes every invoice of the customer and leaves updated_at unchanged" do
+        expect { refresh_service.call }.not_to change { invoice.reload.updated_at }
 
-        expect(invoice.reload.search_terms).to include("INV-001", "Acme Inc")
+        expect(invoice.search_terms).to include("INV-001", "Acme Inc")
       end
 
       it "leaves other customers' invoices untouched" do

@@ -18,7 +18,7 @@ module DunningCampaigns
       ActiveRecord::Base.transaction do
         if params[:applied_to_organization]
           organization.dunning_campaigns.applied_to_organization
-            .update_all(applied_to_organization: false) # rubocop:disable Rails/SkipsModelValidations
+            .update_all(applied_to_organization: false, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
 
           organization.default_billing_entity.reset_customers_last_dunning_campaign_attempt
         end

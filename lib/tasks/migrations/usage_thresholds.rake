@@ -41,7 +41,8 @@ namespace :migrations do
         child_signature = threshold_signature.call(child_thresholds)
 
         if child_signature == parent_signature
-          child_plan.usage_thresholds.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+          deleted_at = Time.current
+          child_plan.usage_thresholds.update_all(deleted_at:, updated_at: deleted_at) # rubocop:disable Rails/SkipsModelValidations
         else
           ActiveRecord::Base.transaction do
             if subscription.usage_thresholds.none?
@@ -56,7 +57,8 @@ namespace :migrations do
               end
             end
 
-            child_plan.usage_thresholds.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+            deleted_at = Time.current
+            child_plan.usage_thresholds.update_all(deleted_at:, updated_at: deleted_at) # rubocop:disable Rails/SkipsModelValidations
           end
         end
 

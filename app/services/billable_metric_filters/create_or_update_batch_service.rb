@@ -150,9 +150,10 @@ module BillableMetricFilters
     end
 
     def bulk_discard_filter_values(filter_value_ids)
+      deleted_at = Time.current
       ChargeFilterValue
         .where(id: filter_value_ids)
-        .update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+        .update_all(deleted_at:, updated_at: deleted_at) # rubocop:disable Rails/SkipsModelValidations
     end
 
     def bulk_discard_emptied_charge_filters_for(filter_value_ids)
@@ -165,6 +166,7 @@ module BillableMetricFilters
 
       return if charge_filter_ids.empty?
 
+      deleted_at = Time.current
       ChargeFilter
         .where(id: charge_filter_ids, deleted_at: nil)
         .where(
@@ -173,7 +175,7 @@ module BillableMetricFilters
           " AND charge_filter_values.deleted_at IS NULL)"
         )
         .unscope(:order)
-        .update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+        .update_all(deleted_at:, updated_at: deleted_at) # rubocop:disable Rails/SkipsModelValidations
     end
   end
 end

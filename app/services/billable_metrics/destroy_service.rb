@@ -32,9 +32,10 @@ module BillableMetrics
         metric.discard!
 
         # rubocop:disable Rails/SkipsModelValidations
-        metric.alerts.update_all(deleted_at: Time.current)
-        metric.charges.update_all(deleted_at: Time.current)
-        Invoice.where(id: draft_invoice_ids).update_all(ready_to_be_refreshed: true)
+        deleted_at = Time.current
+        metric.alerts.update_all(deleted_at:, updated_at: deleted_at)
+        metric.charges.update_all(deleted_at:, updated_at: deleted_at)
+        Invoice.where(id: draft_invoice_ids).update_all(ready_to_be_refreshed: true) # rubocop:disable Lago/UpdateAllUpdatedAt -- refresh flag, the job that clears it writes the change
         # rubocop:enable Rails/SkipsModelValidations
       end
 

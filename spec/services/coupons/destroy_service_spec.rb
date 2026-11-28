@@ -8,7 +8,7 @@ RSpec.describe Coupons::DestroyService do
   let_it_be(:organization) { create_default(:organization) }
   let_it_be(:membership) { create(:membership) }
   let(:coupon) { create(:coupon, organization:) }
-  let(:coupon_plan) { create(:coupon_plan, coupon:) }
+  let(:coupon_plan) { create(:coupon_plan, coupon:, updated_at: 1.day.ago) }
 
   describe "#call" do
     before do
@@ -26,6 +26,7 @@ RSpec.describe Coupons::DestroyService do
       freeze_time do
         expect { destroy_service.call }.to change { coupon_plan.reload.deleted_at }
           .from(nil).to(Time.current)
+          .and change(coupon_plan, :updated_at).to(Time.current)
       end
     end
 

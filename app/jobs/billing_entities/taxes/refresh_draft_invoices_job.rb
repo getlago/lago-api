@@ -11,7 +11,7 @@ module BillingEntities
 
         billing_entity.invoices.draft
           .in_batches do |batch|
-            batch.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations
+            batch.update_all(ready_to_be_refreshed: true) # rubocop:disable Rails/SkipsModelValidations, Lago/UpdateAllUpdatedAt -- refresh flag, the job that clears it writes the change
           end
       end
     end

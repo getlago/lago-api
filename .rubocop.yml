@@ -23,6 +23,7 @@ require:
   - ./dev/cops/stub_perform_all_later_cop.rb
   - ./dev/cops/no_expect_receive_on_job_cop.rb
   - ./dev/cops/v2_timestamp_format_cop.rb
+  - ./dev/cops/update_all_updated_at_cop.rb
   - ./dev/cops/service_new_call_cop.rb
 
 inherit_gem:
@@ -96,6 +97,70 @@ Lago/MigrationsIfNotExists:
     - "db/migrate/202[0-5]*.rb"
     - "db/migrate/20260[0-8]*.rb"
     - "db/migrate/202609[0-2]*.rb"
+
+# Specs force test state with `update_all`. Existing migrations and backfill jobs are not changed;
+# check migrations dated November 28, 2026 or later. The autocorrection breaks on a table without `updated_at`.
+Lago/UpdateAllUpdatedAt:
+  SafeAutoCorrect: false
+  Exclude:
+    - "spec/**/*.rb"
+    - "db/migrate/202[0-5]*.rb"
+    - "db/migrate/20260*.rb"
+    - "db/migrate/202610*.rb"
+    - "db/migrate/202611[01]*.rb"
+    - "db/migrate/2026112[0-7]*.rb"
+    - "app/jobs/database_migrations/backfill_child_charge_filter_codes_job.rb"
+    - "app/jobs/database_migrations/backfill_customers_payment_term_job.rb"
+    - "app/jobs/database_migrations/backfill_invoices_search_terms_job.rb"
+    - "app/jobs/database_migrations/fix_invoices_organization_sequential_id_job.rb"
+    - "app/jobs/database_migrations/populate_add_ons_taxes_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_adjusted_fees_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_applied_coupons_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_applied_invoice_custom_sections_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_applied_usage_thresholds_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_billable_metric_filters_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_billing_entities_taxes_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_charge_filters_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_charges_taxes_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_charges_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_commitments_taxes_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_commitments_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_coupon_targets_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_credit_note_items_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_credit_notes_taxes_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_credit_notes_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_credits_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_customer_metadata_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_customers_taxes_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_data_export_parts_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_dunning_campaign_thresholds_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_fees_taxes_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_fees_with_billing_entity_id_job.rb"
+    - "app/jobs/database_migrations/populate_fees_with_organization_from_invoice_job.rb"
+    - "app/jobs/database_migrations/populate_fees_with_organization_from_subscription_job.rb"
+    - "app/jobs/database_migrations/populate_idempotency_records_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_integration_collection_mappings_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_integration_customers_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_integration_items_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_integration_mappings_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_integration_resources_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_invoice_metadata_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_invoice_subscriptions_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_invoices_billing_entity_sequential_id_job.rb"
+    - "app/jobs/database_migrations/populate_invoices_payment_requests_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_invoices_taxes_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_payment_provider_customers_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_payments_with_customer_id.rb"
+    - "app/jobs/database_migrations/populate_payments_with_organization_from_invoice_job.rb"
+    - "app/jobs/database_migrations/populate_payments_with_organization_from_payment_request_job.rb"
+    - "app/jobs/database_migrations/populate_plans_taxes_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_recurring_transaction_rules_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_refunds_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_subscriptions_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_usage_thresholds_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_wallet_transactions_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_wallets_with_organization_job.rb"
+    - "app/jobs/database_migrations/populate_webhooks_with_organization_job.rb"
 
 # The autocorrection runs the service middlewares, such as the activity log, that `new(...).call` skips.
 # Webhook services and the allowed receivers do not inherit `BaseService` and have no class-level `call`.

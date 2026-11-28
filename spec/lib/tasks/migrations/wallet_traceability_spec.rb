@@ -128,6 +128,7 @@ describe "migrations:wallet_traceability", type: :request, with_pdf_generation_s
       ENV["DRY_RUN"] = "false"
       task.reenable
       expect { task.invoke }.to output(anything).to_stdout
+        .and not_change { wallet1.reload.updated_at }
 
       expect(wallet1.reload.traceable).to eq(true)
       expect(wallet2.reload.traceable).to eq(true)

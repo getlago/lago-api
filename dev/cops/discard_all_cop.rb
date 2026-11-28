@@ -4,7 +4,7 @@ require "rubocop"
 
 module Cops
   class DiscardAllCop < ::RuboCop::Cop::Base
-    MSG = "Avoid using `discard_all`. Use `update_all(deleted_at: Time.current)` instead."
+    MSG = "Avoid using `discard_all`. Use `update_all(deleted_at: Time.current, updated_at: Time.current)` instead."
 
     def_node_matcher :discard_all_call?, <<~PATTERN
       (send _ :discard_all ...)

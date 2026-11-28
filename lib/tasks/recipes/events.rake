@@ -40,7 +40,8 @@ namespace :recipes do
         prefix = "[#{index + 1}/#{subscriptions.size}]"
 
         events.in_batches(of: BATCH_SIZE) do |batch|
-          sub_deleted += batch.update_all(deleted_at: Time.current)
+          deleted_at = Time.current
+          sub_deleted += batch.update_all(deleted_at:, updated_at: deleted_at)
           print "\r\e[K#{prefix} Subscription #{external_id}: #{sub_deleted} events deleted. Total: #{total_deleted + sub_deleted}"
         end
 

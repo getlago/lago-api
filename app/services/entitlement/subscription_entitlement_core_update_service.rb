@@ -41,19 +41,20 @@ module Entitlement
     end
 
     def process_single_entitlement
+      deleted_at = Time.current
       if plan_entitlement.nil? && sub_entitlement.nil?
-        subscription.entitlement_removals.where(feature:).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
+        subscription.entitlement_removals.where(feature:).update_all(deleted_at:, updated_at: deleted_at) # rubocop:disable Rails/SkipsModelValidations
         create_entitlement_and_values_for_subscription
       elsif plan_entitlement && privilege_params_same_as_plan?(plan_entitlement)
         # Restore the plan default by removing all overrides
-        sub_entitlement&.values&.update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
+        sub_entitlement&.values&.update_all(deleted_at:, updated_at: deleted_at) # rubocop:disable Rails/SkipsModelValidations
         sub_entitlement&.discard!
         SubscriptionFeatureRemoval.where(subscription: subscription).merge(
           SubscriptionFeatureRemoval.where(feature:)
             .or(SubscriptionFeatureRemoval.where(privilege: feature.privileges))
-        ).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
+        ).update_all(deleted_at:, updated_at: deleted_at) # rubocop:disable Rails/SkipsModelValidations
       else
-        subscription.entitlement_removals.where(feature:).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
+        subscription.entitlement_removals.where(feature:).update_all(deleted_at:, updated_at: deleted_at) # rubocop:disable Rails/SkipsModelValidations
 
         sub_entitlement = self.sub_entitlement || create_entitlement_for_subscription
         remove_missing_entitlement_values(plan_entitlement, sub_entitlement) if full?
@@ -122,7 +123,8 @@ module Entitlement
     end
 
     def delete_all_privilege_entitlement_removals(privilege)
-      subscription.entitlement_removals.where(privilege:).update_all(deleted_at: Time.zone.now) # rubocop:disable Rails/SkipsModelValidations
+      deleted_at = Time.current
+      subscription.entitlement_removals.where(privilege:).update_all(deleted_at:, updated_at: deleted_at) # rubocop:disable Rails/SkipsModelValidations
     end
 
     def create_entitlement_value(entitlement, privilege, value)

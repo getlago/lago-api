@@ -108,6 +108,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
       it "discards all filters and the related values" do
         expect { service }.to change { filter.reload.discarded? }.to(true)
           .and change { filter_value.reload.discarded? }.to(true)
+        expect(filter_value.updated_at).to eq(filter_value.deleted_at)
       end
     end
   end
@@ -355,6 +356,7 @@ RSpec.describe ChargeFilters::CreateOrUpdateBatchService do
         service
 
         expect(filter_values.map { it.reload.discarded? }).to all(be true)
+        expect(filter_values.map(&:updated_at)).to eq(filter_values.map(&:deleted_at))
       end
     end
 

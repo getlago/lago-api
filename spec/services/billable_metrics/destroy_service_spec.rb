@@ -29,6 +29,7 @@ RSpec.describe BillableMetrics::DestroyService do
     it "soft deletes all the related charges" do
       freeze_time do
         expect { destroy_service.call }.to change { charge.reload.deleted_at }.from(nil).to(Time.current)
+          .and change(charge, :updated_at).to(Time.current)
       end
     end
 
@@ -36,6 +37,7 @@ RSpec.describe BillableMetrics::DestroyService do
       alert = create(:billable_metric_current_usage_amount_alert, billable_metric:, organization:)
       freeze_time do
         expect { destroy_service.call }.to change { alert.reload.deleted_at }.from(nil).to(Time.current)
+          .and change(alert, :updated_at).to(Time.current)
       end
     end
 
@@ -55,6 +57,7 @@ RSpec.describe BillableMetrics::DestroyService do
       create(:invoice_subscription, subscription:, invoice:)
 
       expect { destroy_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
+        .and not_change(invoice, :updated_at)
     end
 
     context "when billable metric is not found" do

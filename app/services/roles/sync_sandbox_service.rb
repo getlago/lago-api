@@ -57,7 +57,8 @@ module Roles
       links = MembershipRole.where(organization: sandbox, role: copy)
       holders = sandbox.memberships.active.where(id: links.select(:membership_id)).includes(:user).order(:user_id).to_a
 
-      links.update_all(deleted_at: Time.current, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+      deleted_at = Time.current
+      links.update_all(deleted_at:, updated_at: deleted_at) # rubocop:disable Rails/SkipsModelValidations
       copy.discard!
       log(sandbox, "role.deleted", role_code: copy.code)
 

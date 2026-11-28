@@ -34,7 +34,7 @@ module PaymentProviders
       adyen_provider.save!
 
       if payment_provider_code_changed?(adyen_provider, old_code, args)
-        adyen_provider.customers.update_all(payment_provider_code: args[:code]) # rubocop:disable Rails/SkipsModelValidations
+        adyen_provider.customers.update_all(payment_provider_code: args[:code], updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
       end
 
       result.adyen_provider = adyen_provider

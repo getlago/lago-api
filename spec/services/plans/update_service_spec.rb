@@ -253,6 +253,7 @@ RSpec.describe Plans::UpdateService do
 
       it "marks the plan's draft invoices as ready to be refreshed" do
         expect { plans_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
+          .and not_change(invoice, :updated_at)
       end
 
       it "marks consolidated invoices shared with other subscriptions" do
@@ -263,6 +264,7 @@ RSpec.describe Plans::UpdateService do
         create(:invoice_subscription, organization:, invoice:, subscription: same_plan_subscription)
 
         expect { plans_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
+          .and not_change(invoice, :updated_at)
       end
 
       context "when the subscription is terminated" do
@@ -270,6 +272,7 @@ RSpec.describe Plans::UpdateService do
 
         it "still marks its draft invoices as ready to be refreshed" do
           expect { plans_service.call }.to change { invoice.reload.ready_to_be_refreshed }.to(true)
+            .and not_change(invoice, :updated_at)
         end
       end
 

@@ -21,7 +21,8 @@ module ChargeFilters
       filter_values = charge_filter.to_h_with_discarded
 
       ActiveRecord::Base.transaction do
-        charge_filter.values.update_all(deleted_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
+        deleted_at = Time.current
+        charge_filter.values.update_all(deleted_at:, updated_at: deleted_at) # rubocop:disable Rails/SkipsModelValidations
         charge_filter.discard!
 
         result.charge_filter = charge_filter

@@ -196,7 +196,7 @@ module Invoices
 
     def preserve_subscription_fee_creation_date
       # NOTE: In case of a refresh the same day of the termination.
-      invoice.fees.update_all(created_at: invoice.created_at) # rubocop:disable Rails/SkipsModelValidations
+      invoice.fees.update_all(created_at: invoice.created_at, updated_at: Time.current) # rubocop:disable Rails/SkipsModelValidations
     end
 
     def tax_error?(error)
@@ -204,7 +204,7 @@ module Invoices
     end
 
     def reset_subscription_invoice_values!
-      invoice.credit_notes.each { |cn| cn.items.update_all(fee_id: nil) } # rubocop:disable Rails/SkipsModelValidations
+      invoice.credit_notes.each { |cn| cn.items.update_all(fee_id: nil, updated_at: Time.current) } # rubocop:disable Rails/SkipsModelValidations
       invoice.fees.destroy_all
       invoice_subscriptions.destroy_all
       reset_shared_invoice_values!

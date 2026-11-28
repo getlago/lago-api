@@ -84,12 +84,14 @@ RSpec.describe PaymentProviders::FlutterwaveService do
         end
 
         it "updates the provider and associated customer codes" do
-          result = flutterwave_service.create_or_update(**args)
+          freeze_time do
+            result = flutterwave_service.create_or_update(**args)
 
-          expect(result).to be_success
-          expect(result.flutterwave_provider.code).to eq("flutterwave_2")
-          flutterwave_customer.reload
-          expect(flutterwave_customer.customer.payment_provider_code).to eq("flutterwave_2")
+            expect(result).to be_success
+            expect(result.flutterwave_provider.code).to eq("flutterwave_2")
+            flutterwave_customer.reload
+            expect(flutterwave_customer.customer).to have_attributes(payment_provider_code: "flutterwave_2", updated_at: Time.current)
+          end
         end
       end
     end

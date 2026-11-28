@@ -142,4 +142,20 @@ RSpec.describe UsageThresholds::UpdateService, premium: true do
       end
     end
   end
+
+  describe "full update" do
+    let(:partial) { false }
+    let(:usage_thresholds_params) { [{amount_cents: 100}] }
+    let(:removed_threshold) { create(:usage_threshold, plan: model, organization:, amount_cents: 200) }
+
+    before { removed_threshold }
+
+    it "sets updated_at to deleted_at on the removed thresholds" do
+      expect(result).to be_success
+
+      removed_threshold.reload
+      expect(removed_threshold).to be_discarded
+      expect(removed_threshold.updated_at).to eq(removed_threshold.deleted_at)
+    end
+  end
 end

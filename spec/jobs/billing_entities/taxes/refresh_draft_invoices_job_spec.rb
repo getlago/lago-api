@@ -7,7 +7,8 @@ RSpec.describe BillingEntities::Taxes::RefreshDraftInvoicesJob do
   let(:billing_entity) { organization.default_billing_entity }
 
   it "marks draft invoices of the billing entity as ready to be refreshed" do
-    draft_invoice = create(:invoice, :draft, organization:, billing_entity:)
+    freeze_time
+    draft_invoice = create(:invoice, :draft, organization:, billing_entity:, updated_at: 1.day.ago)
     finalized_invoice = create(:invoice, organization:, billing_entity:)
     other_billing_entity = create(:billing_entity, organization:)
     other_draft_invoice = create(:invoice, :draft, organization:, billing_entity: other_billing_entity)
@@ -15,6 +16,7 @@ RSpec.describe BillingEntities::Taxes::RefreshDraftInvoicesJob do
     described_class.perform_now(billing_entity.id)
 
     expect(draft_invoice.reload.ready_to_be_refreshed).to be true
+    expect(draft_invoice.updated_at).to eq(1.day.ago)
     expect(finalized_invoice.reload.ready_to_be_refreshed).to be false
     expect(other_draft_invoice.reload.ready_to_be_refreshed).to be false
   end

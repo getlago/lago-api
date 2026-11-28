@@ -37,6 +37,7 @@ RSpec.describe "entitlements:cleanup_duplicate_subscription_entitlements" do # r
         expect { task.invoke(organization.id) }.to output(/Done/).to_stdout
 
         expect(duplicate_entitlement.reload.deleted_at).to eq(expected_deleted_at)
+        expect(duplicate_entitlement.updated_at).to eq(expected_deleted_at)
       end
     end
   end

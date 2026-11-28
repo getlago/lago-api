@@ -10,7 +10,7 @@ module LifetimeUsages
     end
 
     def call
-      result.updated_lifetime_usages = LifetimeUsage
+      result.updated_lifetime_usages = LifetimeUsage # rubocop:disable Lago/UpdateAllUpdatedAt -- refresh flag, the job that clears it writes the change
         .where(subscription_id: plan.subscriptions.active.select(:id))
         .update_all(recalculate_invoiced_usage: true) # rubocop:disable Rails/SkipsModelValidations
       result

@@ -19,6 +19,7 @@ RSpec.describe BillableMetricFilters::DestroyAllService do
       freeze_time do
         expect { destroy_service.call }.to change { billable_metric.filters.reload.kept.count }.from(2).to(0)
           .and change { filter_value.reload.reload.deleted_at }.from(nil).to(Time.current)
+          .and change(filter_value, :updated_at).to(Time.current)
       end
     end
 
