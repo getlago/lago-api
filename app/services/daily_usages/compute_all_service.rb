@@ -39,12 +39,12 @@ module DailyUsages
 
       # Drop subscriptions already computed for yesterday. Subtracting here runs the dedup query
       # once per organization, instead of three times (once per leg) if it lived in base_scope.
-      ids.subtract(already_computed_subscription_ids(organization))
+      ids.subtract(already_computed_subscription_ids(organization)) if ids.any?
 
       enqueue(Subscription, DailyUsages::ComputeJob, ids)
 
       contract_ids = metered_contracts(organization).pluck("contracts.id").to_set
-      contract_ids.subtract(already_computed_contract_ids(organization))
+      contract_ids.subtract(already_computed_contract_ids(organization)) if contract_ids.any?
 
       enqueue(Contract, DailyUsages::ComputeContractJob, contract_ids)
     end
@@ -61,11 +61,15 @@ module DailyUsages
 
     # Recompute every day for subscriptions that received an event recently: their usage may have
     # changed. Restricted to customers entering a new day in their timezone.
+    #
+    # last_received_event_on is a date in the customer's timezone, so it is compared with their
+    # local yesterday. The UTC yesterday is never after it in the window: it only serves the index.
     def event_subscriptions(organization)
       base_scope(organization)
         .joins(customer: :billing_entity)
         .where(timezone_window_sql, timestamp:)
-        .where("last_received_event_on >= :yesterday", yesterday: yesterday)
+        .where("subscriptions.last_received_event_on >= :yesterday", yesterday: yesterday)
+        .where("subscriptions.last_received_event_on >= #{local_yesterday_sql}", timestamp:)
     end
 
     # Recompute every day for subscriptions whose usage changes between billing boundaries WITHOUT
@@ -79,7 +83,7 @@ module DailyUsages
         .where(plan_id: time_dependent_plan_ids(organization))
         .joins(customer: :billing_entity)
         .where(timezone_window_sql, timestamp:)
-        .where("last_received_event_on IS NULL OR last_received_event_on < :yesterday", yesterday: yesterday)
+        .where(no_recent_event_sql, timestamp:)
     end
 
     # Recurring metrics are constant between events, so they only need to be recomputed once per
@@ -87,15 +91,16 @@ module DailyUsages
     #
     # `ComputeService` skips the billing day itself (its usage comes from the periodic invoice), so
     # the carry-over row (usage_date = period start) is created on the run of the *next* day. We
-    # therefore select subscriptions whose period rolled over yesterday (`timestamp - 1.day`).
+    # therefore select subscriptions whose period rolled over on the local yesterday. For customers
+    # in the window, `timestamp - 12.hours` falls in its middle, even after a 23-hour DST day.
     def recurring_rollover_subscriptions(organization)
-      scope = base_scope(organization)
-        .where(plan_id: recurring_plan_ids(organization))
-        .where("last_received_event_on IS NULL OR last_received_event_on < :yesterday", yesterday: yesterday)
+      scope = base_scope(organization).where(plan_id: recurring_plan_ids(organization))
 
-      Subscriptions::BillingDateQuery.call(subscriptions: scope, timestamp: timestamp - 1.day)
+      # The query joins the customer and its billing entity, which the timezone conditions read.
+      Subscriptions::BillingDateQuery.call(subscriptions: scope, timestamp: timestamp - 12.hours)
         .subscriptions
         .where(timezone_window_sql, timestamp:)
+        .where(no_recent_event_sql, timestamp:)
     end
 
     def base_scope(organization)
@@ -169,32 +174,33 @@ module DailyUsages
       computed_yesterday(organization).where.not(subscription_id: nil).pluck(:subscription_id)
     end
 
-    # A contract's usage_date is the day before the customer's current local date, which
-    # can be two UTC days back for customers ahead of UTC.
     def already_computed_contract_ids(organization)
-      DailyUsage
-        .where(organization_id: organization.id)
-        .where.not(contract_id: nil)
-        .where(usage_date: (timestamp.to_date - 2.days)..timestamp.to_date)
-        .joins("INNER JOIN customers ON daily_usages.customer_id = customers.id")
-        .joins("INNER JOIN billing_entities ON customers.billing_entity_id = billing_entities.id")
-        .where("daily_usages.usage_date = DATE(:timestamp#{at_time_zone}) - 1", timestamp:)
-        .distinct
-        .pluck(:contract_id)
+      computed_yesterday(organization).where.not(contract_id: nil).distinct.pluck(:contract_id)
     end
 
-    # Daily usages already computed for yesterday (in the customer's timezone).
-    # Pre-filters on the indexed raw usage_date before the timezone-aware match, to avoid scanning
-    # the org's whole history.
+    # Daily usages of each customer's local yesterday, the usage_date the compute services write.
+    # Only ids the windowed legs selected are subtracted, and for their customers that date is the
+    # UTC date or the day before, hence the indexed range. A window condition here would make
+    # Postgres, which cannot estimate it, read the whole history of every customer in the window.
     def computed_yesterday(organization)
       DailyUsage
-        .usage_date_in_timezone(timestamp.to_date - 1.day)
         .where(organization_id: organization.id)
-        .where(usage_date: (timestamp.to_date - 2.days)..timestamp.to_date)
+        .where(usage_date: yesterday..timestamp.to_date)
+        .joins(customer: :billing_entity)
+        .where("daily_usages.usage_date = #{local_yesterday_sql}", timestamp:)
     end
 
+    # The UTC yesterday: for a customer entering a new day, their local yesterday or the day before.
     def yesterday
       @yesterday ||= timestamp.to_date - 1.day
+    end
+
+    def local_yesterday_sql
+      "DATE(:timestamp#{at_time_zone}) - 1"
+    end
+
+    def no_recent_event_sql
+      "subscriptions.last_received_event_on IS NULL OR subscriptions.last_received_event_on < #{local_yesterday_sql}"
     end
 
     # Only schedule customers entering a new day in their timezone; the hourly clock catches each

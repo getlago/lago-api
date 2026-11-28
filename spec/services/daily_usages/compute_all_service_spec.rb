@@ -94,6 +94,116 @@ RSpec.describe DailyUsages::ComputeAllService do
       end
     end
 
+    context "with a customer timezone ahead of UTC by 3 hours or more" do
+      # 2024-10-22 00:05 in Asia/Tokyo (UTC+9), still 2024-10-21 in UTC: yesterday is 2024-10-21 locally.
+      let(:timestamp) { Time.zone.parse("2024-10-21 15:05:00") }
+      let(:customer) { create(:customer, organization:, timezone: "Asia/Tokyo") }
+      let(:subscriptions) { create_list(:subscription, 2, customer:, last_received_event_on: Date.new(2024, 10, 21)) }
+
+      context "when the last event was received the day before yesterday" do
+        # 2024-10-20 is the UTC yesterday, but two days back for the customer.
+        let(:subscriptions) { create_list(:subscription, 2, customer:, last_received_event_on: Date.new(2024, 10, 20)) }
+
+        before { create(:daily_usage, subscription: subscriptions.first, customer:, usage_date: Date.new(2024, 10, 20)) }
+
+        it "does not enqueue any job" do
+          expect(compute_service.call).to be_success
+          expect(DailyUsages::ComputeJob).not_to have_been_enqueued
+        end
+      end
+
+      context "when yesterday was already computed" do
+        before { create(:daily_usage, subscription: subscriptions.first, customer:, usage_date: Date.new(2024, 10, 21)) }
+
+        it "does not enqueue a job for that subscription" do
+          expect(compute_service.call).to be_success
+          expect(DailyUsages::ComputeJob).not_to have_been_enqueued.with(subscriptions.first, timestamp:)
+          expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscriptions.second, timestamp:)
+        end
+      end
+
+      context "when only the day before yesterday was computed" do
+        before { create(:daily_usage, subscription: subscriptions.first, customer:, usage_date: Date.new(2024, 10, 20)) }
+
+        it "enqueues a job to compute yesterday" do
+          expect(compute_service.call).to be_success
+          subscriptions.each do |subscription|
+            expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
+          end
+        end
+      end
+    end
+
+    context "with a customer timezone ahead of UTC by less than 3 hours" do
+      # Europe/Paris is UTC+2 in October: its 0-2h window starts on the previous UTC date and ends on the same one.
+      let(:customer) { create(:customer, organization:, timezone: "Europe/Paris") }
+      let(:subscriptions) { create_list(:subscription, 2, customer:, last_received_event_on: Date.new(2024, 10, 21)) }
+
+      context "when the local date is ahead of the UTC date" do
+        # 2024-10-22 01:05 in Paris, still 2024-10-21 in UTC: yesterday is 2024-10-21 locally.
+        let(:timestamp) { Time.zone.parse("2024-10-21 23:05:00") }
+
+        context "when only the day before yesterday was computed" do
+          before { create(:daily_usage, subscription: subscriptions.first, customer:, usage_date: Date.new(2024, 10, 20)) }
+
+          it "enqueues a job to compute yesterday" do
+            expect(compute_service.call).to be_success
+            subscriptions.each do |subscription|
+              expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
+            end
+          end
+        end
+
+        context "when yesterday was already computed" do
+          before { create(:daily_usage, subscription: subscriptions.first, customer:, usage_date: Date.new(2024, 10, 21)) }
+
+          it "does not enqueue a job for that subscription" do
+            expect(compute_service.call).to be_success
+            expect(DailyUsages::ComputeJob).not_to have_been_enqueued.with(subscriptions.first, timestamp:)
+            expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscriptions.second, timestamp:)
+          end
+        end
+
+        context "when the last event was received the day before yesterday" do
+          let(:subscriptions) { create_list(:subscription, 2, customer:, last_received_event_on: Date.new(2024, 10, 20)) }
+
+          it "does not enqueue any job" do
+            expect(compute_service.call).to be_success
+            expect(DailyUsages::ComputeJob).not_to have_been_enqueued
+          end
+        end
+      end
+
+      context "when the local date is the UTC date" do
+        # 2024-10-22 02:05 in Paris and 2024-10-22 in UTC: yesterday is 2024-10-21 for both.
+        let(:timestamp) { Time.zone.parse("2024-10-22 00:05:00") }
+
+        context "when yesterday was already computed" do
+          before { create(:daily_usage, subscription: subscriptions.first, customer:, usage_date: Date.new(2024, 10, 21)) }
+
+          it "does not enqueue a job for that subscription" do
+            expect(compute_service.call).to be_success
+            expect(DailyUsages::ComputeJob).not_to have_been_enqueued.with(subscriptions.first, timestamp:)
+            expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscriptions.second, timestamp:)
+          end
+        end
+      end
+    end
+
+    context "when the customer was deleted and yesterday was already computed" do
+      # Its subscriptions stay active until Customers::TerminateRelationsJob has run
+      before do
+        create(:daily_usage, subscription: subscriptions.first, customer:, usage_date: Date.new(2024, 10, 21))
+        customer.discard!
+      end
+
+      it "does not enqueue a job for that subscription" do
+        expect(compute_service.call).to be_success
+        expect(DailyUsages::ComputeJob).not_to have_been_enqueued.with(subscriptions.first, timestamp:)
+        expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscriptions.second, timestamp:)
+      end
+    end
+
     context "when the organization has a timezone" do
       let(:organization) { create(:organization, timezone: "America/Sao_Paulo", premium_integrations:) }
       let(:billing_entity) { create_default(:billing_entity, organization:) }
@@ -188,8 +298,8 @@ RSpec.describe DailyUsages::ComputeAllService do
 
       context "with a recurring billable metric" do
         # Recurring metrics are constant between events, so they are recomputed once per period,
-        # on the run following the period rollover (timestamp - 1.day). With a calendar monthly
-        # plan, that rollover is the 1st of the month.
+        # on the run following the period rollover. With a calendar monthly plan, that rollover is
+        # the 1st of the month.
         let(:timestamp) { Time.zone.parse("2024-10-02 00:05:00") }
         let(:subscriptions) do
           create_list(:subscription, 5, :calendar, customer:, plan:, last_received_event_on: timestamp.to_date - 5.days)
@@ -201,6 +311,71 @@ RSpec.describe DailyUsages::ComputeAllService do
           expect(compute_service.call).to be_success
           subscriptions.each do |subscription|
             expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
+          end
+        end
+
+        context "with a customer timezone ahead of UTC by 3 hours or more" do
+          # 2024-10-02 00:05 in Asia/Tokyo, 2024-10-01 in UTC: the period rolled over on the local yesterday.
+          let(:timestamp) { Time.zone.parse("2024-10-01 15:05:00") }
+          let(:customer) { create(:customer, organization:, timezone: "Asia/Tokyo") }
+
+          # The periodic invoice fills the last day of the closed period, which is the UTC date minus one.
+          before { create(:daily_usage, subscription: subscriptions.first, customer:, usage_date: Date.new(2024, 9, 30)) }
+
+          it "enqueues jobs to record the carried-over usage" do
+            expect(compute_service.call).to be_success
+            subscriptions.each do |subscription|
+              expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
+            end
+          end
+
+          context "when the last event was received on the last day of the closed period" do
+            # 2024-09-30 is the UTC yesterday, but two days back for the customer: the event leg
+            # does not select the subscriptions, and this leg compares with the local yesterday.
+            let(:subscriptions) do
+              create_list(:subscription, 2, :calendar, customer:, plan:, last_received_event_on: Date.new(2024, 9, 30))
+            end
+
+            it "enqueues jobs to record the carried-over usage" do
+              expect(compute_service.call).to be_success
+              subscriptions.each do |subscription|
+                expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
+              end
+            end
+          end
+        end
+
+        context "with a period rolling over the day before a spring-forward DST change" do
+          # Anniversary on the 30th, Europe/Paris: the period rolls over on 2024-03-30, and the clocks
+          # move forward on 2024-03-31, a 23-hour day.
+          let(:customer) { create(:customer, organization:, timezone: "Europe/Paris") }
+          let(:subscriptions) do
+            subscription_at = Time.zone.parse("2024-01-29 23:00:00") # 2024-01-30 00:00 in Paris
+            create_list(:subscription, 2, :anniversary, customer:, plan:, subscription_at:, started_at: subscription_at,
+              last_received_event_on: Date.new(2024, 3, 20))
+          end
+
+          context "when the next local day starts" do
+            # 2024-03-31 00:05 in Paris (UTC+1): the period rolled over on the local yesterday.
+            let(:timestamp) { Time.zone.parse("2024-03-30 23:05:00") }
+
+            it "enqueues jobs to record the carried-over usage" do
+              expect(compute_service.call).to be_success
+              subscriptions.each do |subscription|
+                expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
+              end
+            end
+          end
+
+          context "when the day after the DST change starts" do
+            # 2024-04-01 00:05 in Paris (UTC+2). 24 hours earlier is 2024-03-30 23:05 in Paris, the
+            # rollover day, but the local yesterday is 2024-03-31.
+            let(:timestamp) { Time.zone.parse("2024-03-31 22:05:00") }
+
+            it "does not enqueue any job" do
+              expect(compute_service.call).to be_success
+              expect(DailyUsages::ComputeJob).not_to have_been_enqueued
+            end
           end
         end
 
@@ -223,6 +398,23 @@ RSpec.describe DailyUsages::ComputeAllService do
           expect(compute_service.call).to be_success
           subscriptions.each do |subscription|
             expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
+          end
+        end
+
+        context "with a customer timezone ahead of UTC by 3 hours or more" do
+          # 2024-10-22 00:05 in Asia/Tokyo, still 2024-10-21 in UTC. The last event, on 2024-10-20, is
+          # the UTC yesterday but two days back for the customer: the event leg does not select them.
+          let(:timestamp) { Time.zone.parse("2024-10-21 15:05:00") }
+          let(:customer) { create(:customer, organization:, timezone: "Asia/Tokyo") }
+          let(:subscriptions) do
+            create_list(:subscription, 2, customer:, plan:, last_received_event_on: Date.new(2024, 10, 20))
+          end
+
+          it "enqueues jobs even though no event was received yesterday" do
+            expect(compute_service.call).to be_success
+            subscriptions.each do |subscription|
+              expect(DailyUsages::ComputeJob).to have_been_enqueued.with(subscription, timestamp:)
+            end
           end
         end
       end

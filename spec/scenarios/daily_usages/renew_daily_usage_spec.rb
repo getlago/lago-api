@@ -165,17 +165,20 @@ describe "Daily Usage last_received_event_on Scenario", :premium, cache: :redis 
   end
 
   # Scenario: event arrives at 00:01 local time (just after midnight), job runs at 00:02.
-  # The event belongs to the NEW day so the job looking for "yesterday" won't pick it up.
-  # The next day's job run WILL process it.
+  # Known limitation: a daily usage snapshots the usage when the job runs, not at the end of its
+  # day, so yesterday's row already includes the event, for any timezone. The next day's row
+  # carries no diff for it.
   #
-  # Using Asia/Kolkata (UTC+5:30) — a non-standard half-hour offset timezone.
+  # Using Asia/Kolkata (UTC+5:30), a non-standard half-hour offset timezone, still on the
+  # previous UTC date at local midnight.
   # 2025-01-05 18:31 UTC = 2025-01-06 00:01 IST → event date is Jan 6 in customer TZ
-  # 2025-01-05 18:32 UTC = 2025-01-06 00:02 IST → job queries last_received_event_on = Jan 5 → no match (it's Jan 6)
-  # 2025-01-06 18:32 UTC = 2025-01-07 00:02 IST → job queries last_received_event_on = Jan 6 → match!
+  # 2025-01-05 18:32 UTC = 2025-01-06 00:02 IST → computes Jan 5, including the event
+  # 2025-01-06 18:32 UTC = 2025-01-07 00:02 IST → computes Jan 6, with no new usage
+  # 2025-01-07 18:32 UTC = 2025-01-08 00:02 IST → no event on Jan 7, nothing computed
   context "with tricky timezone and event at midnight boundary" do
     let(:customer) { create(:customer, external_id: "cust_daily_usage", organization:, timezone: "Asia/Kolkata") }
 
-    it "defers midnight event to next day's daily usage computation" do
+    it "counts the midnight event in the local yesterday's daily usage" do
       travel_to(DateTime.new(2025, 1, 1)) do
         create_subscription({
           external_customer_id: customer.external_id,
@@ -196,7 +199,7 @@ describe "Daily Usage last_received_event_on Scenario", :premium, cache: :redis 
       expect(subscription.last_received_event_on).to eq(Date.new(2025, 1, 4))
 
       # Job runs at 00:05 IST on Jan 5 (= 2025-01-04 18:35 UTC)
-      # Queries last_received_event_on = Jan 4 (yesterday in IST) → match
+      # last_received_event_on = Jan 4 >= Jan 4 (yesterday in IST) → match
       travel_to(Time.zone.parse("2025-01-04 18:35:00")) do
         perform_usage_update
       end
@@ -215,26 +218,38 @@ describe "Daily Usage last_received_event_on Scenario", :premium, cache: :redis 
       expect(subscription.last_received_event_on).to eq(Date.new(2025, 1, 6))
 
       # Job runs at 00:02 IST on Jan 6 (= 2025-01-05 18:32 UTC)
-      # Queries last_received_event_on = Jan 5 (yesterday in IST)
-      # But last_received_event_on is Jan 6 → NO match → subscription NOT selected
+      # last_received_event_on = Jan 6 >= Jan 5 (yesterday in IST), and no daily usage exists for Jan 5
+      # → computes Jan 5, snapshotting the usage at run time, event_a included
       travel_to(Time.zone.parse("2025-01-05 18:32:00")) do
         perform_usage_update
       end
 
-      # No new daily usage was created for Jan 5
-      expect(DailyUsage.where(subscription:, usage_date: Date.new(2025, 1, 5)).count).to eq(0)
+      jan5_usage = DailyUsage.where(subscription:, usage_date: Date.new(2025, 1, 5)).sole
+      # 3 + 7 = 10 ops_count * 5 EUR = 5000 amount_cents
+      expect(jan5_usage.usage["amount_cents"]).to eq(5000)
+      # event_a (7 ops_count * 5 EUR) is diffed against the Jan 4 row
+      expect(jan5_usage.usage_diff["amount_cents"]).to eq(3500)
 
       # Next day: job runs at 00:02 IST on Jan 7 (= 2025-01-06 18:32 UTC)
-      # Queries last_received_event_on = Jan 6 → MATCH → subscription selected
-      # Computes daily usage for Jan 6 which now includes event_a
+      # last_received_event_on = Jan 6 >= Jan 6 (yesterday in IST) → computes Jan 6
       travel_to(Time.zone.parse("2025-01-06 18:32:00")) do
         perform_usage_update
       end
 
-      jan6_usage = DailyUsage.where(subscription:, usage_date: Date.new(2025, 1, 6)).first
-      expect(jan6_usage).to be_present
-      # Jan 6 usage should include both events (3 + 7 = 10 ops_count → 50 amount_cents at rate "5")
+      jan6_usage = DailyUsage.where(subscription:, usage_date: Date.new(2025, 1, 6)).sole
+      # Same usage as Jan 5: no event since
       expect(jan6_usage.usage["amount_cents"]).to eq(5000)
+      expect(jan6_usage.usage_diff["amount_cents"]).to eq(0)
+
+      # Day after: job runs at 00:02 IST on Jan 8 (= 2025-01-07 18:32 UTC)
+      # last_received_event_on = Jan 6 >= Jan 7 (yesterday in IST) → false, although Jan 6 is the UTC yesterday
+      travel_to(Time.zone.parse("2025-01-07 18:32:00")) do
+        perform_usage_update
+      end
+
+      expect(DailyUsage.where(subscription:).pluck(:usage_date)).to match_array(
+        [Date.new(2025, 1, 4), Date.new(2025, 1, 5), Date.new(2025, 1, 6)]
+      )
     end
   end
 end

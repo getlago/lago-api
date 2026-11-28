@@ -4,19 +4,11 @@ class DailyUsage < ApplicationRecord
   DEFAULT_HISTORY_DAYS = 120
 
   belongs_to :organization
-  belongs_to :customer
+  belongs_to :customer, -> { with_discarded }
   # A subscription's daily usage, or a contract rate card's: a check constraint keeps exactly one.
   belongs_to :subscription, optional: true
   belongs_to :contract, optional: true
   belongs_to :contract_rate_card, -> { with_discarded }, optional: true
-
-  scope :usage_date_in_timezone, ->(timestamp) do
-    at_time_zone = Utils::Timezone.at_time_zone_sql(customer: "cus", billing_entity: "billing_entities")
-
-    joins("INNER JOIN customers AS cus ON daily_usages.customer_id = cus.id")
-      .joins("INNER JOIN billing_entities ON cus.billing_entity_id = billing_entities.id")
-      .where("DATE((daily_usages.usage_date)#{at_time_zone}) = DATE(:timestamp#{at_time_zone})", timestamp:)
-  end
 end
 
 # == Schema Information

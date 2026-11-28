@@ -171,6 +171,68 @@ RSpec.describe DailyUsages::ComputeService do
         end
       end
 
+      context "when two days of the customer timezone share a UTC midnight" do
+        # Atlantic/Azores moves from UTC+0 to UTC-1 on 2024-10-27: the UTC midnights of the 27th and the 28th
+        # are both on the 27th locally. 2024-10-29 01:05 UTC is 00:05 there, so the usage date is the 28th.
+        let(:customer) { create(:customer, organization:, timezone: "Atlantic/Azores") }
+        let(:timestamp) { Time.zone.parse("2024-10-29 01:05:00") }
+
+        before { create(:daily_usage, subscription:, organization:, customer:, usage_date: Date.new(2024, 10, 27)) }
+
+        it "creates the daily usage of the following day" do
+          travel_to(timestamp) do
+            expect { compute_service.call }.to change(DailyUsage, :count).by(1)
+          end
+
+          expect(DailyUsage.order(:usage_date).last.usage_date).to eq(Date.new(2024, 10, 28))
+        end
+      end
+
+      context "when timestamp is on a monthly billing day of the charges of a yearly plan" do
+        let(:plan) { create(:plan, organization:, interval: :yearly, bill_charges_monthly: true) }
+        let(:timestamp) { Time.zone.parse("2024-11-01 00:05:00") }
+
+        # Received in the charges period that just opened, so the current usage is not empty
+        let(:event) do
+          create(
+            :event,
+            organization:,
+            external_subscription_id: subscription.external_id,
+            code: billable_metric.code,
+            timestamp: timestamp - 2.minutes,
+            created_at: timestamp - 2.minutes
+          )
+        end
+
+        it "does not create a daily usage" do
+          travel_to(timestamp) do
+            expect { compute_service.call }.not_to change(DailyUsage, :count)
+          end
+        end
+
+        context "when timestamp is on another day" do
+          let(:timestamp) { Time.zone.parse("2024-10-22 00:05:00") }
+
+          it "creates a daily usage" do
+            travel_to(timestamp) do
+              expect { compute_service.call }.to change(DailyUsage, :count).by(1)
+            end
+          end
+        end
+      end
+
+      context "when timestamp is on a monthly billing day of the fixed charges of a yearly plan" do
+        # Its charges are billed yearly, so the periodic invoice fills no daily usage on that day
+        let(:plan) { create(:plan, organization:, interval: :yearly, bill_fixed_charges_monthly: true) }
+        let(:timestamp) { Time.zone.parse("2024-11-01 00:05:00") }
+
+        it "creates a daily usage" do
+          travel_to(timestamp) do
+            expect { compute_service.call }.to change(DailyUsage, :count).by(1)
+          end
+        end
+      end
+
       context "when timestamp is on subscription billing day" do
         let(:subscription) do
           create(:subscription, :anniversary, customer:, plan:, started_at: 1.year.ago, subscription_at: 1.year.ago)

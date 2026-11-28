@@ -113,7 +113,7 @@ module DailyUsages
       @to ||= if subscription.terminated?
         subscription.terminated_at.in_time_zone(timezone).to_date
       else
-        to_date || Time.zone.yesterday.in_time_zone(timezone).to_date
+        to_date || Time.current.in_time_zone(timezone).to_date - 1.day
       end
     end
 
@@ -174,15 +174,23 @@ module DailyUsages
     end
 
     # NOTE: Returns the set of dates (in the customer timezone) that are the first day of a billing
-    #       period within the [from..to] range.
+    #       period within the [from..to] range, or of a charges period when a longer plan bills its
+    #       charges monthly, as ComputeService does.
     def billing_period_first_days
-      @billing_period_first_days ||= (from..to).each_with_object(Set.new) do |date, set|
+      return @billing_period_first_days if defined?(@billing_period_first_days)
+
+      monthly_charges = subscription.plan.charges_billed_in_monthly_split_intervals?
+
+      @billing_period_first_days = (from..to).each_with_object(Set.new) do |date, set|
         date_service = Subscriptions::DatesService.new_instance(
           subscription,
           date.in_time_zone(timezone).end_of_day,
           current_usage: true
         )
-        set << date_service.from_datetime.in_time_zone(timezone).to_date
+        period_starts = [date_service.from_datetime]
+        period_starts << date_service.charges_from_datetime if monthly_charges
+
+        period_starts.compact.each { set << it.in_time_zone(timezone).to_date }
       end
     end
   end
