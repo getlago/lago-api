@@ -30,7 +30,7 @@ module Subscriptions
 
         def evaluate_inactive_rule
           if rule.applicable?
-            rule.expires_at = compute_expires_at
+            rule.expires_at = rule.compute_expires_at
             rule.pending!
           else
             rule.not_applicable!
@@ -41,12 +41,6 @@ module Subscriptions
           raise ArgumentError, "status required to transition a pending rule" if status.blank?
 
           rule.public_send(:"#{status}!")
-        end
-
-        def compute_expires_at
-          return nil if rule.timeout_hours.zero?
-
-          Time.current + rule.timeout_hours.hours
         end
       end
     end
