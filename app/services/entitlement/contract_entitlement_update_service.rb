@@ -21,8 +21,16 @@ module Entitlement
 
       ActiveRecord::Base.transaction do
         lock_override_owner!(contract)
+        # NOTE: Without entitlement_events, the write logs nothing.
+        log_changes = entitlements_params.present? && log_entitlement_changes?
+        if log_changes
+          # A catalog plan write committed between the two reads would be logged as a change of this call.
+          contract.catalog_plan&.lock!("FOR SHARE")
+          entitlements_before = SubscriptionEntitlement.for_contract(contract)
+        end
         update_entitlements
         result.entitlements = SubscriptionEntitlement.for_contract(contract)
+        log_entitlement_changes(entitlements_before, result.entitlements) if log_changes
       end
 
       result
@@ -40,6 +48,15 @@ module Entitlement
 
     attr_reader :contract, :entitlements_params
     delegate :organization, to: :contract
+
+    def entitlement_events?
+      organization.feature_flag_enabled?(:entitlement_events)
+    end
+
+    # The logs render the contract entitlements before the call, so they are only built when they can be sent.
+    def log_entitlement_changes?
+      entitlement_events? && Utils::ActivityLog.available?
+    end
 
     def update_entitlements
       return if entitlements_params.blank?
@@ -84,6 +101,41 @@ module Entitlement
       return if privilege_params.is_a?(Hash)
 
       result.single_validation_failure!(field: path, error_code: "value_is_invalid").raise_if_error!
+    end
+
+    # One activity log per entitlement of the body whose values that apply changed (value, plan value or source),
+    # filed under the contract, with the entitlement before and after. An entitlement left as it was gets none.
+    # A feature granted back after its removal from the contract is logged as created.
+    def log_entitlement_changes(entitlements_before, entitlements_after)
+      before = renders_by_code(entitlements_before)
+      after = renders_by_code(entitlements_after)
+      changed_codes = (before.keys | after.keys).reject { before[it]&.dig(:values) == after[it]&.dig(:values) }
+
+      # Newest first, in the order of the contract read.
+      ordered_codes = after.keys.select { changed_codes.include?(it) } + (changed_codes - after.keys)
+      ordered_codes.each do |code|
+        action = if before[code].nil?
+          "created"
+        elsif after[code].nil?
+          "deleted"
+        else
+          "updated"
+        end
+
+        Utils::ActivityLog.produce_after_commit(
+          contract, "contract_entitlement.#{action}",
+          activity_object: after[code] || before[code],
+          changes: {"values" => [before[code]&.dig(:values), after[code]&.dig(:values)]}
+        )
+      end
+    end
+
+    # The entitlements of the body, rendered once each, in the order of the contract read.
+    def renders_by_code(entitlements)
+      feature_codes = entitlements_params.keys
+      entitlements.select { feature_codes.include?(it.code) }.to_h do |entitlement|
+        [entitlement.code, ::V2::ContractEntitlementSerializer.new(entitlement).serialize]
+      end
     end
   end
 end

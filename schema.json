@@ -1053,6 +1053,24 @@
               "deprecationReason": null
             },
             {
+              "name": "contract_entitlement_created",
+              "description": "contract_entitlement.created",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_entitlement_updated",
+              "description": "contract_entitlement.updated",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
+              "name": "contract_entitlement_deleted",
+              "description": "contract_entitlement.deleted",
+              "isDeprecated": false,
+              "deprecationReason": null
+            },
+            {
               "name": "contract_rate_card_created",
               "description": "contract_rate_card.created",
               "isDeprecated": false,

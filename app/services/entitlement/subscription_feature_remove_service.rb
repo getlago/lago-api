@@ -14,6 +14,7 @@ module Entitlement
       super
     end
 
+    # The subscription event only: the callers of a contract log their own.
     activity_loggable(
       action: "subscription.updated",
       record: -> { subscription }

@@ -85,6 +85,9 @@ RSpec.describe Types::ActivityLogs::ActivityTypeEnum do
         plan_entitlement_updated
         plan_entitlement_deleted
         plan_rate_card_copied_to_production
+        contract_entitlement_created
+        contract_entitlement_updated
+        contract_entitlement_deleted
         contract_rate_card_created
         contract_rate_card_updated
         contract_rate_card_deleted
