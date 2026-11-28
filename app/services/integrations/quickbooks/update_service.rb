@@ -19,13 +19,17 @@ module Integrations
           return result.forbidden_failure!(code: "premium_integration_missing")
         end
 
-        integration.name = params[:name] if params.key?(:name)
-        integration.code = params[:code] if params.key?(:code)
-        integration.sync_credit_notes = cast_boolean(params[:sync_credit_notes]) if params.key?(:sync_credit_notes)
-        integration.sync_invoices = cast_boolean(params[:sync_invoices]) if params.key?(:sync_invoices)
-        integration.sync_payments = cast_boolean(params[:sync_payments]) if params.key?(:sync_payments)
+        # Reloaded under a row lock: the settings are one column, and a connection check may have flagged
+        # the integration since it was loaded.
+        integration.with_lock do
+          integration.name = params[:name] if params.key?(:name)
+          integration.code = params[:code] if params.key?(:code)
+          integration.sync_credit_notes = cast_boolean(params[:sync_credit_notes]) if params.key?(:sync_credit_notes)
+          integration.sync_invoices = cast_boolean(params[:sync_invoices]) if params.key?(:sync_invoices)
+          integration.sync_payments = cast_boolean(params[:sync_payments]) if params.key?(:sync_payments)
 
-        integration.save!
+          integration.save!
+        end
 
         result.integration = integration
         result

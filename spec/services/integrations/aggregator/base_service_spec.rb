@@ -441,4 +441,143 @@ RSpec.describe Integrations::Aggregator::BaseService do
         .to raise_error(BaseService::ThrottlingError) { |error| expect(error.provider_name).to eq(:netsuite) }
     end
   end
+
+  describe "#call_with_middlewares" do
+    subject(:result) { service_class.call(integration:) }
+
+    let(:service_class) do
+      Class.new(described_class) do
+        def action_name
+          "realm-check-test"
+        end
+
+        def call
+          trigger_action({})
+          result
+        end
+      end
+    end
+
+    let(:organization) { create(:organization) }
+    let(:connection_id) { "quickbooks-placeholder-connection" }
+    let(:sandbox) { false }
+    let(:realm_id_mismatch) { true }
+    let(:integration) do
+      create(
+        :quickbooks_integration,
+        organization:,
+        secrets: {connection_id:}.to_json,
+        settings: {realm_id: "1234567890", sandbox:, realm_id_mismatch:}
+      )
+    end
+    let(:log_output) { StringIO.new }
+    let(:blocked_lines) { log_output.string.lines.grep(/QuickBooks call blocked/) }
+    let(:action_request) do
+      stub_request(:post, "https://api.nango.dev/action/trigger").to_return(status: 200, body: "{}")
+    end
+
+    before do
+      allow(Rails).to receive(:logger).and_return(ActiveSupport::Logger.new(log_output))
+      allow(ENV).to receive(:[]).and_call_original
+      allow(ENV).to receive(:[]).with("NANGO_SECRET_KEY").and_return("nango-secret-placeholder")
+      action_request
+    end
+
+    context "when the QuickBooks integration is flagged" do
+      it "fails with realm_id_changed before any request and logs one safe line" do
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        expect(result.error.code).to eq("realm_id_changed")
+        expect(action_request).not_to have_been_requested
+        expect(a_request(:any, /api.nango.dev/)).not_to have_been_made
+
+        expect(blocked_lines.size).to eq(1)
+        expect(blocked_lines.first).to include(organization.id, integration.id, %("provider_config_key":"quickbooks"))
+        expect(log_output.string).not_to include(connection_id)
+        expect(log_output.string).not_to include("Bearer")
+        expect(log_output.string).not_to include("nango-secret-placeholder")
+      end
+
+      it "runs the blocked call inside the tracer span" do
+        allow(LagoTracer).to receive(:in_span).and_call_original
+
+        expect(result.error.code).to eq("realm_id_changed")
+        expect(LagoTracer).to have_received(:in_span).with(a_string_ending_with("#call")).once
+      end
+
+      it "raises a forbidden failure through call!" do
+        expect { service_class.call!(integration:) }
+          .to raise_error(BaseService::ForbiddenFailure) { |error| expect(error.code).to eq("realm_id_changed") }
+      end
+    end
+
+    context "when the flagged QuickBooks integration is a sandbox" do
+      let(:sandbox) { true }
+
+      it "logs the sandbox provider config key" do
+        expect(result.error.code).to eq("realm_id_changed")
+        expect(blocked_lines.sole).to include(%("provider_config_key":"quickbooks-sandbox"))
+      end
+    end
+
+    context "when the flag is stored as a string" do
+      let(:realm_id_mismatch) { "true" }
+
+      it "blocks the call" do
+        expect(result.error.code).to eq("realm_id_changed")
+        expect(action_request).not_to have_been_requested
+      end
+    end
+
+    context "when the QuickBooks integration is not flagged" do
+      let(:realm_id_mismatch) { false }
+
+      it "runs the call" do
+        expect(result).to be_success
+        expect(action_request).to have_been_requested.once
+        expect(blocked_lines).to be_empty
+      end
+    end
+
+    context "when the flag is absent from the settings" do
+      let(:integration) { create(:quickbooks_integration, organization:) }
+
+      it "runs the call" do
+        expect(result).to be_success
+        expect(action_request).to have_been_requested.once
+      end
+    end
+
+    context "when the integration is not a QuickBooks one, even with the setting" do
+      let(:integration) do
+        netsuite_integration = create(:netsuite_integration, organization:)
+        netsuite_integration.update!(settings: netsuite_integration.settings.merge("realm_id_mismatch" => true))
+        netsuite_integration
+      end
+
+      it "runs the call" do
+        expect(result).to be_success
+        expect(action_request).to have_been_requested.once
+        expect(blocked_lines).to be_empty
+      end
+    end
+
+    context "when the integration is nil" do
+      let(:integration) { nil }
+      let(:service_class) do
+        Class.new(described_class) do
+          def call
+            LagoHttpClient::Client.new("https://api.nango.dev/action/trigger").post_with_response({}, {})
+            result
+          end
+        end
+      end
+
+      it "runs the call" do
+        expect(result).to be_success
+        expect(action_request).to have_been_requested.once
+        expect(blocked_lines).to be_empty
+      end
+    end
+  end
 end

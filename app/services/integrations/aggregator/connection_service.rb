@@ -48,6 +48,11 @@ module Integrations
 
       private
 
+      # The realm re-check must reach Nango to clear the flag.
+      def realm_id_mismatch_blocked?
+        false
+      end
+
       def http_client
         # max_retries: 0 turns off Net::HTTP's own retry of an idempotent GET after a read timeout.
         LagoHttpClient::Client.new(endpoint_url, open_timeout: 5, read_timeout: 10, write_timeout: 10, max_retries: 0)

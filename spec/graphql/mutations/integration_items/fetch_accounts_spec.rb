@@ -104,5 +104,32 @@ RSpec.describe Mutations::IntegrationItems::FetchAccounts do
       expect(integration.integration_items.where(item_type: :account).pluck(:external_id, :external_name))
         .to eq([["79", "Services"]])
     end
+
+    context "when the integration is flagged with a realm id mismatch" do
+      let(:integration) do
+        create(:quickbooks_integration, organization:, settings: {realm_id: "1234567890", sandbox: false, realm_id_mismatch: true})
+      end
+
+      it "returns realm_id_changed without any request to Nango and keeps the stored items" do
+        result = execute_graphql(
+          current_user: membership.user,
+          current_organization: organization,
+          permissions: required_permission,
+          query: mutation,
+          variables: {
+            input: {integrationId: integration.id}
+          }
+        )
+
+        expect(result["data"]).to be_nil
+        expect(result["errors"].sole).to include(
+          "message" => "forbidden",
+          "extensions" => {"status" => 403, "code" => "realm_id_changed"}
+        )
+        expect(sync_request).not_to have_been_requested
+        expect(a_request(:get, %r{api.nango.dev/records})).not_to have_been_made
+        expect(integration.integration_items.reload).to eq([integration_item])
+      end
+    end
   end
 end

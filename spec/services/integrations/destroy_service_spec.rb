@@ -50,6 +50,20 @@ RSpec.describe Integrations::DestroyService do
         before { destroy_service.call }
       end
 
+      context "when the connection was flagged as pointing at another company" do
+        let(:integration) do
+          create(:quickbooks_integration, organization:, settings: {realm_id: "1234567890", sandbox: false, realm_id_mismatch: true})
+        end
+
+        it "destroys it and still deletes its Nango connection" do
+          result = destroy_service.call
+
+          expect(result).to be_success
+          expect(Integrations::BaseIntegration.exists?(integration.id)).to be(false)
+          expect(WebMock).to have_requested(:delete, connection_url).once
+        end
+      end
+
       context "when Nango fails" do
         let(:nango_status) { 500 }
 

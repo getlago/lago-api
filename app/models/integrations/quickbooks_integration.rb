@@ -11,12 +11,17 @@ module Integrations
     validates :connection_id, presence: true
     validate :realm_id_uniqueness
 
-    settings_accessors :sync_invoices, :sync_credit_notes, :sync_payments, :realm_id, :sandbox
+    settings_accessors :sync_invoices, :sync_credit_notes, :sync_payments, :realm_id, :sandbox, :realm_id_mismatch
     secrets_accessors :connection_id
 
     # The setting is stored uncast: only true and "true" select the sandbox
     def sandbox?
       sandbox.to_s == "true"
+    end
+
+    # The setting is stored uncast: only true and "true" flag a connection moved to another company
+    def realm_id_mismatch?
+      realm_id_mismatch.to_s == "true"
     end
 
     private

@@ -46,9 +46,30 @@ module Integrations
         "action/trigger"
       end
 
+      # A QuickBooks integration whose connection now points at another company never reaches Nango.
+      def call_with_middlewares(&block)
+        with_middlewares { realm_id_mismatch_blocked? ? realm_id_changed_failure : call(&block) }
+      end
+
       private
 
       attr_reader :integration, :options
+
+      def realm_id_mismatch_blocked?
+        integration.is_a?(::Integrations::QuickbooksIntegration) && integration.realm_id_mismatch?
+      end
+
+      # Never the connection id, the headers or a body: they can hold OAuth credentials.
+      def realm_id_changed_failure
+        details = {
+          organization_id: integration.organization_id,
+          integration_id: integration.id,
+          provider_config_key: provider_key
+        }
+
+        Rails.logger.warn("QuickBooks call blocked: realm id changed #{details.to_json}")
+        result.forbidden_failure!(code: "realm_id_changed")
+      end
 
       # NOTE: Extend it with other providers if needed
       def provider

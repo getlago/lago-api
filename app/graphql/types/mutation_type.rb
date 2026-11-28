@@ -269,6 +269,7 @@ module Types
 
     field :create_quickbooks_integration, mutation: Mutations::Integrations::Quickbooks::Create
     field :update_quickbooks_integration, mutation: Mutations::Integrations::Quickbooks::Update
+    field :verify_quickbooks_integration_connection, mutation: Mutations::Integrations::Quickbooks::VerifyConnection
 
     field :create_hubspot_integration, mutation: Mutations::Integrations::Hubspot::Create
     field :update_hubspot_integration, mutation: Mutations::Integrations::Hubspot::Update
