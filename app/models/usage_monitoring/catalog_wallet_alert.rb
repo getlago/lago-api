@@ -14,6 +14,10 @@ module UsageMonitoring
       class_name: "UsageMonitoring::CatalogWalletTriggeredAlert",
       inverse_of: :alert
 
+    def watches_wallet?
+      true
+    end
+
     # Before the ongoing balance is first computed its column holds a default, while with no usage deducted yet the
     # ongoing balance is the balance itself
     def find_value(catalog_wallet)

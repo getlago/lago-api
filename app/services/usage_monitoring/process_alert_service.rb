@@ -27,9 +27,9 @@ module UsageMonitoring
         # NOTE: two evaluations of one alert can finish out of order: an older usage would overwrite previous_value
         next if stale_usage?
 
-        # NOTE: the job and the wallet alerts consumer can evaluate one wallet concurrently: reading it under
-        # the lock keeps an older balance from overwriting previous_value and triggering the threshold twice
-        current_metrics.reload if alertable.is_a?(Wallet)
+        # NOTE: a wallet loaded before the lock (or evaluated concurrently by the job and the wallet alerts consumer) can
+        # hold an older balance: reading it under the lock keeps it from overwriting previous_value and triggering twice
+        current_metrics.reload if alert.watches_wallet?
         # NOTE: read inside the lock so the metric selection and the thresholds come from the same configuration
         current = alert.find_value(current_metrics)
 

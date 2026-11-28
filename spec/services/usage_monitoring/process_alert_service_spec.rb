@@ -677,6 +677,25 @@ RSpec.describe UsageMonitoring::ProcessAlertService do
       end
     end
 
+    context "with a catalog wallet loaded before its balance moved" do
+      subject(:result) { described_class.call(alert:, alertable: stale_wallet, current_metrics: stale_wallet) }
+
+      let(:catalog_wallet) { create(:catalog_wallet, organization:, balance_cents: 600) }
+      let(:stale_wallet) { CatalogWallet.find(catalog_wallet.id) }
+      let(:alert) { create(:catalog_wallet_alert, organization:, catalog_wallet:, previous_value: 400, last_processed_at: 1.hour.ago) }
+
+      before do
+        create(:catalog_wallet_alert_threshold, organization:, catalog_wallet_alert: alert, value: 500)
+        stale_wallet
+        catalog_wallet.update!(balance_cents: 400)
+      end
+
+      it "evaluates the balance read under the lock" do
+        expect { result }.not_to change(UsageMonitoring::CatalogWalletTriggeredAlert, :count)
+        expect(alert.reload.previous_value).to eq(400)
+      end
+    end
+
     context "with a contract alert" do
       subject(:result) { evaluate(*rate_card_usages) }
 

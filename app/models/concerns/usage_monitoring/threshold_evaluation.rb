@@ -4,6 +4,11 @@ module UsageMonitoring
   module ThresholdEvaluation
     extend ActiveSupport::Concern
 
+    # A wallet alert is evaluated on the wallet itself, which ProcessAlertService reads back under the alert lock
+    def watches_wallet?
+      false
+    end
+
     # `previous:` lets a caller cross from another value without changing the stored previous_value
     def find_thresholds_crossed(current, previous: previous_value)
       if increasing?
