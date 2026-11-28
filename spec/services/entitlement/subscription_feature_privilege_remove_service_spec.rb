@@ -171,4 +171,45 @@ RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
       end
     end
   end
+
+  describe "#call with a contract owner" do
+    subject(:result) { described_class.call(owner: contract, feature_code:, privilege_code:) }
+
+    let(:catalog_plan) { create(:catalog_plan, organization:) }
+    let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+    let(:contract_entitlement) { create(:entitlement, :contract, organization:, contract:, feature:) }
+    let(:contract_value) { create(:entitlement_value, entitlement: contract_entitlement, privilege:, value: "5") }
+
+    before do
+      create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature:)
+      contract_value
+    end
+
+    it "discards the override value and stores a privilege removal on the contract" do
+      expect(result).to be_success
+      expect(Entitlement::EntitlementValue.with_discarded.find(contract_value.id)).to be_discarded
+      expect(contract.entitlement_removals.reload.map { [it.entitlement_feature_id, it.entitlement_privilege_id] }).to eq([[nil, privilege.id]])
+    end
+
+    it "keeps one removal when called twice" do
+      described_class.call(owner: contract, feature_code:, privilege_code:)
+
+      expect(result).to be_success
+      expect(contract.entitlement_removals.reload.count).to eq(1)
+    end
+
+    it "sends no subscription webhook" do
+      expect { result }.not_to have_enqueued_job(SendWebhookJob)
+    end
+
+    context "with a terminated contract" do
+      let(:contract) { create(:contract, :terminated, organization:, customer:, catalog_plan:) }
+
+      it "refuses the write" do
+        expect(result).not_to be_success
+        expect(result.error.messages).to eq(base: ["contract_not_editable"])
+        expect(contract_value.reload).not_to be_discarded
+      end
+    end
+  end
 end

@@ -14,6 +14,7 @@ RSpec.describe Entitlement::Entitlement do
       expect(subject).to belong_to(:plan).optional
       expect(subject).to belong_to(:catalog_plan).optional
       expect(subject).to belong_to(:subscription).optional
+      expect(subject).to belong_to(:contract).optional
       expect(subject).to have_many(:values).class_name("Entitlement::EntitlementValue").inverse_of(:entitlement).dependent(:destroy)
     end
   end
@@ -79,6 +80,11 @@ RSpec.describe Entitlement::Entitlement do
         expect(entitlement).to be_valid
       end
 
+      it "is valid when only contract is present" do
+        entitlement = build(:entitlement, :contract, organization:, feature:)
+        expect(entitlement).to be_valid
+      end
+
       it "counts an unsaved parent through the association" do
         entitlement = build(:entitlement, organization:, feature:, plan: build(:plan, organization:), subscription: nil)
         expect(entitlement).to be_valid
@@ -87,6 +93,12 @@ RSpec.describe Entitlement::Entitlement do
       it "is invalid when a plan and a catalog_plan are both present" do
         catalog_plan = create(:catalog_plan, organization:)
         entitlement = build(:entitlement, organization:, feature:, plan:, catalog_plan:)
+        expect(entitlement).not_to be_valid
+        expect(entitlement.errors[:base]).to eq(["one_of_plan_or_subscription_required"])
+      end
+
+      it "is invalid when a catalog_plan and a contract are both present" do
+        entitlement = build(:entitlement, :contract, organization:, feature:, catalog_plan: create(:catalog_plan, organization:))
         expect(entitlement).not_to be_valid
         expect(entitlement.errors[:base]).to eq(["one_of_plan_or_subscription_required"])
       end
@@ -124,6 +136,42 @@ RSpec.describe Entitlement::Entitlement do
         )
 
         expect { entitlement.save(validate: false) }.to raise_error(ActiveRecord::StatementInvalid)
+      end
+
+      it "saves a row owned by a contract only" do
+        entitlement = build(:entitlement, :contract, organization:, feature:)
+
+        expect(entitlement.save(validate: false)).to be(true)
+        expect(entitlement.reload.contract_id).to eq(entitlement.contract.id)
+      end
+
+      it "rejects a row with a catalog plan and a contract even past model validation" do
+        entitlement = build(
+          :entitlement,
+          :contract,
+          organization:,
+          feature:,
+          catalog_plan: create(:catalog_plan, organization:)
+        )
+
+        expect { entitlement.save(validate: false) }
+          .to raise_error(ActiveRecord::StatementInvalid, /entitlement_check_exactly_one_parent/)
+      end
+
+      it "rejects a second live row for a contract and a feature" do
+        entitlement = create(:entitlement, :contract, organization:, feature:)
+        duplicate = build(:entitlement, :contract, organization:, feature:, contract: entitlement.contract)
+
+        expect { duplicate.save(validate: false) }
+          .to raise_error(ActiveRecord::RecordNotUnique, /idx_unique_feature_per_contract/)
+      end
+
+      it "saves a row for a contract and a feature once the previous one is discarded" do
+        entitlement = create(:entitlement, :contract, organization:, feature:)
+        entitlement.discard!
+        replacement = build(:entitlement, :contract, organization:, feature:, contract: entitlement.contract)
+
+        expect(replacement.save(validate: false)).to be(true)
       end
     end
   end

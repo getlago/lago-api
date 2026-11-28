@@ -35,6 +35,8 @@ class Contract < ApplicationRecord
   has_many :wallets, class_name: "CatalogWallet"
   has_many :daily_usages
   has_many :fees
+  has_many :entitlements, class_name: "Entitlement::Entitlement"
+  has_many :entitlement_removals, class_name: "Entitlement::SubscriptionFeatureRemoval"
   has_many :invoices, -> { distinct }, through: :fees
   has_many :applied_invoice_custom_sections,
     class_name: "Contract::AppliedInvoiceCustomSection",

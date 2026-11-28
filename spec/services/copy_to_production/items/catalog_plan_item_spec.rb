@@ -24,9 +24,9 @@ RSpec.describe CopyToProduction::Items::CatalogPlanItem do
     attributes: described_class::ALERT_ATTRIBUTES, left_out: %w[plan_wallet_id]
   it_behaves_like "a copy to production item copying every column", UsageMonitoring::CatalogWalletAlertThreshold,
     attributes: described_class::THRESHOLD_ATTRIBUTES, left_out: %w[plan_wallet_alert_id catalog_wallet_alert_id]
-  # An entitlement is created by its feature code, and its values by privilege code.
+  # An entitlement is created by its feature code, and its values by privilege code. A plan entitlement has no contract.
   it_behaves_like "a copy to production item copying every column", Entitlement::Entitlement,
-    attributes: [], left_out: %w[entitlement_feature_id plan_id catalog_plan_id subscription_id]
+    attributes: [], left_out: %w[entitlement_feature_id plan_id catalog_plan_id subscription_id contract_id]
   it_behaves_like "a copy to production item copying every column", Entitlement::EntitlementValue,
     attributes: %i[value], left_out: %w[entitlement_entitlement_id entitlement_privilege_id]
 
