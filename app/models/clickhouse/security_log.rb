@@ -33,6 +33,7 @@ module Clickhouse
       integration.created
       integration.deleted
       integration.updated
+      organization.activated
       organization.authentication_methods_updated
       role.created
       role.deleted

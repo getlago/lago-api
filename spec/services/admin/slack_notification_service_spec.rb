@@ -65,6 +65,23 @@ RSpec.describe Admin::SlackNotificationService do
         end
       end
 
+      context "when a production organization was activated" do
+        let(:audit_log) do
+          create(:cs_admin_audit_log, organization:, action: :organization_activated, feature_type: "organization",
+            feature_key: organization.id, before_value: false, actor_email: "admin@lago.com",
+            reason: "Opened for a sales prospect")
+        end
+
+        it "names the organization, the actor and the reason" do
+          service.call
+
+          expect(a_request(:post, webhook_url).with { |req|
+            JSON.parse(req.body)["blocks"].first["text"]["text"] ==
+              "[✅ Production activated] *ACME Corp* by admin@lago.com, reason: \"Opened for a sales prospect\""
+          }).to have_been_made.once
+        end
+      end
+
       context "when a sandbox was created" do
         let(:audit_log) do
           sandbox = create(:organization, :sandbox, production_organization: organization, name: "ACME Corp Sandbox")

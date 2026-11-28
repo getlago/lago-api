@@ -10,6 +10,7 @@ module Types
       value "org_created", "Feature set during org creation"
       value "rollback", "Change was rolled back"
       value "sandbox_linked", "Organization was linked as a sandbox"
+      value "organization_activated", "Pending production organization was activated"
     end
   end
 end
