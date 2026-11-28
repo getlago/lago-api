@@ -14,6 +14,11 @@ module Api
         before_action :reject_pagination!
         before_action :load_contract
 
+        # The list is returned whole.
+        def index
+          render_entitlements(::Entitlement::SubscriptionEntitlement.for_contract(contract))
+        end
+
         def update
           permitted = params.slice(:entitlements).permit(entitlements: {})
           # An empty map is valid: it changes nothing. A missing or non-map value is a 400.
