@@ -220,67 +220,300 @@ RSpec.describe Entitlement::SubscriptionFeatureRemoveService do
   describe "#call with a contract owner" do
     subject(:result) { described_class.call(owner: contract, feature_code:) }
 
+    # The organization factory also creates a webhook endpoint.
+    let(:organization) { create(:organization, feature_flags:) }
+    let(:feature_flags) { %w[entitlement_events] }
     let(:catalog_plan) { create(:catalog_plan, organization:) }
-    let(:contract) { create(:contract, organization:, customer:, catalog_plan:) }
+    let(:contract) { create(:contract, organization:, customer:, catalog_plan:, external_id: "contract_123") }
+    let(:max) { create(:privilege, organization:, feature:, code: "max", value_type: "integer") }
 
     before { feature }
 
+    # The entitlement of the contract, in the v2 contract entitlement shape.
+    def contract_entitlement_render(**fields)
+      {lago_contract_id: contract.id, feature_code: "test_feature", **fields}
+    end
+
+    def sent_webhooks
+      ActiveJob::Base.queue_adapter.enqueued_jobs
+        .select { it[:job] == SendWebhookJob }
+        .map { ActiveJob::Arguments.deserialize(it[:args]) }
+    end
+
     context "when the catalog plan grants the feature" do
+      let(:plan_entitlement) { create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature:) }
       let(:contract_entitlement) { create(:entitlement, :contract, organization:, contract:, feature:) }
-      let(:privilege) { create(:privilege, organization:, feature:) }
+      let(:contract_value) { create(:entitlement_value, organization:, entitlement: contract_entitlement, privilege: max, value: "20") }
+      let(:sso) { create(:privilege, organization:, feature:, code: "sso", value_type: "boolean") }
+      let(:privilege_removal) { create(:subscription_feature_removal, :contract, organization:, contract:, privilege: sso) }
+
+      # sso is removed from the contract, so only max applies: 20 on the contract over 10 on the plan.
+      let(:render) do
+        contract_entitlement_render(source: "plan", values: [{privilege_code: "max", value: 20, plan_value: 10, source: "contract"}])
+      end
 
       before do
-        create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature:)
-        contract_entitlement
-        create(:subscription_feature_removal, :contract, organization:, contract:, privilege:)
+        create(:entitlement_value, organization:, entitlement: plan_entitlement, privilege: max, value: "10")
+        create(:entitlement_value, organization:, entitlement: plan_entitlement, privilege: sso, value: "true")
+        contract_value
+        privilege_removal
       end
 
-      it "discards the override and stores a removal on the contract" do
+      it "discards the override, its values and privilege removals, and stores a removal on the contract" do
         expect(result).to be_success
         expect(contract_entitlement.reload).to be_discarded
+        expect(contract_value.reload).to be_discarded
+        expect(privilege_removal.reload).to be_discarded
         expect(contract.entitlement_removals.reload.map { [it.entitlement_feature_id, it.entitlement_privilege_id] }).to eq([[feature.id, nil]])
         expect(Entitlement::SubscriptionFeatureRemoval.where(subscription_id: nil, contract_id: nil)).to be_empty
+        expect(Entitlement::SubscriptionEntitlement.for_contract(contract)).to be_empty
       end
 
-      it "keeps one removal when called twice" do
-        described_class.call(owner: contract, feature_code:)
-
-        expect(result).to be_success
-        expect(contract.entitlement_removals.reload.count).to eq(1)
+      it "returns the entitlement as it applied before the removal" do
+        expect(V2::ContractEntitlementSerializer.new(result.entitlement).serialize).to eq(render)
       end
 
-      it "sends no subscription webhook and no activity log" do
+      it "sends one contract_entitlement.deleted webhook and activity log with the entitlement before the removal" do
+        expect { result }.to have_enqueued_job_after_commit(SendWebhookJob)
+          .with("contract_entitlement.deleted", contract, {contract_entitlement: render})
+
+        expect(sent_webhooks).to eq([["contract_entitlement.deleted", contract, {contract_entitlement: render}]])
+        expect(Utils::ActivityLog).to have_received(:produce).with(
+          contract, "contract_entitlement.deleted", after_commit: true,
+          activity_object: render,
+          changes: {"values" => [render[:values], nil]}
+        ).once
+        expect(Utils::ActivityLog).to have_received(:produce).with(anything, /\Acontract_entitlement\./, any_args).once
+        expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, "subscription.updated", any_args)
+      end
+
+      context "when the feature is already removed" do
+        before { described_class.call(owner: contract, feature_code:) }
+
+        it "fails with a feature not found and sends nothing more" do
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::NotFoundFailure)
+          expect(result.error.resource).to eq("feature")
+          expect(contract.entitlement_removals.reload.count).to eq(1)
+          # The first removal only.
+          expect(sent_webhooks.size).to eq(1)
+          expect(Utils::ActivityLog).to have_received(:produce).with(anything, /\Acontract_entitlement\./, any_args).once
+        end
+      end
+
+      context "without a webhook endpoint" do
+        before { organization.webhook_endpoints.destroy_all }
+
+        it "logs the removal and sends no webhook" do
+          expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+          expect(result).to be_success
+          expect(Utils::ActivityLog).to have_received(:produce).with(
+            contract, "contract_entitlement.deleted", after_commit: true,
+            activity_object: render,
+            changes: {"values" => [render[:values], nil]}
+          ).once
+        end
+      end
+
+      context "without the entitlement_events feature flag" do
+        let(:feature_flags) { [] }
+
+        it "removes the feature, returns it and sends nothing" do
+          expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+          expect(V2::ContractEntitlementSerializer.new(result.entitlement).serialize).to eq(render)
+          expect(contract_entitlement.reload).to be_discarded
+          expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, /\Acontract_entitlement\./, any_args)
+        end
+      end
+
+      context "when the removal write fails" do
+        before { allow(Entitlement::SubscriptionFeatureRemoval).to receive(:insert_all).and_raise(ActiveRecord::StatementInvalid) }
+
+        it "rolls back the removal and sends nothing" do
+          expect { result }.to raise_error(ActiveRecord::StatementInvalid)
+
+          expect(SendWebhookJob).not_to have_been_enqueued
+          expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, /\Acontract_entitlement\./, any_args)
+          expect(contract_entitlement.reload).not_to be_discarded
+        end
+      end
+    end
+
+    context "when only the contract grants the feature" do
+      let(:contract_entitlement) { create(:entitlement, :contract, organization:, contract:, feature:) }
+      let(:contract_value) { create(:entitlement_value, organization:, entitlement: contract_entitlement, privilege: max, value: "20") }
+
+      before { contract_value }
+
+      it "discards the entitlement and its values, stores no removal and returns it" do
+        expect(V2::ContractEntitlementSerializer.new(result.entitlement).serialize).to eq(
+          contract_entitlement_render(source: "contract", values: [{privilege_code: "max", value: 20, plan_value: nil, source: "contract"}])
+        )
+        expect(contract_entitlement.reload).to be_discarded
+        expect(contract_value.reload).to be_discarded
+        expect(contract.entitlement_removals).to be_empty
+        expect(sent_webhooks.map(&:first)).to eq(["contract_entitlement.deleted"])
+      end
+    end
+
+    context "when the feature does not apply to the contract" do
+      it "fails with a feature not found and sends nothing" do
         expect { result }.not_to have_enqueued_job(SendWebhookJob)
-        expect(Utils::ActivityLog).not_to have_produced("subscription.updated")
+
+        expect(result).not_to be_success
+        expect(result.error).to be_a(BaseService::NotFoundFailure)
+        expect(result.error.resource).to eq("feature")
+        expect(contract.entitlement_removals).to be_empty
+        expect(Utils::ActivityLog).not_to have_received(:produce).with(anything, /\Acontract_entitlement\./, any_args)
       end
     end
 
     context "when only a legacy plan grants a feature with the same id" do
       before { create(:entitlement, organization:, feature:, plan:) }
 
-      it "stores no removal" do
-        expect(result).to be_success
+      it "fails with a feature not found and stores no removal" do
+        expect(result.error.resource).to eq("feature")
         expect(contract.entitlement_removals).to be_empty
       end
     end
 
     context "with a contract without a catalog plan" do
       let(:catalog_plan) { nil }
+      let(:contract_entitlement) { create(:entitlement, :contract, organization:, contract:, feature:) }
 
-      before { create(:entitlement, organization:, feature:, plan:) }
+      before do
+        create(:entitlement, organization:, feature:, plan:)
+        contract_entitlement
+      end
 
-      it "stores no removal" do
+      it "discards the contract entitlement and stores no removal" do
         expect(result).to be_success
+        expect(contract_entitlement.reload).to be_discarded
         expect(contract.entitlement_removals).to be_empty
       end
     end
 
-    context "with a terminated contract" do
-      let(:contract) { create(:contract, :terminated, organization:, customer:, catalog_plan:) }
+    %i[terminated canceled].each do |status|
+      context "with a #{status} contract" do
+        let(:contract) { create(:contract, status, organization:, customer:, catalog_plan:) }
 
-      it "refuses the write" do
+        before { create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature:) }
+
+        it "refuses the write and sends nothing" do
+          expect { result }.not_to have_enqueued_job(SendWebhookJob)
+
+          expect(result).not_to be_success
+          expect(result.error.messages).to eq(base: ["contract_not_editable"])
+          expect(contract.entitlement_removals).to be_empty
+        end
+
+        context "with an unknown feature" do
+          let(:feature_code) { "unknown" }
+
+          it "refuses the write as for a known feature" do
+            expect(result).not_to be_success
+            expect(result.error.messages).to eq(base: ["contract_not_editable"])
+          end
+        end
+      end
+    end
+
+    context "with an unknown feature" do
+      let(:feature_code) { "unknown" }
+
+      it "fails with a feature not found" do
         expect(result).not_to be_success
-        expect(result.error.messages).to eq(base: ["contract_not_editable"])
+        expect(result.error.resource).to eq("feature")
+      end
+    end
+
+    context "when the feature is deleted while the removal waits for it", transaction: false do
+      let(:locked) { Queue.new }
+      let(:release) { Queue.new }
+
+      before do
+        create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature:)
+        contract
+      end
+
+      # Frees the lock holder left waiting by a failed expectation.
+      after { release << true }
+
+      it "fails with a feature not found, stores no removal and sends nothing" do
+        deleter = Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            ActiveRecord::Base.transaction do
+              Entitlement::Feature.lock.find(feature.id).discard!
+              locked << true
+              release.pop
+            end
+          end
+        end
+        locked.pop
+
+        remover = Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            described_class.call(owner: Contract.find(contract.id), feature_code:)
+          end
+        end
+        # The removal found the feature before the delete committed, then waits on its lock.
+        expect(remover.join(0.5)).to be_nil
+
+        release << true
+        deleter.join
+
+        expect(remover.value.error.resource).to eq("feature")
+        expect(Entitlement::SubscriptionFeatureRemoval.where(contract_id: contract.id, entitlement_feature_id: feature.id)).to be_empty
+        expect(sent_webhooks).to be_empty
+      end
+    end
+
+    context "with two concurrent removals of the same feature", transaction: false do
+      let(:locked) { Queue.new }
+      let(:release) { Queue.new }
+
+      # Committed before the threads start, which only read them.
+      before do
+        create(:entitlement, :catalog_plan, organization:, catalog_plan:, feature:)
+        contract
+      end
+
+      # Frees the lock holder left waiting by a failed expectation.
+      after { release << true }
+
+      it "removes it once, fails the other with a feature not found and sends one event" do
+        holder = Thread.new do
+          ActiveRecord::Base.connection_pool.with_connection do
+            ActiveRecord::Base.transaction do
+              Contract.lock("FOR NO KEY UPDATE").find(contract.id)
+              locked << true
+              release.pop
+            end
+          end
+        end
+        locked.pop
+
+        removers = Array.new(2) do
+          Thread.new do
+            ActiveRecord::Base.connection_pool.with_connection do
+              described_class.call(owner: Contract.find(contract.id), feature_code:)
+            end
+          end
+        end
+        # Both removers wait on the lock, so each one reads the entitlements once it holds the lock.
+        expect(removers.map { it.join(0.5) }).to eq([nil, nil])
+
+        release << true
+        holder.join
+        results = removers.map(&:value)
+
+        expect(results.count(&:success?)).to eq(1)
+        expect(results.reject(&:success?).map { it.error.resource }).to eq(["feature"])
+        expect(Entitlement::SubscriptionFeatureRemoval.where(contract_id: contract.id, entitlement_feature_id: feature.id).count).to eq(1)
+        expect(sent_webhooks.map(&:first)).to eq(["contract_entitlement.deleted"])
+        expect(Utils::ActivityLog).to have_received(:produce).with(contract, "contract_entitlement.deleted", any_args).once
       end
     end
   end

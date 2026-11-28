@@ -111,6 +111,7 @@ Rails.application.routes.draw do
         resources :alerts, param: :code, code: /.*/, only: %i[index show create update destroy], controller: "contracts/alerts"
         get :entitlements, on: :member, to: "contracts/entitlements#index"
         patch :entitlements, on: :member, to: "contracts/entitlements#update"
+        delete "entitlements/:code", on: :member, to: "contracts/entitlements#destroy", constraints: {code: /.*/}
         resources :applied_rate_cards, param: :code, code: /.*/, only: %i[index create show update destroy], controller: "contract_rate_cards" do
           scope module: :contract_rate_cards do
             resources :rate_phases, param: :code, code: /.*/, only: %i[index create update destroy]

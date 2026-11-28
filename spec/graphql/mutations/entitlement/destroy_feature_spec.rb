@@ -40,6 +40,27 @@ RSpec.describe Mutations::Entitlement::DestroyFeature, :premium do
     expect(result_data["description"]).to eq(feature.description)
   end
 
+  context "when the feature has contract removals" do
+    let(:privilege) { create(:privilege, feature:) }
+    let(:contract) { create(:contract, organization:) }
+    let(:feature_removal) { create(:subscription_feature_removal, :contract, contract:, feature:) }
+    let(:privilege_removal) { create(:subscription_feature_removal, :contract, contract:, privilege:) }
+    let(:other_feature_removal) { create(:subscription_feature_removal, :contract, contract:, feature: create(:feature, organization:)) }
+
+    before do
+      feature_removal
+      privilege_removal
+      other_feature_removal
+    end
+
+    it "discards the contract removals of the feature and of its privileges" do
+      result = subject
+
+      expect(result["errors"]).to be_nil
+      expect(Entitlement::SubscriptionFeatureRemoval.where(contract:)).to eq([other_feature_removal])
+    end
+  end
+
   context "when feature does not exist" do
     let(:input) { {id: "non-existent-id"} }
 
