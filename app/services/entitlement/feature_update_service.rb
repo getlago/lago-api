@@ -2,6 +2,8 @@
 
 module Entitlement
   class FeatureUpdateService < BaseService
+    include Concerns::ContractRemovalsConcern
+
     Result = BaseResult[:feature]
 
     def initialize(feature:, params:, partial:)
@@ -151,6 +153,9 @@ module Entitlement
       # Then delete the privileges themselves
       kept_privilege_codes = (params[:privileges] || []).filter_map { find_privilege(it[:code])&.code }
       missing_privilege_codes = feature.privileges.pluck(:code) - kept_privilege_codes
+      # Read before the discard, as the default scope hides discarded privileges.
+      missing_privilege_ids = feature.privileges.where(code: missing_privilege_codes).ids
+      discard_contract_privilege_removals(feature.organization_id, missing_privilege_ids)
       EntitlementValue.where(privilege: feature.privileges.where(code: missing_privilege_codes)).discard_all!
       feature.privileges.where(code: missing_privilege_codes).discard_all!
     end

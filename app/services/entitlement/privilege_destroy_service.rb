@@ -2,6 +2,8 @@
 
 module Entitlement
   class PrivilegeDestroyService < BaseService
+    include Concerns::ContractRemovalsConcern
+
     Result = BaseResult[:privilege]
 
     def initialize(privilege:)
@@ -25,6 +27,7 @@ module Entitlement
         return result.not_found_failure!(resource: "privilege") if feature.nil? || feature.discarded? || privilege.reload.discarded?
 
         privilege.values.discard_all!
+        discard_contract_privilege_removals(privilege.organization_id, privilege.id)
         privilege.discard!
       end
 

@@ -74,6 +74,30 @@ RSpec.describe Entitlement::PrivilegeDestroyService do
       end
     end
 
+    context "with removals" do
+      let(:contract) { create(:contract, organization:) }
+      let(:other_privilege) { create(:privilege, feature:, code: "has_root", value_type: "boolean") }
+      let(:privilege_removal) { create(:subscription_feature_removal, :contract, contract:, privilege:) }
+      let(:other_privilege_removal) { create(:subscription_feature_removal, :contract, contract:, privilege: other_privilege) }
+      let(:subscription_removal) { create(:subscription_feature_removal, privilege:) }
+
+      before do
+        privilege_removal
+        other_privilege_removal
+        subscription_removal
+      end
+
+      it "discards the contract removals of the privilege only" do
+        freeze_time do
+          expect(subject).to be_success
+
+          expect(privilege_removal.reload).to have_attributes(deleted_at: Time.current, updated_at: Time.current)
+          expect(other_privilege_removal.reload.deleted_at).to be_nil
+          expect(subscription_removal.reload.deleted_at).to be_nil
+        end
+      end
+    end
+
     context "when privilege has entitlements" do
       let(:entitlement) { create(:entitlement, feature:) }
       let(:entitlement_value) { create(:entitlement_value, entitlement:, privilege:, value: "10") }

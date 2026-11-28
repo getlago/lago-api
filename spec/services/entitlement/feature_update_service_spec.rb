@@ -276,6 +276,36 @@ RSpec.describe Entitlement::FeatureUpdateService do
         end
       end
 
+      context "when deleting privileges with contract removals" do
+        let(:contract) { create(:contract, organization:) }
+        let(:removed_privilege_removal) { create(:subscription_feature_removal, :contract, contract:, privilege: privilege2) }
+        let(:kept_privilege_removal) { create(:subscription_feature_removal, :contract, contract:, privilege: privilege1) }
+        let(:subscription_removal) { create(:subscription_feature_removal, privilege: privilege2) }
+        let(:params) do
+          {
+            privileges: [
+              {code: "max", name: "Max."}
+            ]
+          }
+        end
+
+        before do
+          removed_privilege_removal
+          kept_privilege_removal
+          subscription_removal
+        end
+
+        it "discards the contract removals of the removed privileges only" do
+          freeze_time do
+            expect(subject).to be_success
+
+            expect(removed_privilege_removal.reload).to have_attributes(deleted_at: Time.current, updated_at: Time.current)
+            expect(kept_privilege_removal.reload.deleted_at).to be_nil
+            expect(subscription_removal.reload.deleted_at).to be_nil
+          end
+        end
+      end
+
       context "when new privileges is provided" do
         let(:new_privilege_code) { "     new_privilege     " }
         let(:params) do
@@ -529,6 +559,20 @@ RSpec.describe Entitlement::FeatureUpdateService do
           expect(result).to be_success
           expect(result.feature.name).to eq(original_name)
           expect(result.feature.description).to eq("Updated feature description")
+        end
+      end
+
+      context "when privileges with contract removals are not in the params" do
+        let(:removal) { create(:subscription_feature_removal, :contract, privilege: privilege2) }
+        let(:params) { {privileges: [{code: "max", name: "Max."}]} }
+
+        before { removal }
+
+        it "keeps the privileges and their contract removals" do
+          expect(subject).to be_success
+
+          expect(privilege2.reload).not_to be_discarded
+          expect(removal.reload.deleted_at).to be_nil
         end
       end
 
