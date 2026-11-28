@@ -501,6 +501,77 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
 
       expect(event_store).not_to have_received(:prorated_sum)
     end
+
+    context "when rounding is configured" do
+      let(:billable_metric) do
+        create(
+          :billable_metric,
+          organization:,
+          aggregation_type: "sum_agg",
+          field_name: "total_count",
+          recurring: true,
+          rounding_function: "ceil",
+          rounding_precision: 0
+        )
+      end
+
+      let(:latest_events) do
+        create(
+          :event,
+          organization_id: organization.id,
+          code: billable_metric.code,
+          customer:,
+          subscription:,
+          timestamp: from_datetime + 25.days,
+          properties: {total_count: 4.3}
+        )
+      end
+
+      it "rounds the full amount once" do
+        result = sum_service.aggregate(options:)
+
+        # 2.5 + 2.5 + 4.3 = 9.3 -> 10
+        expect(result.aggregation).to eq(10)
+        expect(result.count).to eq(3)
+      end
+
+      context "with grouped_by" do
+        let(:grouped_by) { ["agent_name"] }
+
+        let(:old_events) do
+          create_list(
+            :event,
+            2,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            customer:,
+            subscription:,
+            timestamp: subscription.started_at + 3.months,
+            properties: {total_count: 2.5, agent_name: "aragorn"}
+          )
+        end
+
+        let(:latest_events) do
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            customer:,
+            subscription:,
+            timestamp: from_datetime + 25.days,
+            properties: {total_count: 4.3, agent_name: "aragorn"}
+          )
+        end
+
+        it "rounds the full amount of each group once" do
+          result = sum_service.aggregate(options:)
+
+          # 2.5 + 2.5 + 4.3 = 9.3 -> 10
+          expect(result.aggregations.map { [it.grouped_by, it.aggregation, it.count] })
+            .to eq([[{"agent_name" => "aragorn"}, 10, 3]])
+        end
+      end
+    end
   end
 
   context "when events are out of bounds" do
@@ -754,6 +825,58 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
 
         expect(result.aggregation).to eq(0)
         expect(result.current_usage_units).to eq(0)
+      end
+    end
+
+    context "when rounding is configured" do
+      let(:billable_metric) do
+        create(
+          :billable_metric,
+          organization:,
+          aggregation_type: "sum_agg",
+          field_name: "total_count",
+          recurring: true,
+          rounding_function: "ceil",
+          rounding_precision: 0
+        )
+      end
+      let(:max_aggregation_with_proration) { "3.8" }
+
+      let(:cached_aggregation) do
+        create(
+          :cached_aggregation,
+          organization: billable_metric.organization,
+          charge:,
+          external_subscription_id: subscription.external_id,
+          event_transaction_id: latest_events.transaction_id,
+          timestamp: latest_events.timestamp,
+          current_aggregation: "4.3",
+          max_aggregation: "6",
+          max_aggregation_with_proration:
+        )
+      end
+
+      before { latest_events.update!(properties: {total_count: 4.3}) }
+
+      it "does not count the rounding of the units as usage" do
+        result = sum_service.aggregate(options:)
+
+        # 2.5 + 2.5 + 4.3 = 9.3 units; 9.3 - 4.3 cached = 5 new units, + 3.8 cached prorated = 8.8 -> 9
+        expect(result.aggregation).to eq(9)
+        expect(result.current_usage_units).to eq(10) # ceil(9.3)
+      end
+
+      context "when the period started after the charge period" do
+        let(:from_datetime) { Time.zone.parse("2023-05-15 00:00:00") }
+        let(:max_aggregation_with_proration) { "4.1" }
+
+        it "prorates only the raw new units" do
+          result = sum_service.aggregate(options:)
+
+          # 9.3 - 4.3 cached = 5 new units over 17 of 31 days = 2.74194, + 4.1 cached prorated = 6.84194 -> 7
+          expect(result.aggregation).to eq(7)
+          expect(result.current_usage_units).to eq(10) # ceil(9.3)
+        end
       end
     end
   end
@@ -1254,6 +1377,43 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
             expect(aggregation.grouped_by["agent_name"]).to eq(agent_names[index])
           end
         end
+
+        context "when rounding is configured" do
+          let(:billable_metric) do
+            create(
+              :billable_metric,
+              organization:,
+              aggregation_type: "sum_agg",
+              field_name: "total_count",
+              recurring: true,
+              rounding_function: "ceil",
+              rounding_precision: 2
+            )
+          end
+
+          let(:latest_events) do
+            [12, 12.434].map do |total_count|
+              create(
+                :event,
+                organization_id: organization.id,
+                code: billable_metric.code,
+                customer:,
+                subscription:,
+                timestamp: from_datetime + 25.days,
+                properties: {total_count:, agent_name: "aragorn"}
+              )
+            end
+          end
+
+          it "rounds the units of each group once" do
+            result = sum_service.aggregate(options:)
+
+            # aggregation: 5 + 12 * 6/31 + 12.434 * 6/31 = 9.72917 -> 9.73
+            # units: 2.5 + 2.5 + 12 + 12.434 = 29.434 -> 29.44
+            expect(result.aggregations.map { [it.grouped_by, it.aggregation, it.current_usage_units] })
+              .to eq([[{"agent_name" => "aragorn"}, 9.73, 29.44]])
+          end
+        end
       end
 
       context "when charge is pay in advance" do
@@ -1318,6 +1478,74 @@ RSpec.describe BillableMetrics::ProratedAggregations::SumService, transaction: f
               expect(aggregation.aggregation).to eq(5)
               expect(aggregation.current_usage_units).to eq(5)
               expect(aggregation.grouped_by["agent_name"]).to eq(agent_names[index])
+            end
+          end
+        end
+
+        context "when rounding is configured" do
+          let(:billable_metric) do
+            create(
+              :billable_metric,
+              organization:,
+              aggregation_type: "sum_agg",
+              field_name: "total_count",
+              recurring: true,
+              rounding_function: "ceil",
+              rounding_precision: 0
+            )
+          end
+          let(:max_aggregation_with_proration) { "3.8" }
+
+          let(:latest_events) do
+            agent_names.map do |agent_name|
+              create(
+                :event,
+                organization_id: organization.id,
+                code: billable_metric.code,
+                customer:,
+                subscription:,
+                timestamp: to_datetime - 3.days,
+                properties: {
+                  total_count: 4.3,
+                  agent_name:
+                }
+              )
+            end
+          end
+
+          let(:cached_aggregation) do
+            create(
+              :cached_aggregation,
+              organization: billable_metric.organization,
+              charge:,
+              external_subscription_id: subscription.external_id,
+              event_transaction_id: latest_events.first.transaction_id,
+              timestamp: latest_events.first.timestamp,
+              current_aggregation: "4.3",
+              max_aggregation: "6",
+              max_aggregation_with_proration:,
+              grouped_by: {"agent_name" => agent_names.first}
+            )
+          end
+
+          it "does not count the rounding of the group units as usage" do
+            result = sum_service.aggregate(options:)
+
+            # 2.5 + 2.5 + 4.3 = 9.3 units; 9.3 - 4.3 cached = 5 new units, + 3.8 cached prorated = 8.8 -> 9
+            expect(result.aggregations.map { [it.grouped_by, it.aggregation, it.current_usage_units] })
+              .to eq([[{"agent_name" => "aragorn"}, 9, 10]])
+          end
+
+          context "when the period started after the charge period" do
+            let(:from_datetime) { Time.zone.parse("2023-05-15 00:00:00") }
+            let(:max_aggregation_with_proration) { "4.1" }
+
+            it "prorates only the raw new group units" do
+              result = sum_service.aggregate(options:)
+
+              # 9.3 - 4.3 cached = 5 new units over 17 of 31 days = 2.74194, + 4.1 cached prorated = 6.84194 -> 7
+              expect(result.aggregations.map { [it.grouped_by, it.aggregation, it.current_usage_units] })
+                .to eq([[{"agent_name" => "aragorn"}, 7, 10]])
             end
           end
         end

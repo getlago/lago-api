@@ -278,6 +278,40 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transa
           expect(result.aggregation).to eq(1)
         end
       end
+
+      context "when the charge is billed in advance on the billing date with rounding" do
+        let(:options) { {is_pay_in_advance: true, is_current_usage: false} }
+        let(:billable_metric) do
+          create(
+            :billable_metric,
+            organization:,
+            aggregation_type: "unique_count_agg",
+            field_name: "unique_id",
+            recurring: true,
+            rounding_function: "round",
+            rounding_precision: -1
+          )
+        end
+        let(:other_events) do
+          Array.new(5) do
+            create(
+              :event,
+              organization_id: organization.id,
+              code: billable_metric.code,
+              external_subscription_id: subscription.external_id,
+              timestamp: added_at,
+              properties: {unique_id: SecureRandom.uuid}
+            )
+          end
+        end
+
+        before { other_events }
+
+        it "rounds the full amount once" do
+          # 6 persisted unique ids -> round to tens = 10
+          expect(result.aggregation).to eq(10)
+        end
+      end
     end
 
     context "with persisted metrics added in the period" do
@@ -588,6 +622,75 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transa
           expect(result.current_usage_units).to eq(1)
         end
       end
+
+      context "when rounding is configured" do
+        let(:billable_metric) do
+          create(
+            :billable_metric,
+            organization:,
+            aggregation_type: "unique_count_agg",
+            field_name: "unique_id",
+            recurring: true,
+            rounding_function: "round",
+            rounding_precision: -1
+          )
+        end
+
+        let(:cached_aggregation) do
+          create(
+            :cached_aggregation,
+            organization:,
+            charge:,
+            event_transaction_id: previous_event.transaction_id,
+            external_subscription_id: subscription.external_id,
+            timestamp: from_datetime + 5.days,
+            current_aggregation: "1",
+            max_aggregation: "5",
+            max_aggregation_with_proration: "4.5"
+          )
+        end
+
+        it "does not subtract the cached units from the rounded units" do
+          # 2 units - 1 cached = 1 new unit, + 4.5 cached prorated = 5.5 -> round to tens = 10
+          expect(result.aggregation).to eq(10)
+          expect(result.current_usage_units).to eq(0) # 2 rounded to tens
+        end
+
+        context "when the period started after the charge period" do
+          let(:from_datetime) { Time.zone.parse("2022-07-25 00:00:00 UTC") }
+          let(:billable_metric) do
+            create(
+              :billable_metric,
+              organization:,
+              aggregation_type: "unique_count_agg",
+              field_name: "unique_id",
+              recurring: true,
+              rounding_function: "ceil",
+              rounding_precision: -1
+            )
+          end
+
+          let(:cached_aggregation) do
+            create(
+              :cached_aggregation,
+              organization:,
+              charge:,
+              event_transaction_id: previous_event.transaction_id,
+              external_subscription_id: subscription.external_id,
+              timestamp: from_datetime + 5.days,
+              current_aggregation: "1",
+              max_aggregation: "10",
+              max_aggregation_with_proration: "9.2"
+            )
+          end
+
+          it "prorates only the raw new units" do
+            # 2 units - 1 cached = 1 new unit over 15 of 31 days = 0.48388, + 9.2 cached prorated = 9.68388 -> ceil to tens = 10
+            expect(result.aggregation).to eq(10)
+            expect(result.current_usage_units).to eq(10) # 2 ceiled to tens
+          end
+        end
+      end
     end
 
     context "when event is given" do
@@ -703,6 +806,39 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transa
     end
 
     before { events }
+
+    context "when the charge is billed in advance on the billing date with rounding" do
+      let(:options) { {is_pay_in_advance: true, is_current_usage: false} }
+      let(:billable_metric) do
+        create(
+          :billable_metric,
+          organization:,
+          aggregation_type: "unique_count_agg",
+          field_name: "unique_id",
+          recurring: true,
+          rounding_function: "round",
+          rounding_precision: -1
+        )
+      end
+      let(:events) do
+        agent_names.product(%w[000 001 002 003 004 005]).each do |agent_name, unique_id|
+          create(
+            :event,
+            organization_id: organization.id,
+            code: billable_metric.code,
+            external_subscription_id: subscription.external_id,
+            timestamp: added_at,
+            properties: {unique_id:, agent_name:}
+          )
+        end
+      end
+
+      it "rounds the full amount of each group once" do
+        # 6 persisted unique ids per group -> round to tens = 10
+        expect(result.aggregations.map { [it.grouped_by, it.aggregation] })
+          .to match_array([[{"agent_name" => "aragorn"}, 10], [{"agent_name" => "frodo"}, 10]])
+      end
+    end
 
     context "with persisted metric on full period" do
       it "returns the number of persisted metric" do
@@ -1049,6 +1185,83 @@ RSpec.describe BillableMetrics::ProratedAggregations::UniqueCountService, transa
             expect(aggregation.aggregation).to eq(1)
             expect(aggregation.current_usage_units).to eq(1)
             expect(aggregation.full_units_number).to eq(1)
+          end
+        end
+      end
+
+      context "when rounding is configured" do
+        let(:billable_metric) do
+          create(
+            :billable_metric,
+            organization:,
+            aggregation_type: "unique_count_agg",
+            field_name: "unique_id",
+            recurring: true,
+            rounding_function: "round",
+            rounding_precision: -1
+          )
+        end
+
+        let(:cached_aggregations) do
+          agent_names.map.with_index do |agent_name, index|
+            create(
+              :cached_aggregation,
+              organization:,
+              charge:,
+              event_transaction_id: previous_events[index].transaction_id,
+              external_subscription_id: subscription.external_id,
+              timestamp: from_datetime + 5.days,
+              current_aggregation: "1",
+              max_aggregation: "5",
+              max_aggregation_with_proration: "4.5",
+              grouped_by: {agent_name:}
+            )
+          end
+        end
+
+        it "does not subtract the cached units from the rounded units of each group" do
+          # Per group: 2 units - 1 cached = 1 new unit, + 4.5 cached prorated = 5.5 -> round to tens = 10;
+          # 2 units rounded to tens = 0
+          expect(result.aggregations.map { [it.grouped_by["agent_name"], it.aggregation, it.current_usage_units] })
+            .to match_array([["aragorn", 10, 0], ["frodo", 10, 0]])
+        end
+
+        context "when the period started after the charge period" do
+          let(:from_datetime) { Time.zone.parse("2022-07-25 00:00:00 UTC") }
+          let(:billable_metric) do
+            create(
+              :billable_metric,
+              organization:,
+              aggregation_type: "unique_count_agg",
+              field_name: "unique_id",
+              recurring: true,
+              rounding_function: "ceil",
+              rounding_precision: -1
+            )
+          end
+
+          let(:cached_aggregations) do
+            agent_names.map.with_index do |agent_name, index|
+              create(
+                :cached_aggregation,
+                organization:,
+                charge:,
+                event_transaction_id: previous_events[index].transaction_id,
+                external_subscription_id: subscription.external_id,
+                timestamp: from_datetime + 5.days,
+                current_aggregation: "1",
+                max_aggregation: "10",
+                max_aggregation_with_proration: "9.2",
+                grouped_by: {agent_name:}
+              )
+            end
+          end
+
+          it "prorates only the raw new units of each group" do
+            # Per group: 2 units - 1 cached = 1 new unit over 15 of 31 days = 0.48388,
+            # + 9.2 cached prorated = 9.68388 -> ceil to tens = 10; 2 units ceiled to tens = 10
+            expect(result.aggregations.map { [it.grouped_by["agent_name"], it.aggregation, it.current_usage_units] })
+              .to match_array([["aragorn", 10, 10], ["frodo", 10, 10]])
           end
         end
       end

@@ -82,21 +82,22 @@ module BillableMetrics
         result.pay_in_advance_event = event if event
       end
 
-      def aggregate(options: {})
+      # round: false leaves the units raw, for a caller that rounds them once itself
+      def aggregate(options: {}, round: true)
         if grouped_by.present?
           compute_grouped_by_aggregation(options:)
           if metered_item.dynamic?
             compute_grouped_by_precise_total_amount_cents(options:)
           end
 
-          result.aggregations.each { apply_rounding(it) }
+          result.aggregations.each { apply_rounding(it) } if round
         else
           compute_aggregation(options:)
           if metered_item.dynamic?
             compute_precise_total_amount_cents(options:)
           end
 
-          apply_rounding(result)
+          apply_rounding(result) if round
         end
         result
       end

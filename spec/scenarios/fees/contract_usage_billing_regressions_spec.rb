@@ -314,6 +314,94 @@ RSpec.describe "Contract usage billing behavior" do
       end
     end
 
+    context "with prorated standard pricing and a rounded fractional sum" do
+      subject(:usage_snapshots) do
+        inputs.map do |input|
+          travel_to(input.fetch(:at))
+          create_event({external_contract_id: contract.external_id, code: billable_metric.code,
+            timestamp: input.fetch(:at).to_i, properties: input.fetch(:properties, {}).merge(field_name => input.fetch(:value))},
+            perform_jobs: false)
+          perform_all_enqueued_jobs(except: [BillingOperations::ProcessJob])
+
+          fee = current_usage_fees.call.sole
+          [fee.units, fee.amount_cents]
+        end
+      end
+
+      let(:current_usage_fees) do
+        -> { Contracts::CurrentUsageService.call!(contract:, apply_taxes: false).rate_card_usages.sole.fees }
+      end
+
+      let(:started_at) { Time.zone.parse("2026-11-20 00:00:00") }
+      let(:billable_metric) do
+        create(:billable_metric, organization:, aggregation_type:, recurring:, field_name:,
+          rounding_function: :ceil, rounding_precision: 0)
+      end
+      let(:proration) { true }
+      let(:rate_properties) { {"amount" => "0.50"} }
+      let(:rate) do
+        RateCardRates::CreateService.call!(rate_card:, params: {
+          code: "qa-rate", effective_from: started_at, rate_model:, rate_properties:,
+          billing_interval_unit: :day, billing_interval_count: 14
+        }).rate_card_rate
+      end
+      # The 14-day interval anchored on Nov 15 opens a Nov 20-28 segment (9 of 14 days).
+      let(:card) do
+        create(:contract_rate_card, organization:, contract:, rate_card:,
+          effective_date: started_at.to_date, billing_anchor_date: Date.new(2026, 11, 15))
+      end
+      let(:inputs) do
+        [["2026-11-21", "7.571188657"], ["2026-11-23", "9.552135703"],
+          ["2026-11-24", "-3.639498807"], ["2026-11-25", "18.631375395"]].map do |day, value|
+          {at: Time.zone.parse("#{day} 10:00:00"), value:}
+        end
+      end
+
+      it "reports the rounded prorated maximum without counting rounding as usage" do
+        snapshots = usage_snapshots
+
+        expect(Fee.where(contract:, fee_type: :product).order(:created_at).pluck(:amount_cents)).to eq([216, 205, 0, 214])
+        # Units are the ceiled running total, the amount is ceil(cached prorated maximum) x 50 cents:
+        # 7.571188657 * 8/14 = 4.32640 -> 5; + 9.552135703 * 6/14 = 8.42018 -> 9; a decrease keeps 9;
+        # + 18.631375395 * 4/14 = 12.70358 -> 13.
+        expect(snapshots).to eq([[8, 250], [18, 450], [14, 450], [33, 650]])
+      end
+
+      it "does not write billing state when current usage is read" do
+        usage_snapshots
+        persisted_state = lambda do
+          [Fee.count, Invoice.count, CachedAggregation.count,
+            CachedAggregation.order(:created_at).pluck(:current_aggregation, :max_aggregation, :max_aggregation_with_proration)]
+        end
+        before_reads = persisted_state.call
+
+        2.times { current_usage_fees.call }
+
+        expect(persisted_state.call).to eq(before_reads)
+      end
+
+      context "when usage is grouped" do
+        let(:rate_properties) { {"amount" => "0.50", "pricing_group_keys" => ["region"]} }
+        let(:inputs) do
+          [["2026-11-21", "7.571188657"], ["2026-11-23", "9.552135703"],
+            ["2026-11-24", "-3.639498807"], ["2026-11-25", "18.631375395"]].map do |day, value|
+            {at: Time.zone.parse("#{day} 10:00:00"), value:, properties: {"region" => "eu"}}
+          end
+        end
+
+        it "reports the rounded prorated maximum of the group without counting rounding as usage" do
+          snapshots = usage_snapshots
+
+          expect(Fee.where(contract:, fee_type: :product).order(:created_at).pluck(:amount_cents, :grouped_by))
+            .to eq([216, 205, 0, 214].map { [it, {"region" => "eu"}] })
+          # Same arithmetic as the ungrouped case, on the single "eu" group:
+          # 4.32640 -> 5; 8.42018 -> 9; 9 after the decrease; 12.70358 -> 13, each x 50 cents.
+          expect(snapshots).to eq([[8, 250], [18, 450], [14, 450], [33, 650]])
+          expect(current_usage_fees.call.sole.grouped_by).to eq("region" => "eu")
+        end
+      end
+    end
+
     context "with recurring prorated unique-count pricing" do
       let(:started_at) { Time.zone.parse("2026-10-07 00:00:00") }
       let(:aggregation_type) { :unique_count_agg }
