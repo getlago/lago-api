@@ -4,6 +4,7 @@ module Entitlement
   class PlanEntitlementsUpdateService < BaseService
     include ::Entitlement::Concerns::CreateOrUpdateConcern
     include ::Entitlement::Concerns::OwnerLockConcern
+    include ::Entitlement::Concerns::EntryPathConcern
 
     Result = BaseResult[:entitlements, :failed_field]
 
@@ -66,30 +67,6 @@ module Entitlement
 
     attr_reader :organization, :plan, :entitlements_params, :partial, :send_webhook
     alias_method :partial?, :partial
-
-    # NOTE: The failures keep the keys that v1 and GraphQL clients read, and put their codes on the path of
-    #       the failing entry of the request (entitlements.<feature>[.<privilege>]), which native v2 renders.
-    #       failed_field lets the v2 controller render an unknown feature or privilege on that path.
-    def not_found_at!(path, resource)
-      result.failed_field = path
-      result.not_found_failure!(resource:).raise_if_error!
-    end
-
-    # v1 and GraphQL clients read privilege.<attribute>.
-    def save_value_at!(path)
-      yield
-    rescue ActiveRecord::RecordInvalid => e
-      raise unless e.record.is_a?(EntitlementValue)
-
-      failure = BaseService::ValidationFailure.from_errors(result, e.record.errors)
-      at_path = ->(field) { (field.to_sym == :value) ? path : :"privilege.#{field}" }
-      raise BaseService::ValidationFailure.new(
-        result,
-        messages: failure.messages.transform_keys { :"privilege.#{it}" },
-        codes: failure.codes.transform_keys(&at_path),
-        meta: failure.meta.transform_keys(&at_path)
-      )
-    end
 
     def catalog_plan?
       plan.is_a?(CatalogPlan)

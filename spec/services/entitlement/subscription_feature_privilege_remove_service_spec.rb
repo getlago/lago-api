@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
-  subject(:result) { described_class.call(subscription:, feature_code:, privilege_code:) }
+  subject(:result) { described_class.call(owner: subscription, feature_code:, privilege_code:) }
 
   # let, not let_it_be: the concurrency examples commit their rows and empty the tables.
   let(:organization) { create(:organization) }
@@ -96,7 +96,7 @@ RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
 
     context "when privilege is on subscription" do
       let(:subscription_entitlement) { create(:entitlement, feature:, subscription:, plan: nil) }
-      let(:entitlement_value) { create(:entitlement_value, entitlement: subscription_entitlement, privilege:, value: "10") }
+      let(:entitlement_value) { create(:entitlement_value, entitlement: subscription_entitlement, privilege:, value: "10", updated_at: 1.day.ago) }
 
       before do
         entitlement_value
@@ -110,6 +110,14 @@ RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
 
       it "soft deletes the entitlement values" do
         expect { result }.to change { entitlement_value.reload.deleted_at }.from(nil)
+      end
+
+      it "sets updated_at on the discarded entitlement values" do
+        freeze_time do
+          result
+
+          expect(entitlement_value.reload).to have_attributes(deleted_at: Time.current, updated_at: Time.current)
+        end
       end
 
       it "does not discards the subscription entitlement" do
@@ -145,7 +153,7 @@ RSpec.describe Entitlement::SubscriptionFeaturePrivilegeRemoveService do
 
         remover = Thread.new do
           ActiveRecord::Base.connection_pool.with_connection do
-            described_class.call(subscription: Subscription.find(subscription.id), feature_code:, privilege_code:)
+            described_class.call(owner: Subscription.find(subscription.id), feature_code:, privilege_code:)
           end
         end
         expect(remover.join(0.5)).to be_nil

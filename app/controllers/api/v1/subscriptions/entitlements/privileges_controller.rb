@@ -9,7 +9,7 @@ module Api
 
           def destroy
             result = ::Entitlement::SubscriptionFeaturePrivilegeRemoveService.call(
-              subscription:,
+              owner: subscription,
               feature_code: params[:entitlement_code],
               privilege_code: params[:code]
             )

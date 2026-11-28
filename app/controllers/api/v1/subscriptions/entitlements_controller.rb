@@ -38,7 +38,7 @@ module Api
         end
 
         def destroy
-          result = ::Entitlement::SubscriptionFeatureRemoveService.call(subscription:, feature_code: params[:code])
+          result = ::Entitlement::SubscriptionFeatureRemoveService.call(owner: subscription, feature_code: params[:code])
 
           if result.success?
             render(

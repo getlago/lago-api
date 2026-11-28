@@ -44,7 +44,7 @@ RSpec.describe Entitlement::SubscriptionEntitlementUpdateService do
         result
 
         expect(Entitlement::SubscriptionEntitlementCoreUpdateService).to have_received(:call!).with(
-          subscription: subscription,
+          owner: subscription,
           plan: plan, # no parent plan created here, so it's the subscription plan
           feature: feature,
           plan_entitlement:,
