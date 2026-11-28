@@ -28,7 +28,10 @@ RSpec.describe Webhooks::Plans::DeletedService do
       end
       let(:tax) { create(:tax, organization:, name: "VAT", code: "vat_20", rate: 20.0, description: "Standard VAT") }
 
-      before { create(:plan_applied_tax, :catalog_plan, catalog_plan:, tax:, organization:) }
+      before do
+        create(:plan_applied_tax, :catalog_plan, catalog_plan:, tax:, organization:)
+        create(:item_metadata, owner: catalog_plan, organization:, value: {"crm_id" => "123", "tier" => nil})
+      end
 
       it "creates a webhook with every serialized catalog plan field" do
         webhook_service.call
@@ -59,7 +62,8 @@ RSpec.describe Webhooks::Plans::DeletedService do
                 "updated_at" => tax.updated_at.iso8601,
                 "deleted_at" => nil
               }
-            ]
+            ],
+            "metadata" => {"crm_id" => "123", "tier" => nil}
           }
         )
       end
