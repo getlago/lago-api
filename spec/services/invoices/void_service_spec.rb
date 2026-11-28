@@ -214,6 +214,153 @@ RSpec.describe Invoices::VoidService do
             expect(wallet.reload.credits_balance).to eq(100)
             expect(WalletTransactions::RecreditService).not_to have_received(:call)
           end
+
+          it "does not fail a settled top-up" do
+            create(:credit_fee, invoice:, wallet_transaction:)
+
+            void_service.call
+
+            expect(wallet_transaction.reload).to be_settled
+          end
+
+          context "when its top-up is still pending" do
+            # Found through the credit fee, as Invoices::PrepaidCreditJob does
+            let(:pending_top_up) do
+              create(:wallet_transaction, wallet:, status: :pending, settled_at: nil, transaction_status: :purchased, amount: 50, credit_amount: 50)
+            end
+            let(:other_pending_top_up) do
+              create(:wallet_transaction, wallet:, status: :pending, settled_at: nil, transaction_status: :purchased, amount: 20, credit_amount: 20)
+            end
+
+            before do
+              create(:credit_fee, invoice:, wallet_transaction: pending_top_up)
+              other_pending_top_up
+            end
+
+            it "fails the pending top-up and sends its webhook" do
+              void_service.call
+
+              expect(pending_top_up.reload).to be_failed
+              expect(pending_top_up.failed_at).to be_present
+              expect(SendWebhookJob).to have_been_enqueued.with("wallet_transaction.updated", pending_top_up)
+            end
+
+            it "leaves the pending top-ups of other invoices alone" do
+              void_service.call
+
+              expect(other_pending_top_up.reload).to be_pending
+            end
+
+            context "when a payment link was opened before the void" do
+              let(:payment_intent) { create(:payment_intent, invoice:, status: :active) }
+
+              before { payment_intent }
+
+              it "expires the payment link, so it cannot settle the failed top-up" do
+                void_service.call
+
+                expect(payment_intent.reload).to be_expired
+                expect(pending_top_up.reload).to be_failed
+              end
+
+              context "when the provider refuses to expire it" do
+                before do
+                  allow(PaymentIntents::ExpireService).to receive(:call!)
+                    .and_raise(BaseService::ServiceFailure.new(BaseResult.new, code: "stripe_error", error_message: "boom"))
+                end
+
+                it "does not void the invoice, so the link cannot pay a failed top-up" do
+                  result = void_service.call
+
+                  expect(result).not_to be_success
+                  expect(invoice.reload).to be_finalized
+                  expect(pending_top_up.reload).to be_pending
+                end
+              end
+
+              context "when Stripe cannot be reached" do
+                before do
+                  allow(PaymentIntents::ExpireService).to receive(:call!).and_raise(::Stripe::APIConnectionError.new("timeout"))
+                end
+
+                it "fails cleanly without voiding, so it can be retried" do
+                  result = void_service.call
+
+                  expect(result).not_to be_success
+                  expect(result.error.code).to eq("payment_link_expiration_failed")
+                  expect(invoice.reload).to be_finalized
+                  expect(pending_top_up.reload).to be_pending
+                end
+              end
+
+              context "when the customer's payment provider was removed" do
+                let(:payment_intent) { create(:payment_intent, invoice:, status: :active, provider_session_id: "cs_test_123") }
+
+                before { invoice.customer.update!(payment_provider: nil) }
+
+                it "expires the link on Lago's side and voids the invoice" do
+                  result = void_service.call
+
+                  expect(result).to be_success
+                  expect(invoice.reload).to be_voided
+                  expect(payment_intent.reload).to be_expired
+                  expect(pending_top_up.reload).to be_failed
+                end
+              end
+
+              context "when the customer moved to a provider that cannot expire links" do
+                before do
+                  allow(PaymentIntents::ExpireService).to receive(:call!)
+                    .and_raise(ArgumentError, "Invoices::Payments::GocardlessService: :expire_payment_url is not declared in RESULTS")
+                end
+
+                it "expires the link on Lago's side and voids the invoice" do
+                  result = void_service.call
+
+                  expect(result).to be_success
+                  expect(payment_intent.reload).to be_expired
+                  expect(pending_top_up.reload).to be_failed
+                end
+              end
+
+              context "when an unrelated ArgumentError is raised" do
+                before { allow(PaymentIntents::ExpireService).to receive(:call!).and_raise(ArgumentError, "bug") }
+
+                it "does not hide it" do
+                  expect { void_service.call }.to raise_error(ArgumentError, "bug")
+                end
+              end
+            end
+
+            context "when its payment is still processing, as a SEPA debit" do
+              before do
+                create(:payment, payable: invoice, customer: invoice.customer, organization: invoice.organization,
+                  status: "processing", payable_payment_status: :processing)
+              end
+
+              it "leaves the top-up pending for the provider's webhook to settle or fail" do
+                void_service.call
+
+                expect(pending_top_up.reload).to be_pending
+                expect(SendWebhookJob).not_to have_been_enqueued.with("wallet_transaction.updated", pending_top_up)
+              end
+            end
+          end
+        end
+
+        context "when a subscription invoice has a pending top-up fee" do
+          let(:payment_status) { :pending }
+          let(:pending_top_up) do
+            create(:wallet_transaction, status: :pending, settled_at: nil, transaction_status: :purchased)
+          end
+
+          before { create(:credit_fee, invoice:, wallet_transaction: pending_top_up) }
+
+          it "leaves the top-up alone" do
+            void_service.call
+
+            expect(pending_top_up.reload).to be_pending
+          end
         end
       end
     end
