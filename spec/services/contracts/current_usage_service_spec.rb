@@ -754,4 +754,43 @@ RSpec.describe Contracts::CurrentUsageService do
       end
     end
   end
+
+  context "with the usage buckets", clickhouse: {clean_before: true} do
+    subject(:result) { described_class.call!(contract:, timestamp:, apply_taxes:, use_usage_buckets:) }
+
+    include_context "with realtime usage availability"
+
+    let(:use_usage_buckets) { true }
+    let(:organization) do
+      create(:organization, clickhouse_events_store: true, feature_flags: %w[product_catalog realtime_usage])
+    end
+
+    before do
+      ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = "product_events_raw"
+      create(:clickhouse_product_usage_bucket, contract:, product:, aggregation_type: "count",
+        bucket: Time.zone.parse("2027-02-05"), units: "5.0", events_count: 5)
+    end
+
+    after { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+
+    it "prices the metered window from the buckets" do
+      expect(result.rate_card_usages.sole.fees.sole).to have_attributes(units: 5, amount_cents: 1000) # 5 units at 2 EUR
+    end
+
+    context "when the caller does not ask for them" do
+      let(:use_usage_buckets) { false }
+
+      it "reads the product events, which hold none here" do
+        expect(result.rate_card_usages.sole.fees.sole).to have_attributes(units: 0, amount_cents: 0)
+      end
+    end
+
+    context "when the organization is not on the product events pipeline" do
+      before { ENV["LAGO_KAFKA_PRODUCT_RAW_EVENTS_TOPIC"] = nil }
+
+      it "does not read the product buckets, which only that pipeline writes" do
+        expect(result.rate_card_usages.sole.fees.sole).to have_attributes(units: 0, amount_cents: 0)
+      end
+    end
+  end
 end

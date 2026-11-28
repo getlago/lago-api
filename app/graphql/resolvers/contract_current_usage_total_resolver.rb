@@ -28,7 +28,9 @@ module Resolvers
       contract = current_organization.contracts.find_by(id: contract_id)
       return not_found_error(resource: "contract") unless contract
 
-      result = ::Contracts::CurrentUsageService.call(contract:, apply_taxes: true, untaxed_on_provider_failure: true)
+      result = ::Contracts::CurrentUsageService.call(
+        contract:, apply_taxes: true, untaxed_on_provider_failure: true, use_usage_buckets: true
+      )
 
       if result.success?
         totals(result)

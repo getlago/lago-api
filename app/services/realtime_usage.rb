@@ -118,6 +118,21 @@ module RealtimeUsage
       nil
     end
 
+    def supported_billing_segment?(metered_item)
+      billing_segment_unsupported_reason(metered_item).nil?
+    end
+
+    # The product buckets hold no snapshot to complete a recurring sum with, so a recurring
+    # metric always reads its events. The model and the timing come from the segment's card.
+    def billing_segment_unsupported_reason(metered_item)
+      return "unsupported_charge_model" unless SUPPORTED_CHARGE_MODELS.include?(metered_item.charge_model)
+      return "unsupported_aggregation_type" unless SUPPORTED_AGGREGATION_TYPES.include?(metered_item.billable_metric.aggregation_type)
+      return "pay_in_advance" if metered_item.pay_in_advance?
+      return "prorated" if metered_item.prorated?
+
+      "recurring_metric" if metered_item.billable_metric.recurring?
+    end
+
     # Buckets written before a charge accepted a target wallet hold no wallet code, so their usage
     # would be debited from the wrong wallet. Nothing records that switch, so any edit counts.
     def wallet_charge_changed_since?(charge, datetime)

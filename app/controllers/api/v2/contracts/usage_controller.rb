@@ -15,7 +15,8 @@ module Api
           result = ::Contracts::CurrentUsageService.call(
             contract:,
             apply_taxes: ActiveModel::Type::Boolean.new.cast(params.fetch(:apply_taxes, true)),
-            filters: filter_params
+            filters: filter_params,
+            use_usage_buckets: true
           )
 
           if result.success?

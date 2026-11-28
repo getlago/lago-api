@@ -9,13 +9,17 @@ module Contracts
 
     Result = BaseResult[:contract, :rate_card_usages, :amount_cents, :taxes_amount_cents, :total_amount_cents, :taxes_unavailable]
 
-    def initialize(contract:, timestamp: Time.current, apply_taxes: true, untaxed_on_provider_failure: false, filters: {}, search_term: nil)
+    # `use_usage_buckets` serves the metered windows from the realtime usage buckets when the
+    # organization has them, like Invoices::CustomerUsageService.
+    def initialize(contract:, timestamp: Time.current, apply_taxes: true, untaxed_on_provider_failure: false, filters: {}, search_term: nil,
+      use_usage_buckets: false)
       @contract = contract
       @timestamp = timestamp
       @apply_taxes = apply_taxes
       @untaxed_on_provider_failure = untaxed_on_provider_failure
       @filters = Filters.new(**(filters || {}))
       @search_term = search_term
+      @use_usage_buckets = use_usage_buckets
       super
     end
 
@@ -41,8 +45,9 @@ module Contracts
         fixed_cards = segments.filter_map { |card, _, _| card unless card.rate_card.product.metered? }
         ActiveRecord::Associations::Preloader.new(records: fixed_cards, associations: :terms).call if fixed_cards.any?
 
+        provider = usage_provider(segments.map(&:last))
         segments
-          .map { |card, billable_segment, billing_segment| rate_card_usage(card, billable_segment, billing_segment) }
+          .map { |card, billable_segment, billing_segment| rate_card_usage(card, billable_segment, billing_segment, provider) }
           .sort_by { |usage| usage_order(usage) }
       else
         []
@@ -60,7 +65,7 @@ module Contracts
 
     private
 
-    attr_reader :contract, :timestamp, :apply_taxes, :untaxed_on_provider_failure, :filters, :search_term
+    attr_reader :contract, :timestamp, :apply_taxes, :untaxed_on_provider_failure, :filters, :search_term, :use_usage_buckets
 
     delegate :customer, to: :contract
 
@@ -142,12 +147,12 @@ module Contracts
       [card, billable_segment, billing_segment]
     end
 
-    def rate_card_usage(card, billable_segment, billing_segment)
+    def rate_card_usage(card, billable_segment, billing_segment, provider)
       RateCardUsage.new(
         contract_rate_card: card,
         billing_segment:,
         rate_phase: card.rate_phases.find { |phase| phase.code == billable_segment.rate_phase_code },
-        fees: compute_fees(billing_segment)
+        fees: compute_fees(billing_segment, provider)
       )
     end
 
@@ -156,12 +161,23 @@ module Contracts
       [usage.billing_segment.started_at, usage.billing_segment.ended_at, usage.contract_rate_card.rate_card.code]
     end
 
-    def compute_fees(billing_segment)
+    # One provider for every window, so the metered ones share a single read of the buckets.
+    def usage_provider(billing_segments)
+      Events::Stores::Provider.new(
+        organization: contract.organization,
+        billing_context:,
+        serve_current_usage_from_buckets: use_usage_buckets,
+        billing_segments: billing_segments.select { |segment| segment.contract_rate_card.rate_card.product.metered? }
+      )
+    end
+
+    def compute_fees(billing_segment, provider)
       if billing_segment.contract_rate_card.rate_card.product.metered?
         Fees::ChargeService.call!(
           invoice: nil,
           metered_item: Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:),
           billing_context:,
+          provider:,
           options: Fees::ChargeService::Options.new(context: :current_usage)
         ).fees
       else

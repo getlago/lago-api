@@ -337,6 +337,62 @@ RSpec.describe RealtimeUsage do
     end
   end
 
+  describe ".billing_segment_unsupported_reason" do
+    subject(:reason) { described_class.billing_segment_unsupported_reason(metered_item) }
+
+    let(:organization) { create(:organization) }
+    let(:billable_metric) { create(:sum_billable_metric, organization:) }
+    let(:product) { create(:product, :metered, organization:, billable_metric:) }
+    let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: :arrears, proration: false) }
+    let(:contract_rate_card) { create(:contract_rate_card, organization:, rate_card:) }
+    let(:rate_model) { "standard" }
+    let(:rate_card_rate) { create(:rate_card_rate, organization:, rate_card:, rate_model:) }
+    let(:billing_segment) { build(:billing_segment, organization:, contract_rate_card:, rate_card_rate:) }
+    let(:metered_item) { Fees::ChargeService::MeteredItem.from_billing_segment(billing_segment:) }
+
+    it "serves a standard card on a sum_agg metric" do
+      expect(reason).to be_nil
+      expect(described_class.supported_billing_segment?(metered_item)).to be(true)
+    end
+
+    context "with a model walking individual events" do
+      let(:rate_model) { "percentage" }
+      let(:rate_card_rate) do
+        create(:rate_card_rate, organization:, rate_card:, rate_model:, rate_properties: {"rate" => "1"})
+      end
+
+      it { expect(reason).to eq("unsupported_charge_model") }
+    end
+
+    context "with an aggregation the buckets cannot recompose" do
+      let(:billable_metric) { create(:unique_count_billable_metric, organization:) }
+
+      it { expect(reason).to eq("unsupported_aggregation_type") }
+    end
+
+    context "with a card billed in advance" do
+      let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: :advance) }
+
+      it { expect(reason).to eq("pay_in_advance") }
+    end
+
+    context "with a prorated card" do
+      # Only a recurring metric can be prorated.
+      let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
+      let(:rate_card) { create(:rate_card, organization:, product:, proration: true) }
+
+      it { expect(reason).to eq("prorated") }
+    end
+
+    context "with a recurring metric" do
+      let(:billable_metric) { create(:sum_billable_metric, organization:, recurring: true) }
+
+      it "refuses it, as the product buckets hold no snapshot to carry the units over" do
+        expect(reason).to eq("recurring_metric")
+      end
+    end
+  end
+
   describe ".wallet_charge_changed_since?" do
     subject(:changed) { described_class.wallet_charge_changed_since?(charge, period_start) }
 
