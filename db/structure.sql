@@ -116,6 +116,7 @@ ALTER TABLE IF EXISTS ONLY public.cs_admin_audit_logs DROP CONSTRAINT IF EXISTS 
 ALTER TABLE IF EXISTS ONLY public.catalog_wallet_consumptions DROP CONSTRAINT IF EXISTS fk_rails_c3f8964ecc;
 ALTER TABLE IF EXISTS ONLY public.active_storage_attachments DROP CONSTRAINT IF EXISTS fk_rails_c3b3935057;
 ALTER TABLE IF EXISTS ONLY public.wallet_transactions DROP CONSTRAINT IF EXISTS fk_rails_c29bf4ff0f;
+ALTER TABLE IF EXISTS ONLY public.billing_engine_migrations DROP CONSTRAINT IF EXISTS fk_rails_c1abbd8061;
 ALTER TABLE IF EXISTS ONLY public.customers DROP CONSTRAINT IF EXISTS fk_rails_bff25bb1bb;
 ALTER TABLE IF EXISTS ONLY public.charge_filter_values DROP CONSTRAINT IF EXISTS fk_rails_bf661ef73d;
 ALTER TABLE IF EXISTS ONLY public.dunning_campaign_thresholds DROP CONSTRAINT IF EXISTS fk_rails_bf1f386f75;
@@ -216,6 +217,7 @@ ALTER TABLE IF EXISTS ONLY public.agent_free_credit_grants DROP CONSTRAINT IF EX
 ALTER TABLE IF EXISTS ONLY public.usage_monitoring_alerts DROP CONSTRAINT IF EXISTS fk_rails_8c18828b53;
 ALTER TABLE IF EXISTS ONLY public.fixed_charges_taxes DROP CONSTRAINT IF EXISTS fk_rails_8c09ee2428;
 ALTER TABLE IF EXISTS ONLY public.invoice_metadata DROP CONSTRAINT IF EXISTS fk_rails_8bb5b094c4;
+ALTER TABLE IF EXISTS ONLY public.billing_engine_migrations DROP CONSTRAINT IF EXISTS fk_rails_8a9db45b7b;
 ALTER TABLE IF EXISTS ONLY public.applied_wallet_expirations DROP CONSTRAINT IF EXISTS fk_rails_8a65cfc992;
 ALTER TABLE IF EXISTS ONLY public.add_ons_taxes DROP CONSTRAINT IF EXISTS fk_rails_89e1020aca;
 ALTER TABLE IF EXISTS ONLY public.entitlement_entitlement_values DROP CONSTRAINT IF EXISTS fk_rails_8887954ec7;
@@ -1162,6 +1164,8 @@ DROP INDEX IF EXISTS public.index_billing_entities_taxes_on_billing_entity_id;
 DROP INDEX IF EXISTS public.index_billing_entities_on_organization_id;
 DROP INDEX IF EXISTS public.index_billing_entities_on_code_and_organization_id;
 DROP INDEX IF EXISTS public.index_billing_entities_on_applied_dunning_campaign_id;
+DROP INDEX IF EXISTS public.index_billing_engine_migrations_on_shadow_organization_id;
+DROP INDEX IF EXISTS public.index_billing_engine_migrations_on_organization_id;
 DROP INDEX IF EXISTS public.index_billable_metrics_on_organization_id_and_code;
 DROP INDEX IF EXISTS public.index_billable_metrics_on_organization_id;
 DROP INDEX IF EXISTS public.index_billable_metrics_on_org_id_and_code_and_expr;
@@ -1496,6 +1500,7 @@ ALTER TABLE IF EXISTS ONLY public.billing_object_connections DROP CONSTRAINT IF 
 ALTER TABLE IF EXISTS ONLY public.billing_entities_taxes DROP CONSTRAINT IF EXISTS billing_entities_taxes_pkey;
 ALTER TABLE IF EXISTS ONLY public.billing_entities DROP CONSTRAINT IF EXISTS billing_entities_pkey;
 ALTER TABLE IF EXISTS ONLY public.billing_entities_invoice_custom_sections DROP CONSTRAINT IF EXISTS billing_entities_invoice_custom_sections_pkey;
+ALTER TABLE IF EXISTS ONLY public.billing_engine_migrations DROP CONSTRAINT IF EXISTS billing_engine_migrations_pkey;
 ALTER TABLE IF EXISTS ONLY public.billable_metrics DROP CONSTRAINT IF EXISTS billable_metrics_pkey;
 ALTER TABLE IF EXISTS ONLY public.billable_metric_filters DROP CONSTRAINT IF EXISTS billable_metric_filters_pkey;
 ALTER TABLE IF EXISTS ONLY public.ar_internal_metadata DROP CONSTRAINT IF EXISTS ar_internal_metadata_pkey;
@@ -1731,6 +1736,7 @@ DROP TABLE IF EXISTS public.billing_object_connections;
 DROP TABLE IF EXISTS public.billing_entities_taxes;
 DROP TABLE IF EXISTS public.billing_entities_invoice_custom_sections;
 DROP TABLE IF EXISTS public.billing_entities;
+DROP TABLE IF EXISTS public.billing_engine_migrations;
 DROP VIEW IF EXISTS public.billable_metrics_grouped_charges;
 DROP TABLE IF EXISTS public.billable_metrics;
 DROP TABLE IF EXISTS public.billable_metric_filters;
@@ -1826,6 +1832,7 @@ DROP TYPE IF EXISTS public.billing_segment_status;
 DROP TYPE IF EXISTS public.billing_operation_reason;
 DROP TYPE IF EXISTS public.billing_operation_cancellation_reason;
 DROP TYPE IF EXISTS public.billing_object_connection_behavior;
+DROP TYPE IF EXISTS public.billing_engine_migration_status;
 DROP TYPE IF EXISTS public.billable_metric_weighted_interval;
 DROP TYPE IF EXISTS public.billable_metric_rounding_function;
 DROP TYPE IF EXISTS public.agent_registration_status;
@@ -1924,6 +1931,17 @@ CREATE TYPE public.billable_metric_rounding_function AS ENUM (
 
 CREATE TYPE public.billable_metric_weighted_interval AS ENUM (
     'seconds'
+);
+
+
+--
+-- Name: billing_engine_migration_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.billing_engine_migration_status AS ENUM (
+    'shadowing',
+    'paused',
+    'aborted'
 );
 
 
@@ -3149,6 +3167,21 @@ SELECT
     NULL::uuid AS charge_filter_id,
     NULL::json AS filters,
     NULL::jsonb AS filters_grouped_by;
+
+
+--
+-- Name: billing_engine_migrations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.billing_engine_migrations (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    organization_id uuid NOT NULL,
+    shadow_organization_id uuid NOT NULL,
+    status public.billing_engine_migration_status DEFAULT 'shadowing'::public.billing_engine_migration_status NOT NULL,
+    plan_mapping jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
 
 
 --
@@ -8172,6 +8205,14 @@ ALTER TABLE ONLY public.billable_metrics
 
 
 --
+-- Name: billing_engine_migrations billing_engine_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.billing_engine_migrations
+    ADD CONSTRAINT billing_engine_migrations_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: billing_entities_invoice_custom_sections billing_entities_invoice_custom_sections_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -10695,6 +10736,20 @@ CREATE INDEX index_billable_metrics_on_organization_id ON public.billable_metric
 --
 
 CREATE UNIQUE INDEX index_billable_metrics_on_organization_id_and_code ON public.billable_metrics USING btree (organization_id, code) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: index_billing_engine_migrations_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_billing_engine_migrations_on_organization_id ON public.billing_engine_migrations USING btree (organization_id);
+
+
+--
+-- Name: index_billing_engine_migrations_on_shadow_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_billing_engine_migrations_on_shadow_organization_id ON public.billing_engine_migrations USING btree (shadow_organization_id);
 
 
 --
@@ -17557,6 +17612,14 @@ ALTER TABLE ONLY public.applied_wallet_expirations
 
 
 --
+-- Name: billing_engine_migrations fk_rails_8a9db45b7b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.billing_engine_migrations
+    ADD CONSTRAINT fk_rails_8a9db45b7b FOREIGN KEY (shadow_organization_id) REFERENCES public.organizations(id);
+
+
+--
 -- Name: invoice_metadata fk_rails_8bb5b094c4; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -18354,6 +18417,14 @@ ALTER TABLE ONLY public.charge_filter_values
 
 ALTER TABLE ONLY public.customers
     ADD CONSTRAINT fk_rails_bff25bb1bb FOREIGN KEY (billing_entity_id) REFERENCES public.billing_entities(id);
+
+
+--
+-- Name: billing_engine_migrations fk_rails_c1abbd8061; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.billing_engine_migrations
+    ADD CONSTRAINT fk_rails_c1abbd8061 FOREIGN KEY (organization_id) REFERENCES public.organizations(id);
 
 
 --
@@ -19249,6 +19320,7 @@ INSERT INTO "schema_migrations" (version) VALUES
 ('20261120155610'),
 ('20261119191519'),
 ('20261119191515'),
+('20261119153412'),
 ('20261118162728'),
 ('20261118162726'),
 ('20261118155959'),
