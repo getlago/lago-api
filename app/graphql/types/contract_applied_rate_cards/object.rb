@@ -16,6 +16,7 @@ module Types
       field :rate_card, Types::RateCards::Object, null: false
 
       field :billing_anchor_date, GraphQL::Types::ISO8601Date, null: false
+      field :billing_scope, BillingScopeEnum, null: false
       field :effective_date, GraphQL::Types::ISO8601Date, null: false
       field :next_billing_at, GraphQL::Types::ISO8601DateTime, null: true
 

@@ -177,8 +177,10 @@ RSpec.describe Contracts::TerminateService do
     let(:contract) { create(:contract, organization:, customer:, catalog_plan:, started_at:) }
     let(:product) { create(:product, :fixed, organization:) }
     let(:rate_card) { create(:rate_card, :advance, organization:, product:, currency: "USD") }
+    let(:billing_scope) { ContractRateCard::BILLING_SCOPES.fetch(:segment) }
+    let(:expected_cursor) { Time.utc(2026, 1, 15) }
     let(:contract_rate_card) do
-      create(:contract_rate_card, organization:, contract:, rate_card:,
+      create(:contract_rate_card, organization:, contract:, rate_card:, billing_scope:,
         effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
     end
 
@@ -196,23 +198,34 @@ RSpec.describe Contracts::TerminateService do
       bill(started_at)
     end
 
-    it "clears the future renewal cursor without changing the issued invoice" do
-      invoice = Invoice.where(customer:).sole
-      invoice_attributes = invoice.attributes
-      expect(contract_rate_card.reload.next_billing_at).to eq(Time.utc(2026, 1, 15))
+    shared_examples "a completed advance obligation" do
+      it "clears the future renewal cursor without changing the issued invoice" do
+        invoice = Invoice.where(customer:).sole
+        invoice_attributes = invoice.attributes
+        expect(contract_rate_card.reload.next_billing_at).to eq(expected_cursor)
 
-      termination = described_class.call(contract:, timestamp: terminated_at)
-      expect(termination).to be_success
+        termination = described_class.call(contract:, timestamp: terminated_at)
+        expect(termination).to be_success
 
-      processed = bill(terminated_at)
+        processed = bill(terminated_at)
 
-      expect(processed.invoices).to be_empty
-      expect(contract_rate_card.reload.next_billing_at).to be_nil
-      expect(contract_rate_card.billing_operations.where(reason: "contract_termination")).to be_empty
-      expect(contract_rate_card.billing_operations.pending).to be_empty
-      expect(contract_rate_card.billing_operations.count).to eq(1)
-      expect(Invoice.where(customer:).pluck(:id)).to eq([invoice.id])
-      expect(invoice.reload.attributes).to eq(invoice_attributes)
+        expect(processed.invoices).to be_empty
+        expect(contract_rate_card.reload.next_billing_at).to be_nil
+        expect(contract_rate_card.billing_operations.where(reason: "contract_termination")).to be_empty
+        expect(contract_rate_card.billing_operations.pending).to be_empty
+        expect(contract_rate_card.billing_operations.count).to eq(1)
+        expect(Invoice.where(customer:).pluck(:id)).to eq([invoice.id])
+        expect(invoice.reload.attributes).to eq(invoice_attributes)
+      end
+    end
+
+    it_behaves_like "a completed advance obligation"
+
+    context "when the scope covers the cycle" do
+      let(:billing_scope) { ContractRateCard::BILLING_SCOPES.fetch(:cycle) }
+      let(:expected_cursor) { Time.utc(2026, 2, 1) }
+
+      it_behaves_like "a completed advance obligation"
     end
   end
 

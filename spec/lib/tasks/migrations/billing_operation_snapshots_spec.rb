@@ -14,7 +14,7 @@ RSpec.describe "migrations:billing_operation_snapshots" do # rubocop:disable RSp
   let(:rate_card) { create(:rate_card, organization:, product:, currency: "USD", proration: true) }
   let(:card) do
     create(:contract_rate_card, organization:, contract:, rate_card:,
-      effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1))
+      effective_date: Date.new(2026, 1, 1), billing_anchor_date: Date.new(2026, 1, 1), billing_scope: :segment)
   end
   let(:rate) { create(:rate_card_rate, organization:, rate_card:, effective_from: Time.utc(2026, 1, 1)) }
   let(:processed_at) { nil }

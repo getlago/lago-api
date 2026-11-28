@@ -12,6 +12,7 @@ module V2
         units: model.terms.first&.units,
         effective_date: format_date(model.effective_date),
         billing_anchor_date: format_date(model.billing_anchor_date),
+        billing_scope: model.billing_scope,
         **(include?(:rate_phases) ? {rate_phases: rate_phases} : {})
       }
     end

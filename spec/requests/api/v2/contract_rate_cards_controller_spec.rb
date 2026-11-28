@@ -9,7 +9,7 @@ RSpec.describe Api::V2::ContractRateCardsController do
   let(:rate_card) { create(:rate_card, organization:, currency: "EUR") }
   let(:flat_keys) do
     %i[
-      lago_id external_contract_id rate_card_code units effective_date billing_anchor_date next_billing_at
+      lago_id external_contract_id rate_card_code units effective_date billing_anchor_date billing_scope next_billing_at
       created_at updated_at deleted_at
     ]
   end
@@ -31,8 +31,30 @@ RSpec.describe Api::V2::ContractRateCardsController do
       expect(json[:applied_rate_card][:lago_id]).to be_present
       expect(json[:applied_rate_card][:external_contract_id]).to eq(contract.external_id)
       expect(json[:applied_rate_card][:rate_card_code]).to eq(rate_card.code)
+      expect(json[:applied_rate_card][:billing_scope]).to eq("cycle")
       expect(json[:applied_rate_card].keys).to eq(flat_keys)
       expect(ContractRateCard.find(json[:applied_rate_card][:lago_id]).rate_phases.count).to eq(1)
+    end
+
+    context "with segment billing" do
+      let(:create_params) { super().merge(billing_scope: "segment") }
+
+      it "attaches the card with the requested scope" do
+        subject
+        expect(response).to have_http_status(:ok)
+        expect(json[:applied_rate_card][:billing_scope]).to eq("segment")
+        expect(contract.applied_rate_cards.sole.billing_scope).to eq("segment")
+      end
+    end
+
+    context "with an unknown billing scope" do
+      let(:create_params) { super().merge(billing_scope: "unknown") }
+
+      it "rejects the card" do
+        expect { subject }.not_to change(ContractRateCard, :count)
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:details]).to eq([{field: "billing_scope", code: "value_is_invalid", meta: {}}])
+      end
     end
 
     context "when the contract does not exist" do
@@ -235,17 +257,31 @@ RSpec.describe Api::V2::ContractRateCardsController do
   end
 
   describe "PUT /api/v2/contracts/:external_id/applied_rate_cards/:code" do
-    subject { put_with_token(organization, "/api/v2/contracts/#{contract.external_id}/applied_rate_cards/#{rate_card.code}", {applied_rate_card: {units: "42"}}) }
+    subject { put_with_token(organization, "/api/v2/contracts/#{contract.external_id}/applied_rate_cards/#{rate_card.code}", {applied_rate_card: update_params}) }
 
+    let(:update_params) { {units: "42", billing_scope: "segment"} }
     let!(:contract_rate_card) { create(:contract_rate_card, organization:, contract:, rate_card:, units: 1) }
 
     include_examples "requires API permission", "contract_rate_card", "write"
 
-    it "updates the units" do
+    it "updates the units and billing scope" do
       subject
 
       expect(response).to have_http_status(:success)
       expect(contract_rate_card.reload.terms.sole.units).to eq(42)
+      expect(contract_rate_card.billing_scope).to eq("segment")
+      expect(json[:applied_rate_card][:billing_scope]).to eq("segment")
+    end
+
+    context "when clearing the scope" do
+      let(:update_params) { {billing_scope: nil} }
+
+      it "rejects the edit and keeps the current scope" do
+        subject
+        expect(response).to have_http_status(:unprocessable_content)
+        expect(json[:details]).to eq([{field: "billing_scope", code: "value_is_invalid", meta: {}}])
+        expect(contract_rate_card.reload.billing_scope).to eq("cycle")
+      end
     end
   end
 

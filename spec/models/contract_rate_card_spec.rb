@@ -7,6 +7,17 @@ RSpec.describe ContractRateCard do
 
   it_behaves_like "paper_trail traceable"
 
+  describe "enums" do
+    it do
+      expect(contract_rate_card).to define_enum_for(:billing_scope)
+        .backed_by_column_of_type(:enum)
+        .with_values(cycle: "cycle", segment: "segment")
+        .with_default(:cycle)
+        .with_prefix
+        .validating(allowing_nil: false)
+    end
+  end
+
   describe "associations" do
     it do
       expect(contract_rate_card).to belong_to(:organization)
@@ -118,6 +129,26 @@ RSpec.describe ContractRateCard do
     it { is_expected.to validate_presence_of(:billing_anchor_date) }
     it { is_expected.to validate_presence_of(:effective_date) }
 
+    describe "billing_scope validation" do
+      subject(:contract_rate_card) { build(:contract_rate_card, billing_scope:) }
+
+      let(:billing_scope) { "invalid" }
+
+      it "rejects an unknown scope without raising on assignment" do
+        expect(contract_rate_card).not_to be_valid
+        expect(contract_rate_card.errors.of_kind?(:billing_scope, :inclusion)).to be(true)
+      end
+
+      context "when the scope is nil" do
+        let(:billing_scope) { nil }
+
+        it "requires a scope" do
+          expect(contract_rate_card).not_to be_valid
+          expect(contract_rate_card.errors.of_kind?(:billing_scope, :inclusion)).to be(true)
+        end
+      end
+    end
+
     describe "active uniqueness per (contract, rate_card)" do
       it "rejects a second active row for the same contract and rate card" do
         existing = create(:contract_rate_card)
@@ -141,6 +172,29 @@ RSpec.describe ContractRateCard do
         )
         replacement.valid?
         expect(replacement.errors.where(:rate_card_id, :taken)).not_to be_present
+      end
+    end
+  end
+
+  describe "billing_scope persistence" do
+    let(:card) { create(:contract_rate_card, billing_scope: :segment) }
+
+    it "persists the segment scope" do
+      expect(card.reload.billing_scope).to eq("segment")
+    end
+
+    it "uses the database default when the scope is omitted from an insert" do
+      attributes = card.attributes.except("id", "billing_scope").merge("deleted_at" => Time.current)
+      inserted = described_class.unscoped.insert_all!([attributes], returning: %w[id]) # rubocop:disable Rails/SkipsModelValidations
+
+      expect(described_class.with_discarded.find(inserted.first.fetch("id")).billing_scope).to eq("cycle")
+    end
+
+    context "when no scope is supplied" do
+      let(:card) { create(:contract_rate_card) }
+
+      it "persists the default cycle scope" do
+        expect(card.reload.billing_scope).to eq("cycle")
       end
     end
   end

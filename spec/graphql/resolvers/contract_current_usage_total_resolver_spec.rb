@@ -48,9 +48,10 @@ RSpec.describe Resolvers::ContractCurrentUsageTotalResolver do
     let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: :count_agg) }
     let(:product) { create(:product, :standalone, :metered, organization:, billable_metric:) }
     let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: :arrears, currency: "EUR") }
+    let(:billing_scope) { "cycle" }
     let(:contract_rate_card) do
       create(:contract_rate_card, organization:, contract:, rate_card:,
-        effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1))
+        effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1), billing_scope:)
     end
     let(:rate) do
       create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-01-01"),
@@ -77,6 +78,44 @@ RSpec.describe Resolvers::ContractCurrentUsageTotalResolver do
         "amountCents" => "200", "taxesAmountCents" => "0", "totalAmountCents" => "200", "taxesUnavailable" => false,
         "fromDatetime" => "2027-02-01T00:00:00Z", "toDatetime" => "2027-02-28T23:59:59Z"
       )
+    end
+
+    context "with a midcycle rate change" do
+      before do
+        create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-02-07"),
+          rate_properties: {"amount" => "5"})
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: billable_metric.code, timestamp: Time.zone.parse("2027-02-08"))
+      end
+
+      shared_examples "returns the selected obligation total" do
+        it "reports its complete window and total" do
+          result = execute_graphql(
+            current_user: membership.user, current_organization: organization,
+            permissions: required_permission, query:, variables: {contractId: contract.id}
+          )
+
+          expect(result["data"]["contractCurrentUsageTotal"]).to eq(
+            "amountCents" => expected_amount, "taxesAmountCents" => "0", "totalAmountCents" => expected_amount,
+            "taxesUnavailable" => false, "fromDatetime" => expected_start, "toDatetime" => "2027-02-28T23:59:59Z"
+          )
+        end
+      end
+
+      context "with cycle scope" do
+        let(:expected_start) { "2027-02-01T00:00:00Z" }
+        let(:expected_amount) { "700" } # One event at 2 EUR and one at 5 EUR.
+
+        include_examples "returns the selected obligation total"
+      end
+
+      context "with segment scope" do
+        let(:billing_scope) { "segment" }
+        let(:expected_start) { "2027-02-07T00:00:00Z" }
+        let(:expected_amount) { "500" }
+
+        include_examples "returns the selected obligation total"
+      end
     end
 
     context "with rate cards in and out of a product category" do

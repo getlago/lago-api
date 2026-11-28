@@ -46,7 +46,7 @@ class BillingOperationSnapshotsBackfill
     end
 
     # Legacy operations were billed from schedule slices rather than saved snapshots.
-    segments = BillingOperations::ResolveSegmentsService.call!(operation:).segments
+    segments = BillingOperations::ResolveSegmentsService.call!(operation:).billing_segments
     raise UnverifiableOperation, "legacy resolver returned no coverage" if segments.empty?
 
     verify_completed_history!(operation, segments) if operation.processed_at?

@@ -11,6 +11,7 @@ RSpec.describe Api::V2::Contracts::UsageController do
     let(:contract) { create(:contract, organization:, customer:, started_at: Time.zone.parse("2027-01-01")) }
     let(:external_id) { contract.external_id }
     let(:params) { {} }
+    let(:billing_scope) { "cycle" }
     let(:billable_metric) { create(:billable_metric, organization:, aggregation_type: :count_agg) }
     let(:product_category) { create(:product_category, organization:) }
     let(:metered_product) { create(:product, organization:, billable_metric:, product_category:) }
@@ -25,7 +26,7 @@ RSpec.describe Api::V2::Contracts::UsageController do
     before do
       [[metered_rate_card, nil, "2"], [fixed_rate_card, 3, "10"]].each do |rate_card, units, amount|
         create(:contract_rate_card, organization:, contract:, rate_card:, units:,
-          effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1))
+          effective_date: Date.new(2027, 1, 1), billing_anchor_date: Date.new(2027, 1, 1), billing_scope:)
         create(:rate_card_rate, organization:, rate_card:, effective_from: Time.zone.parse("2027-01-01"),
           rate_properties: {"amount" => amount})
       end
@@ -65,11 +66,13 @@ RSpec.describe Api::V2::Contracts::UsageController do
         rate_phase_code: nil,
         rate_phase_name: nil,
         rate_source: "rate",
-        rate_model: "standard",
-        rate_properties: {amount: "2"},
         units: "1.0",
         events_count: 1,
-        amount_cents: 200
+        amount_cents: 200,
+        segments: [
+          {from_datetime: "2027-02-01T00:00:00.000000Z", to_datetime: "2027-02-28T23:59:59.999999Z", rate_model: "standard",
+           rate_properties: {amount: "2"}, units: "1.0", events_count: 1, amount_cents: 200}
+        ]
       )
       expect(rate_card_entries[fixed_rate_card.code]).to eq(
         rate_card_code: fixed_rate_card.code,
@@ -89,12 +92,89 @@ RSpec.describe Api::V2::Contracts::UsageController do
         rate_phase_code: nil,
         rate_phase_name: nil,
         rate_source: "rate",
-        rate_model: "standard",
-        rate_properties: {amount: "10"},
         units: "3.0",
         events_count: 0,
-        amount_cents: 3000
+        amount_cents: 3000,
+        segments: [
+          {from_datetime: "2027-02-01T00:00:00.000000Z", to_datetime: "2027-02-28T23:59:59.999999Z", rate_model: "standard",
+           rate_properties: {amount: "10"}, units: "3.0", events_count: 0, amount_cents: 3000}
+        ]
       )
+    end
+
+    context "with a midcycle rate change" do
+      let(:params) { {apply_taxes: false} }
+
+      before do
+        create(:rate_card_rate, organization:, rate_card: metered_rate_card, effective_from: Time.zone.parse("2027-02-07"),
+          rate_properties: {"amount" => "5"})
+        create(:event, organization:, customer:, external_subscription_id: contract.external_id,
+          code: billable_metric.code, timestamp: Time.zone.parse("2027-02-08"))
+      end
+
+      shared_examples "returns the selected obligation" do
+        it "returns its complete window and summed usage, and each segment with its own rate" do
+          subject
+
+          expect(response).to have_http_status(:success)
+          expect(rate_card_entries[metered_rate_card.code]).to eq(
+            rate_card_code: metered_rate_card.code,
+            rate_card_name: metered_rate_card.name,
+            product_code: metered_product.code,
+            product_name: metered_product.name,
+            product_category_code: product_category.code,
+            product_category_name: product_category.name,
+            product_filter_code: nil,
+            product_filter_name: nil,
+            invoice_display_name: metered_product.name,
+            product_type: "metered",
+            billable_metric_code: billable_metric.code,
+            billing_timing: "arrears",
+            from_datetime: expected_start,
+            to_datetime: "2027-02-28T23:59:59.999999Z",
+            rate_phase_code: nil,
+            rate_phase_name: nil,
+            rate_source: "rate",
+            units: expected_units,
+            events_count: expected_events,
+            amount_cents: expected_amount,
+            segments: expected_segments
+          )
+        end
+      end
+
+      context "with cycle scope" do
+        let(:expected_start) { "2027-02-01T00:00:00.000000Z" }
+        let(:expected_units) { "2.0" }
+        let(:expected_events) { 2 }
+        let(:expected_amount) { 700 } # One event at 2 EUR and one at 5 EUR.
+        let(:expected_segments) do
+          [
+            {from_datetime: "2027-02-01T00:00:00.000000Z", to_datetime: "2027-02-06T23:59:59.999999Z", rate_model: "standard",
+             rate_properties: {amount: "2"}, units: "1.0", events_count: 1, amount_cents: 200},
+            {from_datetime: "2027-02-07T00:00:00.000000Z", to_datetime: "2027-02-28T23:59:59.999999Z", rate_model: "standard",
+             rate_properties: {amount: "5"}, units: "1.0", events_count: 1, amount_cents: 500}
+          ]
+        end
+
+        include_examples "returns the selected obligation"
+      end
+
+      context "with segment scope" do
+        let(:billing_scope) { "segment" }
+        let(:expected_start) { "2027-02-07T00:00:00.000000Z" }
+        let(:expected_units) { "1.0" }
+        let(:expected_events) { 1 }
+        let(:expected_amount) { 500 }
+        let(:expected_segments) do
+          [
+            {from_datetime: "2027-02-07T00:00:00.000000Z", to_datetime: "2027-02-28T23:59:59.999999Z", rate_model: "standard",
+             rate_properties: {amount: "5"}, units: "1.0", events_count: 1, amount_cents: 500}
+          ]
+        end
+
+        include_examples "returns the selected obligation"
+      end
     end
 
     context "with an intro phase overriding the rate" do
@@ -110,7 +190,9 @@ RSpec.describe Api::V2::Contracts::UsageController do
         subject
 
         expect(rate_card_entries[metered_rate_card.code]).to include(
-          rate_phase_code: "intro", rate_phase_name: "Intro", rate_source: "phase_override",
+          rate_phase_code: "intro", rate_phase_name: "Intro", rate_source: "phase_override", amount_cents: 100
+        )
+        expect(rate_card_entries[metered_rate_card.code][:segments].sole).to include(
           rate_model: "package", rate_properties: {amount: "1", package_size: 1, free_units: 0}, amount_cents: 100
         )
       end

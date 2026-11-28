@@ -337,7 +337,7 @@ RSpec.describe Invoices::RefreshDraftService do
         )
       end
       let(:billing_segment) do
-        BillingOperations::ResolveSegmentsService.call!(operation:).segments.sole
+        BillingOperations::ResolveSegmentsService.call!(operation:).billing_segments.sole
       end
       let(:operation) do
         create(:billing_operation, organization:, customer:, contract_rate_card:, invoice:,

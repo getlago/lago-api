@@ -2190,6 +2190,7 @@ Rate card applied to a contract
 """
 type ContractAppliedRateCard {
   billingAnchorDate: ISO8601Date!
+  billingScope: ContractAppliedRateCardBillingScopeEnum!
   contract: Contract!
   createdAt: ISO8601DateTime!
   effectiveDate: ISO8601Date!
@@ -2201,6 +2202,11 @@ type ContractAppliedRateCard {
   ratePhasesCount: Int!
   units: Float
   updatedAt: ISO8601DateTime!
+}
+
+enum ContractAppliedRateCardBillingScopeEnum {
+  cycle
+  segment
 }
 
 """
@@ -3878,6 +3884,7 @@ Attach rate card to contract input arguments
 """
 input CreateContractAppliedRateCardInput {
   billingAnchorDate: ISO8601Date
+  billingScope: ContractAppliedRateCardBillingScopeEnum
 
   """
   A unique identifier for the client performing the mutation.
@@ -17340,6 +17347,7 @@ Update contract applied rate card input arguments
 """
 input UpdateContractAppliedRateCardInput {
   billingAnchorDate: ISO8601Date
+  billingScope: ContractAppliedRateCardBillingScopeEnum
 
   """
   A unique identifier for the client performing the mutation.

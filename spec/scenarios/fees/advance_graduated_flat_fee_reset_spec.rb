@@ -163,13 +163,14 @@ RSpec.describe "Graduated flat fees and filter buckets across a rate change" do
   context "with arrears billing" do
     let(:billing_timing) { "arrears" }
 
-    it "invoices the old segment at the rate change and resets tiers for the new segment" do
+    it "invoices both segments at the cycle close while resetting tiers at the rate change" do
       expect(fees.map { |fee| [fee.rate_card_rate, fee.units, fee.amount_cents] }).to eq([
         [first_rate, 80, 8_000], [second_rate, 40, 13_000]
       ])
       expect(fees.last.properties["from_datetime"]).to eq(rate_changed_at.iso8601(6))
       expect(fees.last.properties["charges_from_datetime"]).to eq(rate_changed_at.iso8601(6))
-      expect(fees.map { |fee| fee.invoice.created_at }).to eq([rate_changed_at, cycle_ended_at])
+      expect(fees.map { |fee| fee.invoice.created_at }).to eq([cycle_ended_at, cycle_ended_at])
+      expect(fees.map(&:invoice_id).uniq).to eq([fees.first.invoice_id])
     end
   end
 

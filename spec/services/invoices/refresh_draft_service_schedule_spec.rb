@@ -13,12 +13,13 @@ RSpec.describe Invoices::RefreshDraftService do
   let(:product) { create(:product, :fixed, organization:) }
   let(:rate_card) { create(:rate_card, billing_timing:, organization:, product:, currency: "USD") }
   let(:billing_timing) { "advance" }
+  let(:billing_scope) { "cycle" }
   let(:pricing_unit_conversion_rate) { nil }
   let(:operation_cycles) { [1, 2, 3] }
   let(:contract_rate_card) do
     create(
       :contract_rate_card,
-      organization:, contract:, rate_card:,
+      organization:, contract:, rate_card:, billing_scope:,
       billing_anchor_date: Date.new(2026, 1, 1),
       effective_date: Date.new(2026, 1, 1)
     )
@@ -172,6 +173,8 @@ RSpec.describe Invoices::RefreshDraftService do
       end
 
       context "when an earlier operation of the cycle owns the first slice" do
+        let(:billing_scope) { "segment" }
+
         before do
           create(:billing_operation, organization:, customer:, contract_rate_card:,
             action_type: "close_fixed_arrears", reason: :periodic_continuation,

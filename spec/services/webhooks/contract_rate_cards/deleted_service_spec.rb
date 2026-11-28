@@ -42,6 +42,7 @@ RSpec.describe Webhooks::ContractRateCards::DeletedService do
           "units" => "2.5",
           "effective_date" => "2026-01-02",
           "billing_anchor_date" => "2026-01-03",
+          "billing_scope" => "cycle",
           "next_billing_at" => "2026-02-03T04:05:06Z",
           "created_at" => contract_rate_card.created_at.iso8601,
           "updated_at" => contract_rate_card.updated_at.iso8601,

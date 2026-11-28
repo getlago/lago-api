@@ -10,7 +10,7 @@ module Types
       field :billable_metric_code, String, null: true
       field :billing_timing, Types::RateCards::BillingTimingEnum, null: false
       field :events_count, Integer, null: false
-      field :from_datetime, GraphQL::Types::ISO8601DateTime, null: false
+      field :from_datetime, GraphQL::Types::ISO8601DateTime, null: false, method: :started_at
       field :invoice_display_name, String, null: false
       field :product_category_code, String, null: true
       field :product_category_name, String, null: true
@@ -24,7 +24,7 @@ module Types
       field :rate_phase_code, String, null: true
       field :rate_phase_name, String, null: true
       field :rate_source, Types::RateCardUsages::RateSourceEnum, null: false
-      field :to_datetime, GraphQL::Types::ISO8601DateTime, null: false
+      field :to_datetime, GraphQL::Types::ISO8601DateTime, null: false, method: :ended_at
       field :units, GraphQL::Types::Float, null: false
 
       delegate :code, to: :rate_card, prefix: true
@@ -62,10 +62,6 @@ module Types
       delegate :events_count, to: :object
 
       delegate :amount_cents, to: :object
-
-      def from_datetime = object.billing_segment.started_at
-
-      def to_datetime = object.billing_segment.ended_at
 
       private
 

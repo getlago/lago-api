@@ -22,7 +22,7 @@ RSpec.describe Mutations::ContractAppliedRateCards::Create do
   let(:customer) { create(:customer, organization:, currency: rate_card.currency) }
   let(:contract) { create(:contract, :pending, organization:, customer:, catalog_plan: nil) }
 
-  let(:input) { {contractId: contract.id, rateCardCode: rate_card.code, units: 10.0} }
+  let(:input) { {contractId: contract.id, rateCardCode: rate_card.code, units: 10.0, billingScope: "segment"} }
 
   let(:mutation) do
     <<~GQL
@@ -32,6 +32,7 @@ RSpec.describe Mutations::ContractAppliedRateCards::Create do
           units
           ratePhasesCount
           billingAnchorDate
+          billingScope
           product { id }
           rateCard { id }
         }
@@ -49,6 +50,7 @@ RSpec.describe Mutations::ContractAppliedRateCards::Create do
     expect(response["product"]["id"]).to eq(rate_card.product.id)
     expect(response["rateCard"]["id"]).to eq(rate_card.id)
     expect(response["units"]).to eq(10.0)
+    expect(response["billingScope"]).to eq("segment")
     expect(response["ratePhasesCount"]).to eq(1)
   end
 

@@ -23,9 +23,10 @@ RSpec.describe UsageMonitoring::ContractUsageUnitsAlert do
     let(:card_usage) do
       RateCardUsage.new(
         contract_rate_card: build_stubbed(:contract_rate_card),
-        billing_segment: BillingSegment.new,
+        obligation: nil,
         rate_phase: nil,
-        fees: [Fee.new(units: BigDecimal("3.5"), amount_cents: 120_00), Fee.new(units: 2, amount_cents: 80_00)]
+        segments: [RateCardUsageSegment.new(billing_segment: BillingSegment.new,
+          fees: [Fee.new(units: BigDecimal("3.5"), amount_cents: 120_00), Fee.new(units: 2, amount_cents: 80_00)])]
       )
     end
 
