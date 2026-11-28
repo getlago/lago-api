@@ -302,17 +302,6 @@ module ScenariosHelper
     end
   end
 
-  # The mock always return a valid response,
-  # To get an invalid response, simply use a invalid format (like YY123)
-  def mock_vies_check!(vat_number)
-    valvat = instance_double(Valvat)
-    allow(Valvat).to receive(:new).with(vat_number).and_return(valvat)
-    allow(valvat).to receive(:exists?).with(detail: true, raise_error: true).and_return({
-      country_code: vat_number[0..1].upcase,
-      vat_number: vat_number.upcase
-    })
-  end
-
   ### Wallets
 
   def create_wallet(params, as: :json, **kwargs)

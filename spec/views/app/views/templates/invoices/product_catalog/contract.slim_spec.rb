@@ -83,6 +83,28 @@ RSpec.describe "templates/invoices/product_catalog/contract.slim" do
       expect(rendered_text).not_to include("Amount due")
       expect(rendered_text).not_to include("Due date")
     end
+
+    context "when it is regenerated from a voided invoice" do
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          billing_entity:,
+          customer:,
+          invoice_type:,
+          number: "INV-001",
+          voided_invoice_id: create(:invoice, organization:, customer:, invoice_type:, status: :voided).id,
+          payment_due_date: Date.new(2026, 11, 15)
+        )
+      end
+
+      it "renders like a regular invoice, with a due date and a total" do
+        expect(rendered_text).to include("Due date #{I18n.l(Date.new(2026, 11, 15), format: :default)}")
+        expect(rendered_text).to match(/Total \S+/)
+        expect(rendered_text).not_to include("Already paid")
+        expect(rendered_text).not_to include("Paid invoice")
+      end
+    end
   end
 
   context "when the invoice is partly paid with prepaid credits" do

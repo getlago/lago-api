@@ -509,6 +509,16 @@ class Invoice < ApplicationRecord
     contract_fees.exists?
   end
 
+  # An advance_charges invoice rebuilt from a voided one: no coupon or wallet applies to it.
+  def regenerated_advance_charges?
+    advance_charges? && voided_invoice_id.present?
+  end
+
+  # An original advance_charges invoice, paid when issued.
+  def paid_advance_charges?
+    advance_charges? && !regenerated_advance_charges?
+  end
+
   def subscription_gated?
     open? && subscriptions.any?(&:gated?)
   end
@@ -595,11 +605,11 @@ class Invoice < ApplicationRecord
     return I18n.t("invoice.prepaid_credit_invoice") if credit?
 
     if TAX_INVOICE_LABEL_COUNTRIES.include?(billing_entity.country)
-      return I18n.t("invoice.paid_tax_invoice") if advance_charges?
+      return I18n.t("invoice.paid_tax_invoice") if paid_advance_charges?
       return I18n.t("invoice.document_tax_name")
     end
 
-    return I18n.t("invoice.paid_invoice") if advance_charges?
+    return I18n.t("invoice.paid_invoice") if paid_advance_charges?
 
     I18n.t("invoice.document_name")
   end

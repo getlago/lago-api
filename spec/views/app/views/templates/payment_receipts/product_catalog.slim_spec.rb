@@ -162,6 +162,31 @@ RSpec.describe "templates/payment_receipts/product_catalog.slim" do
       expect(rendered_text).to include("Item Units Unit price Tax rate Amount Compute #{I18n.l(Date.new(2026, 10, 15), format: :default)} 280 €0.10 0.0% €28.00")
       expect(rendered_text).to include("Subtotal (incl. tax) €28.00 Already paid €28.00")
     end
+
+    context "when the invoice is regenerated from a voided one" do
+      let(:invoice) do
+        create(
+          :invoice,
+          organization:,
+          billing_entity:,
+          customer:,
+          invoice_type:,
+          voided_invoice_id: create(:invoice, organization:, customer:, invoice_type:, status: :voided).id,
+          number: "INV-001",
+          fees_amount_cents: 2_800,
+          sub_total_excluding_taxes_amount_cents: 2_800,
+          sub_total_including_taxes_amount_cents: 2_800,
+          total_amount_cents: 2_800,
+          total_paid_amount_cents: 2_800
+        )
+      end
+
+      it "details the contract's fees and ends on the total, like a regular invoice" do
+        expect(rendered_text).to include("Platform details Fees from Oct 01, 2026 to Oct 31, 2026 Units Unit price Tax rate Amount Compute 280 €0.10 0.0% €28.00")
+        expect(rendered_text).to include("Subtotal (incl. tax) €28.00 Total €28.00")
+        expect(rendered_text).not_to include("Already paid")
+      end
+    end
   end
 
   context "when the invoice bills several contracts" do

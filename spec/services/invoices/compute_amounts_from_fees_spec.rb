@@ -249,6 +249,20 @@ RSpec.describe Invoices::ComputeAmountsFromFees do
     end
   end
 
+  context "when invoice is advance_charges regenerated from a voided invoice" do
+    let(:voided_invoice) { create(:invoice, :voided, organization:, customer:, invoice_type: :advance_charges) }
+    let(:invoice) do
+      create(:invoice, organization:, customer:, invoice_type: :advance_charges, voided_invoice_id: voided_invoice.id)
+    end
+
+    it "applies taxes to fees" do
+      compute_amounts.call
+
+      expect(fee1.reload.applied_taxes.count).to eq(2)
+      expect(fee1.taxes_amount_cents).to eq(45) # 151 * (10 + 20) / 100
+    end
+  end
+
   context "when taxes are fetched from external provider" do
     let(:integration) { create(:anrok_integration, organization:) }
     let(:integration_customer) { create(:anrok_customer, integration:, customer:) }

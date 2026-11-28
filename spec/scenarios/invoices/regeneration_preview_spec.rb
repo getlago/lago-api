@@ -46,7 +46,7 @@ describe "Invoice regeneration preview" do
   it "rebuilds applied taxes using the current customer taxes" do
     Organizations::UpdateService.call!(organization:, params: {eu_tax_management: true})
 
-    mock_vies_check!("FR12345678901")
+    mock_vies_check("FR12345678901")
     create_or_update_customer(
       {
         external_id: "customer_fr",
@@ -73,7 +73,7 @@ describe "Invoice regeneration preview" do
 
     create_or_update_customer({external_id: customer.external_id, tax_identification_number: nil})
 
-    mock_vies_check!("ES12345678Z")
+    mock_vies_check("ES12345678Z")
     create_or_update_customer(
       {
         external_id: customer.external_id,

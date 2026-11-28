@@ -68,9 +68,9 @@ html lang=I18n.locale
                 td.document-cell.cell--description.cell--summary.body-2 = I18n.t('invoice.prepaid_credits')
                 td.document-cell.cell--amount.cell--summary.body-2.numeric = '-' + MoneyHelper.format(prepaid_credit_amount)
             tr.row--total
-              td.document-cell.cell--description.cell--total.body-2-emphasis = advance_charges? ? I18n.t('invoice.already_paid') : I18n.t('invoice.total')
+              td.document-cell.cell--description.cell--total.body-2-emphasis = paid_advance_charges? ? I18n.t('invoice.already_paid') : I18n.t('invoice.total')
               td.document-cell.cell--amount.cell--total.body-2-emphasis.numeric = MoneyHelper.format(total_amount)
-            - unless advance_charges?
+            - unless paid_advance_charges?
               tr.row--total
                 td.document-cell.cell--description.cell--total.body-2-emphasis = I18n.t('invoice.total_due_amount')
                 td.document-cell.cell--amount.cell--total.body-2-emphasis.numeric = MoneyHelper.format(total_due_amount)

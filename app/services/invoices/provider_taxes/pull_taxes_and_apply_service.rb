@@ -18,7 +18,8 @@ module Invoices
         return result unless invoice.tax_pending?
 
         invoice.error_details.tax_error.discard_all # rubocop:disable Lago/DiscardAll
-        taxes_result = if invoice.draft? || invoice.subscription_gated?
+        # The pay-in-advance fees of a regenerated advance_charges invoice were already committed one by one.
+        taxes_result = if invoice.draft? || invoice.subscription_gated? || invoice.regenerated_advance_charges?
           Integrations::Aggregator::Taxes::Invoices::CreateDraftService.call(invoice:, fees: invoice.fees)
         else
           Integrations::Aggregator::Taxes::Invoices::CreateService.call(invoice:, fees: invoice.fees)
@@ -122,9 +123,11 @@ module Invoices
         !invoice.one_off?
       end
 
+      # A regenerated advance_charges invoice does not use the wallets of the customer.
       def should_create_applied_prepaid_credit?
         return false if invoice.draft?
         return false if invoice.one_off?
+        return false if invoice.regenerated_advance_charges?
 
         invoice.total_amount_cents&.positive?
       end

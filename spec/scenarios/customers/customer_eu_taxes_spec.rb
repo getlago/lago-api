@@ -75,17 +75,18 @@ describe "Add customer-specific taxes" do
 
       webhooks_sent.clear
       # Update customer to provide a valid EU VAT identifier
-      # A call is made to VIES api, we mock the service rather than the HTTP call because it's a SOAP API
+      # A call is made to the VIES API, stubbed at the HTTP level
       # This customer now have 0% vat
-      mock_vies_check!("IT12345678901")
+      mock_vies_check("IT12345678901")
       create_or_update_customer({external_id: "user_it_123", tax_identification_number: "IT12345678901"})
       expect(Customer.find_by(external_id: "user_it_123").taxes.reload.sole.code).to eq "lago_eu_reverse_charge"
       expect(webhooks_sent.find { it["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
         "country_code" => "IT",
-        "vat_number" => "IT12345678901"
+        "vat_number" => "12345678901",
+        "valid" => true
       })
 
-      mock_vies_check!("FR12345678901")
+      mock_vies_check("FR12345678901")
       create_or_update_customer({external_id: "user_fr_123", tax_identification_number: "FR12345678901"})
       expect(Customer.find_by(external_id: "user_fr_123").taxes.sole.code).to eq "lago_eu_fr_standard"
 
@@ -117,8 +118,7 @@ describe "Add customer-specific taxes" do
 
       webhooks_sent.clear
       vat_number = "FR12345678901"
-      allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
-        .and_raise(::Valvat::RateLimitError.new("rate limit exceeded", Valvat::Lookup::VIES))
+      mock_vies_check_unavailable(vat_number, fault: "GLOBAL_MAX_CONCURRENT_REQ")
 
       # Perform the failing VIES check without draining the delayed retry it schedules,
       # since performing the retry would fail VIES again and re-enqueue forever.
@@ -134,7 +134,7 @@ describe "Add customer-specific taxes" do
       expect(webhooks_sent.find { it["webhook_type"] == "customer.vies_check" }.dig("customer", "vies_check")).to eq({
         "valid" => false,
         "valid_format" => true,
-        "error" => "The VIES web service returned the error: rate limit exceeded"
+        "error" => "The VIES web service returned the error: GLOBAL_MAX_CONCURRENT_REQ"
       })
     end
   end
@@ -150,8 +150,7 @@ describe "Add customer-specific taxes" do
       expect(customer.taxes.sole.code).to eq "lago_eu_it_standard"
 
       # Update with VAT number - VIES fails
-      allow_any_instance_of(Valvat).to receive(:exists?) # rubocop:disable RSpec/AnyInstance
-        .and_raise(::Valvat::RateLimitError.new("rate limit exceeded", Valvat::Lookup::VIES))
+      mock_vies_check_unavailable(vat_number, fault: "GLOBAL_MAX_CONCURRENT_REQ")
 
       # Perform the failing VIES check without draining the delayed retry it schedules,
       # since performing the retry would fail VIES again and re-enqueue forever.
@@ -174,7 +173,7 @@ describe "Add customer-specific taxes" do
     end
 
     def resolve_vies_check!(customer)
-      mock_vies_check!(vat_number)
+      mock_vies_check(vat_number)
       Customers::ViesCheckJob.perform_now(customer)
 
       expect(customer.reload.pending_vies_check).to be_nil
@@ -363,7 +362,7 @@ describe "Add customer-specific taxes" do
       enable_eu_tax_management!
       organization.taxes.where(code: "lago_eu_fr_standard").update!(applied_to_organization: true)
 
-      mock_vies_check!("IT12345678901")
+      mock_vies_check("IT12345678901")
       create_or_update_customer(italian_attributes.merge(
         external_id: "user_it_123", tax_identification_number: "IT12345678901"
       ))
@@ -388,7 +387,7 @@ describe "Add customer-specific taxes" do
       charge = create(:standard_charge, :pay_in_advance, billable_metric:, plan:)
       create(:charge_applied_tax, charge:, tax: Tax.find_by(code: "lago_eu_fr_standard"))
 
-      mock_vies_check!("IT12345678901")
+      mock_vies_check("IT12345678901")
       create_or_update_customer(italian_attributes.merge(
         external_id: "user_it_123", tax_identification_number: "IT12345678901"
       ))

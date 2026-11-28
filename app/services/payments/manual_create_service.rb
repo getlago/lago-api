@@ -75,7 +75,7 @@ module Payments
       return result.single_validation_failure!(error_code: "value_is_mandatory", field: "invoice_id") if params[:invoice_id].blank?
       return result.single_validation_failure!(error_code: "invalid_value", field: "amount_cents") unless valid_amount_cents?
       return result.not_found_failure!(resource: "invoice") unless invoice
-      return result if invoice.invoice_type == "advance_charges"
+      return result if invoice.paid_advance_charges?
 
       return result.forbidden_failure! if !License.premium?
       return result.forbidden_failure! unless invoice.allow_manual_payment?

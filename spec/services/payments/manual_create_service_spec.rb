@@ -27,6 +27,31 @@ RSpec.describe Payments::ManualCreateService do
         expect(result).not_to be_success
         expect(result.error).to be_a(BaseService::ForbiddenFailure)
       end
+
+      context "when the invoice is an original advance_charges invoice" do
+        let(:invoice) { create(:invoice, customer:, organization:, invoice_type: :advance_charges, total_amount_cents: 10000, status: :finalized) }
+
+        it "records the payment" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.payment).to have_attributes(payable: invoice, amount_cents: 10000, payment_type: "manual")
+        end
+      end
+
+      context "when the invoice is an advance_charges invoice regenerated from a voided one" do
+        let(:voided_invoice) { create(:invoice, customer:, organization:, invoice_type: :advance_charges, status: :voided) }
+        let(:invoice) do
+          create(:invoice, customer:, organization:, invoice_type: :advance_charges, voided_invoice_id: voided_invoice.id, total_amount_cents: 10000, status: :finalized)
+        end
+
+        it "returns forbidden failure" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        end
+      end
     end
 
     context "when organization is premium", :premium do
@@ -43,6 +68,34 @@ RSpec.describe Payments::ManualCreateService do
 
       context "when invoice is in status that does not allow manual payment" do
         let(:invoice) { create(:invoice, :draft, customer:, organization:) }
+
+        it "returns forbidden failure" do
+          result = service.call
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        end
+      end
+
+      context "when the invoice is an advance_charges invoice regenerated from a voided one" do
+        let(:voided_invoice) { create(:invoice, customer:, organization:, invoice_type: :advance_charges, status: :voided) }
+        let(:invoice) do
+          create(:invoice, customer:, organization:, invoice_type: :advance_charges, voided_invoice_id: voided_invoice.id, total_amount_cents: 10000, status: :finalized)
+        end
+
+        it "records the payment" do
+          result = service.call
+
+          expect(result).to be_success
+          expect(result.payment).to have_attributes(payable: invoice, amount_cents: 10000, payment_type: "manual")
+        end
+      end
+
+      context "when a regenerated advance_charges invoice is voided" do
+        let(:voided_invoice) { create(:invoice, customer:, organization:, invoice_type: :advance_charges, status: :voided) }
+        let(:invoice) do
+          create(:invoice, customer:, organization:, invoice_type: :advance_charges, voided_invoice_id: voided_invoice.id, total_amount_cents: 10000, status: :voided)
+        end
 
         it "returns forbidden failure" do
           result = service.call

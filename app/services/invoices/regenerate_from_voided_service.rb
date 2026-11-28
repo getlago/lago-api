@@ -88,13 +88,17 @@ module Invoices
       true
     end
 
+    # A regenerated advance_charges invoice applies no coupon and no wallet.
     def should_create_coupon_credit?
+      return false if regenerated_invoice.regenerated_advance_charges?
       return false unless regenerated_invoice.fees_amount_cents&.positive?
 
       true
     end
 
     def should_create_applied_prepaid_credit?
+      return false if regenerated_invoice.regenerated_advance_charges?
+
       regenerated_invoice.total_amount_cents&.positive? && wallets.any?
     end
 

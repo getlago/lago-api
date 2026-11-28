@@ -433,6 +433,92 @@ RSpec.describe Invoices::ProviderTaxes::PullTaxesAndApplyService do
         end
       end
 
+      context "when the customer has a payment provider and a wallet" do
+        let(:customer) { create(:customer, organization:, billing_entity:, payment_provider: "stripe") }
+        let(:wallet) do
+          create(:wallet, :with_inbound_transaction, organization:, customer:, balance_cents: 500, credits_balance: 5.0)
+        end
+
+        before { wallet }
+
+        context "when the invoice is a regenerated advance_charges invoice" do
+          let(:voided_invoice) do
+            create(:invoice, :voided, organization:, customer:, billing_entity:, invoice_type: :advance_charges)
+          end
+
+          before do
+            invoice.update!(invoice_type: :advance_charges, voided_invoice_id: voided_invoice.id)
+            allow(Integrations::Aggregator::Taxes::Invoices::CreateDraftService).to receive(:call).and_call_original
+            allow(Integrations::Aggregator::Taxes::Invoices::CreateService).to receive(:call).and_call_original
+          end
+
+          it "computes the taxes without committing them and charges the payment provider without the wallet" do
+            result = pull_taxes_service.call
+
+            expect(result).to be_success
+            expect(Integrations::Aggregator::Taxes::Invoices::CreateDraftService)
+              .to have_received(:call).with(invoice:, fees: invoice.fees)
+            expect(Integrations::Aggregator::Taxes::Invoices::CreateService).not_to have_received(:call)
+            expect(result.invoice).to have_attributes(
+              status: "finalized",
+              prepaid_credit_amount_cents: 0,
+              total_amount_cents: 3_350, # 2000 + 1000 fees + 350 provider taxes, no wallet deducted
+              payment_status: "pending"
+            )
+            expect(WalletTransaction.where(invoice:)).to be_empty
+            expect(wallet.reload.balance_cents).to eq(500)
+            expect(Invoices::Payments::CreateJob).to have_been_enqueued
+              .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+            expect(Payments::ManualCreateJob).not_to have_been_enqueued
+          end
+
+          context "when credit-note credit covers the whole total" do
+            let(:credit_note) do
+              create(:credit_note, organization:, customer:, invoice: voided_invoice,
+                credit_amount_cents: 4_000, balance_amount_cents: 4_000)
+            end
+
+            before { credit_note }
+
+            it "settles the invoice with the credit note" do
+              result = pull_taxes_service.call
+
+              expect(result).to be_success
+              expect(result.invoice).to have_attributes(
+                status: "finalized",
+                credit_notes_amount_cents: 3_350, # the whole 2000 + 1000 fees + 350 provider taxes
+                total_amount_cents: 0,
+                payment_status: "succeeded"
+              )
+              expect(credit_note.reload.balance_amount_cents).to eq(650) # 4000 - 3350
+              expect(Payments::ManualCreateJob).not_to have_been_enqueued
+            end
+          end
+        end
+
+        context "when the invoice is not a regenerated advance_charges invoice" do
+          before do
+            allow(Integrations::Aggregator::Taxes::Invoices::CreateService).to receive(:call).and_call_original
+          end
+
+          it "commits the taxes, applies the wallet and charges the payment provider" do
+            result = pull_taxes_service.call
+
+            expect(result).to be_success
+            expect(Integrations::Aggregator::Taxes::Invoices::CreateService)
+              .to have_received(:call).with(invoice:, fees: invoice.fees)
+            expect(result.invoice).to have_attributes(
+              prepaid_credit_amount_cents: 500,
+              total_amount_cents: 2_850, # 2000 + 1000 fees + 350 provider taxes - 500 wallet
+              payment_status: "pending"
+            )
+            expect(WalletTransaction.where(invoice:).count).to eq(1)
+            expect(Invoices::Payments::CreateJob).to have_been_enqueued
+              .with(invoice:, payment_provider: :stripe, payment_method_params: {})
+          end
+        end
+      end
+
       context "when status is draft" do
         before do
           invoice.update!(status: :draft)

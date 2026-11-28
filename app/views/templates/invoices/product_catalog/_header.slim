@@ -25,7 +25,7 @@
           td.body-1-emphasis
             span.info-label = I18n.t('invoice.payment_term')
           td.body-1 = payment_term_label
-        - unless advance_charges?
+        - unless paid_advance_charges?
           tr
             td.body-1-emphasis
               span.info-label = I18n.t('invoice.payment_due_date')

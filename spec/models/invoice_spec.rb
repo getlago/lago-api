@@ -663,6 +663,56 @@ RSpec.describe Invoice do
     end
   end
 
+  describe "#regenerated_advance_charges?" do
+    subject(:invoice) { build(:invoice, organization:, invoice_type:, voided_invoice_id:) }
+
+    let(:voided_invoice_id) { SecureRandom.uuid }
+
+    context "when the invoice is an advance_charges invoice regenerated from a voided one" do
+      let(:invoice_type) { :advance_charges }
+
+      it { expect(invoice.regenerated_advance_charges?).to be(true) }
+    end
+
+    context "when the invoice is an advance_charges invoice not regenerated" do
+      let(:invoice_type) { :advance_charges }
+      let(:voided_invoice_id) { nil }
+
+      it { expect(invoice.regenerated_advance_charges?).to be(false) }
+    end
+
+    context "when the invoice is regenerated from a voided one of another type" do
+      let(:invoice_type) { :subscription }
+
+      it { expect(invoice.regenerated_advance_charges?).to be(false) }
+    end
+  end
+
+  describe "#paid_advance_charges?" do
+    subject(:invoice) { build(:invoice, organization:, invoice_type:, voided_invoice_id:) }
+
+    let(:voided_invoice_id) { nil }
+
+    context "when the invoice is an original advance_charges invoice" do
+      let(:invoice_type) { :advance_charges }
+
+      it { expect(invoice.paid_advance_charges?).to be(true) }
+    end
+
+    context "when the invoice is an advance_charges invoice regenerated from a voided one" do
+      let(:invoice_type) { :advance_charges }
+      let(:voided_invoice_id) { SecureRandom.uuid }
+
+      it { expect(invoice.paid_advance_charges?).to be(false) }
+    end
+
+    context "when the invoice is of another type" do
+      let(:invoice_type) { :subscription }
+
+      it { expect(invoice.paid_advance_charges?).to be(false) }
+    end
+  end
+
   describe "ready_to_be_finalized" do
     let(:invoice) { create(:invoice, status: :draft, expected_finalization_date: Time.current - 1.day) }
 
@@ -1969,6 +2019,41 @@ RSpec.describe Invoice do
 
       it "returns the correct name for EU country" do
         expect(invoice.document_invoice_name).to eq("Advance invoice")
+      end
+    end
+
+    context "when it is an advance_charges invoice" do
+      let(:invoice) { create(:invoice, customer:, organization:, billing_entity:, invoice_type: :advance_charges) }
+
+      it "returns the paid invoice name" do
+        expect(invoice.document_invoice_name).to eq(I18n.t("invoice.paid_invoice"))
+      end
+
+      context "when the billing entity country is in TAX_INVOICE_LABEL_COUNTRIES" do
+        let(:billing_entity) { create(:billing_entity, organization:, country: "AU") }
+
+        it "returns the paid tax invoice name" do
+          expect(invoice.document_invoice_name).to eq(I18n.t("invoice.paid_tax_invoice"))
+        end
+      end
+    end
+
+    context "when it is a regenerated advance_charges invoice" do
+      let(:voided_invoice) { create(:invoice, :voided, customer:, organization:, billing_entity:, invoice_type: :advance_charges) }
+      let(:invoice) do
+        create(:invoice, customer:, organization:, billing_entity:, invoice_type: :advance_charges, voided_invoice_id: voided_invoice.id)
+      end
+
+      it "returns the standard invoice name" do
+        expect(invoice.document_invoice_name).to eq("Invoice")
+      end
+
+      context "when the billing entity country is in TAX_INVOICE_LABEL_COUNTRIES" do
+        let(:billing_entity) { create(:billing_entity, organization:, country: "AU") }
+
+        it "returns the standard tax invoice name" do
+          expect(invoice.document_invoice_name).to eq("Tax invoice")
+        end
       end
     end
   end

@@ -98,8 +98,10 @@ module Invoices
       !invoice.one_off?
     end
 
+    # A regenerated advance_charges invoice does not use the wallets of the customer.
     def should_create_applied_prepaid_credit?
       return false if invoice.one_off?
+      return false if invoice.regenerated_advance_charges?
 
       invoice.total_amount_cents&.positive?
     end

@@ -1695,7 +1695,7 @@ describe "Payment Gated Subscription Activation Scenarios" do
       expect(invoice.tax_status).to eq("pending")
 
       # Stage 2: VIES resolves — FinalizePendingViesInvoiceService applies taxes and triggers payment
-      mock_vies_check!(vat_number)
+      mock_vies_check(vat_number)
       Customers::ViesCheckJob.perform_now(customer)
       perform_all_enqueued_jobs
 
