@@ -294,6 +294,7 @@ RSpec.describe WebhookEndpoint do
           "plan_rate_card" => Webhooks::PlanRateCards,
           "plan_entitlement" => Webhooks::PlanEntitlements,
           "contract_rate_card" => Webhooks::ContractRateCards,
+          "contract_entitlement" => Webhooks::ContractEntitlements,
           "contract" => Webhooks::Contracts
         }
 

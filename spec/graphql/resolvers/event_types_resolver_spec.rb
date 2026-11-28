@@ -13,6 +13,7 @@ RSpec.describe Resolvers::EventTypesResolver do
       plan_rate_card.created plan_rate_card.updated plan_rate_card.deleted
       plan_entitlement.created plan_entitlement.updated plan_entitlement.deleted
       contract_rate_card.created contract_rate_card.updated contract_rate_card.deleted
+      contract_entitlement.created contract_entitlement.updated contract_entitlement.deleted
       contract.created contract.updated contract.published contract.started contract.terminated contract.canceled
     ]
   end
@@ -85,6 +86,7 @@ RSpec.describe Resolvers::EventTypesResolver do
       contract_events = %w[
         contract.created contract.updated contract.published contract.started contract.terminated contract.canceled
         contract_rate_card.created contract_rate_card.updated contract_rate_card.deleted
+        contract_entitlement.created contract_entitlement.updated contract_entitlement.deleted
       ]
 
       expect(categories_by_name.slice(*plan_events)).to eq(plan_events.index_with("PLANS"))
@@ -95,7 +97,7 @@ RSpec.describe Resolvers::EventTypesResolver do
   context "when product catalog is enabled without the entitlement_events flag" do
     let(:organization) { create(:organization, feature_flags: ["product_catalog"]) }
 
-    it "hides the plan entitlement event types" do
+    it "hides the plan and contract entitlement event types" do
       result = execute_graphql(
         current_user: user,
         current_organization: organization,
@@ -105,7 +107,10 @@ RSpec.describe Resolvers::EventTypesResolver do
 
       event_types_response = result["data"]["eventTypes"].map { |event_type| event_type["name"] }
       expect(event_types_response).to match_array(
-        WebhookEndpoint::WEBHOOK_EVENT_TYPES - %w[plan_entitlement.created plan_entitlement.updated plan_entitlement.deleted]
+        WebhookEndpoint::WEBHOOK_EVENT_TYPES - %w[
+          plan_entitlement.created plan_entitlement.updated plan_entitlement.deleted
+          contract_entitlement.created contract_entitlement.updated contract_entitlement.deleted
+        ]
       )
     end
   end
