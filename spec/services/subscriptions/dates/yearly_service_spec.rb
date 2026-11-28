@@ -954,6 +954,65 @@ RSpec.describe Subscriptions::Dates::YearlyService do
     end
   end
 
+  describe "#fixed_charges_period_from_datetime" do
+    subject(:result) { date_service.fixed_charges_period_from_datetime }
+
+    let(:billing_time) { :calendar }
+    let(:subscription_at) { Time.zone.parse("02 Feb 2020") }
+
+    context "when billing charges monthly but not fixed charges" do
+      before { plan.update!(bill_charges_monthly: true) }
+
+      context "when the cycle bills fixed charges (first period)" do
+        let(:billing_at) { Time.zone.parse("01 Jan 2022") }
+
+        it "returns the fixed-charges period start, like fixed_charges_from_datetime" do
+          expect(result).to eq(date_service.fixed_charges_from_datetime)
+          expect(result.to_s).to eq("2021-01-01 00:00:00 UTC")
+        end
+      end
+
+      context "when the cycle does not bill fixed charges (charges-only run)" do
+        let(:billing_at) { Time.zone.parse("01 Feb 2022") }
+
+        it "still returns the period start even though the gated boundaries are nil" do
+          expect(date_service.fixed_charges_from_datetime).to be_nil
+          expect(date_service.fixed_charges_to_datetime).to be_nil
+          expect(result.to_s).to eq("2021-01-01 00:00:00 UTC")
+        end
+
+        context "when subscription started after the period start" do
+          let(:started_at) { Time.zone.parse("03 Mar 2021") }
+
+          it "returns the subscription start date" do
+            expect(result).to eq(started_at)
+          end
+        end
+      end
+
+      context "with current usage outside the first month of an anniversary period" do
+        let(:billing_time) { :anniversary }
+        let(:current_usage) { true }
+        let(:billing_at) { Time.zone.parse("15 Oct 2022") }
+
+        it "returns the start of the period holding billing_at while the gated boundaries are nil" do
+          expect(date_service.fixed_charges_from_datetime).to be_nil
+          expect(date_service.fixed_charges_to_datetime).to be_nil
+          expect(result.to_s).to eq("2022-02-02 00:00:00 UTC")
+        end
+      end
+    end
+
+    context "when subscription is not yet started" do
+      let(:started_at) { nil }
+      let(:billing_at) { Time.zone.parse("01 Jan 2022") }
+
+      it "returns nil" do
+        expect(result).to be_nil
+      end
+    end
+  end
+
   describe "next_end_of_period" do
     let(:result) { date_service.next_end_of_period.to_s }
 
