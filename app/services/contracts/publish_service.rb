@@ -65,7 +65,18 @@ module Contracts
           # Inside the transaction, so an activation that fails rolls back the move to pending.
           # As on create, a contract without cards or with unpriced cards goes active:
           # ActivateService skips a card it cannot schedule.
-          Contracts::ActivateService.call!(contract:) if contract.started_at <= Time.current
+          if contract.started_at <= Time.current
+            published_at = Time.current
+            Contracts::ActivateService.call!(contract:, timestamp: published_at)
+            # Usage priced in advance skipped the draft: bill what arrived since its start. Delayed
+            # past the ClickHouse merge, so the events sent right before the publication are read.
+            if contract.active?
+              AfterCommitEverywhere.after_commit do
+                Contracts::ReplayDraftUsageJob.set(wait: Events::Stores::ClickhouseStore::CLICKHOUSE_MERGE_DELAY)
+                  .perform_later(contract, published_at)
+              end
+            end
+          end
 
           result.contract = contract
         end

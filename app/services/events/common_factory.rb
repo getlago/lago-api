@@ -35,6 +35,30 @@ module Events
           precise_total_amount_cents: source.precise_total_amount_cents,
           created_at: source.created_at
         )
+      # Events read back from ClickHouse, without an id, as for an event the processor forwards.
+      when "Clickhouse::EventsEnriched"
+        Events::Common.new(
+          id: nil,
+          organization_id: source.organization_id,
+          transaction_id: source.transaction_id,
+          external_subscription_id: source.external_subscription_id,
+          timestamp: source.timestamp,
+          code: source.code,
+          properties: source.properties,
+          precise_total_amount_cents: source.precise_total_amount_cents
+        )
+      # A product event is keyed by contract, which the pay in advance path reads as external_subscription_id.
+      when "Clickhouse::ProductEventsEnriched"
+        Events::Common.new(
+          id: nil,
+          organization_id: source.organization_id,
+          transaction_id: source.transaction_id,
+          external_subscription_id: source.external_contract_id,
+          timestamp: source.timestamp,
+          code: source.code,
+          properties: source.properties,
+          precise_total_amount_cents: source.precise_total_amount_cents
+        )
       when "Clickhouse::EventsRaw"
         Events::Common.new(
           id: nil,
