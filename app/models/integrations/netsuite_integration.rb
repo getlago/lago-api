@@ -2,8 +2,6 @@
 
 module Integrations
   class NetsuiteIntegration < BaseIntegration
-    validates :connection_id, :client_secret, :client_id, :account_id, :script_endpoint_url, presence: true
-
     settings_accessors :client_id,
       :legacy_script,
       :sync_credit_notes,
@@ -12,6 +10,8 @@ module Integrations
       :script_endpoint_url,
       :token_id
     secrets_accessors :connection_id, :client_secret, :token_secret
+
+    validates :connection_id, :client_secret, :client_id, :account_id, :script_endpoint_url, presence: true
 
     def account_id=(value)
       push_to_settings(key: "account_id", value: value&.downcase&.strip&.split(" ")&.join("-"))

@@ -3,13 +3,13 @@
 # Read-only access to billing segments written before billing operations became
 # the authority for scheduled contract billing.
 class LegacyBillingSegment < ApplicationRecord
-  self.table_name = "billing_segments"
-
   STATUSES = {pending: "pending", processing: "processing", done: "done", failed: "failed"}.freeze
 
-  belongs_to :invoice, optional: true
+  self.table_name = "billing_segments"
 
   enum :status, STATUSES, validate: true, prefix: true
+
+  belongs_to :invoice, optional: true
 
   def readonly?
     true

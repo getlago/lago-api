@@ -6,11 +6,12 @@ class Subscription::FixedChargeUnitsOverride < ApplicationRecord
 
   self.table_name = "subscription_fixed_charge_units_overrides"
   self.discard_column = :deleted_at
-  default_scope -> { kept }
 
   belongs_to :organization
   belongs_to :subscription
   belongs_to :fixed_charge
+
+  default_scope -> { kept }
 
   validates :units, presence: true, numericality: {greater_than_or_equal_to: 0}
 

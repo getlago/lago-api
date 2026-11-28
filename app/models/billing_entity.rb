@@ -6,8 +6,6 @@ class BillingEntity < ApplicationRecord
   include Currencies
   include Discard::Model
 
-  self.discard_column = :deleted_at
-
   EMAIL_SETTINGS = [
     "invoice.finalized",
     "credit_note.created",
@@ -25,6 +23,20 @@ class BillingEntity < ApplicationRecord
     keep_anchor: "keep_anchor",
     align_with_finalization_date: "align_with_finalization_date"
   }.freeze
+
+  DOCUMENT_NUMBERINGS = {
+    per_customer: "per_customer",
+    per_billing_entity: "per_billing_entity"
+  }.freeze
+
+  self.discard_column = :deleted_at
+
+  enum :document_numbering, DOCUMENT_NUMBERINGS
+
+  enum :subscription_invoice_issuing_date_anchor, SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS, prefix: true, validate: true
+  enum :subscription_invoice_issuing_date_adjustment, SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS, prefix: true, validate: true
+
+  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
   belongs_to :organization
   belongs_to :applied_dunning_campaign, class_name: "DunningCampaign", optional: true
@@ -70,16 +82,6 @@ class BillingEntity < ApplicationRecord
 
   has_one_attached :logo
 
-  DOCUMENT_NUMBERINGS = {
-    per_customer: "per_customer",
-    per_billing_entity: "per_billing_entity"
-  }.freeze
-
-  enum :document_numbering, DOCUMENT_NUMBERINGS
-
-  enum :subscription_invoice_issuing_date_anchor, SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS, prefix: true, validate: true
-  enum :subscription_invoice_issuing_date_adjustment, SUBSCRIPTION_INVOICE_ISSUING_DATE_ADJUSTMENTS, prefix: true, validate: true
-
   default_scope -> { kept }
   scope :active, -> { where(archived_at: nil).order(created_at: :asc) }
 
@@ -108,8 +110,6 @@ class BillingEntity < ApplicationRecord
 
   validate :validate_email_settings
   validate :validate_einvoicing
-
-  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
   after_create :generate_document_number_prefix
 

@@ -6,10 +6,10 @@ module Integrations
     include SecretsStorable
     include SettingsStorable
 
-    self.table_name = "integrations"
-
     INTEGRATION_ACCOUNTING_TYPES = %w[Integrations::NetsuiteIntegration Integrations::XeroIntegration Integrations::QuickbooksIntegration].freeze
     INTEGRATION_TAX_TYPES = %w[Integrations::AnrokIntegration Integrations::AvalaraIntegration].freeze
+
+    self.table_name = "integrations"
 
     belongs_to :organization
 
@@ -30,11 +30,6 @@ module Integrations
 
     validates :code, uniqueness: {scope: :organization_id}
     validates :name, presence: true
-
-    # Returns the short provider key, e.g. "netsuite", "anrok".
-    def provider_key
-      type.demodulize.delete_suffix("Integration").underscore
-    end
 
     def self.integration_type(type)
       case type
@@ -61,6 +56,11 @@ module Integrations
       else
         raise(NotImplementedError)
       end
+    end
+
+    # Returns the short provider key, e.g. "netsuite", "anrok".
+    def provider_key
+      type.demodulize.delete_suffix("Integration").underscore
     end
 
     def external_id_key

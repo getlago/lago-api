@@ -3,8 +3,6 @@
 class Invoice < ApplicationRecord
   include PreloadableAggregations
 
-  self.ignored_columns += [:negative_amount_cents] # TODO: remove when negative_amount_cents is removed from the database
-
   include AASM
   include PaperTrailTraceable
   include Sequenced
@@ -16,9 +14,92 @@ class Invoice < ApplicationRecord
   COUPON_BEFORE_VAT_VERSION = 3
   TAX_INVOICE_LABEL_COUNTRIES = %w[AU AE NZ ID SG].freeze
 
-  before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity&.per_billing_entity? && !self_billed? }
-  before_save :ensure_number
-  before_save :set_finalized_at, if: -> { status_changed_to_finalized? }
+  INVOICE_TYPES = %i[subscription add_on credit one_off advance_charges progressive_billing contract].freeze
+  PAYMENT_STATUS = %i[pending succeeded failed].freeze
+  TAX_STATUSES = {
+    pending: "pending",
+    succeeded: "succeeded",
+    failed: "failed"
+  }.freeze
+  PROGRESSIVE_BILLING_TRIGGERS = {
+    usage_threshold: "usage_threshold",
+    wallet_expiration: "wallet_expiration"
+  }.freeze
+
+  VISIBLE_STATUS = {draft: 0, finalized: 1, voided: 2, failed: 4, pending: 7}.freeze
+  INVISIBLE_STATUS = {generating: 3, open: 5, closed: 6, deleted: 8}.freeze
+  MANUALLY_PAYABLE_INVOICE_STATUS = %i[finalized open].freeze
+  STATUS = VISIBLE_STATUS.merge(INVISIBLE_STATUS).freeze
+  GENERATED_INVOICE_STATUSES = %w[finalized closed].freeze
+
+  self.ignored_columns += [:negative_amount_cents] # TODO: remove when negative_amount_cents is removed from the database
+
+  attribute :tax_status, :string
+  attribute :progressive_billing_trigger, :string
+
+  enum :invoice_type, INVOICE_TYPES
+  enum :payment_status, PAYMENT_STATUS, prefix: :payment
+  enum :status, STATUS
+
+  enum :tax_status, TAX_STATUSES, prefix: :tax
+
+  enum :progressive_billing_trigger, PROGRESSIVE_BILLING_TRIGGERS, prefix: :triggered_by, validate: {allow_nil: true}
+
+  aasm column: "status", timestamps: true do
+    state :generating
+    state :draft
+    state :open
+    state :finalized
+    state :voided
+    state :failed
+    state :closed
+    state :pending
+    state :deleted
+
+    event :finalize do
+      transitions from: :draft, to: :finalized
+    end
+
+    event :mark_as_deleted do
+      transitions from: :draft, to: :deleted
+    end
+
+    event :void do
+      transitions from: :finalized, to: :voided, after: :handle_void_transition!
+    end
+  end
+
+  expiring_document_urls :file, :xml_file
+
+  monetize :coupons_amount_cents,
+    :credit_notes_amount_cents,
+    :fees_amount_cents,
+    :prepaid_credit_amount_cents,
+    :progressive_billing_credit_amount_cents,
+    :sub_total_excluding_taxes_amount_cents,
+    :sub_total_including_taxes_amount_cents,
+    :total_amount_cents,
+    :total_paid_amount_cents,
+    :taxes_amount_cents,
+    with_model_currency: :currency
+
+  # NOTE: Readonly fields
+  monetize :charge_amount_cents,
+    :subscription_amount_cents,
+    :total_due_amount_cents,
+    disable_validation: true,
+    allow_nil: true,
+    with_model_currency: :currency
+
+  # NOTE: Prepaid credit breakdown - nil for historical invoices
+  monetize :prepaid_granted_credit_amount_cents,
+    :prepaid_purchased_credit_amount_cents,
+    disable_validation: true,
+    allow_nil: true,
+    with_model_currency: :currency
+
+  sequenced scope: ->(invoice) { invoice.customer.invoices.where(billing_entity_id: invoice.billing_entity_id) },
+    lock_key: ->(invoice) { "#{invoice.customer_id}-#{invoice.billing_entity_id}" }
 
   belongs_to :customer, -> { with_discarded }
   belongs_to :organization
@@ -71,90 +152,6 @@ class Invoice < ApplicationRecord
   has_one_attached :file
   has_one_attached :xml_file
 
-  expiring_document_urls :file, :xml_file
-
-  monetize :coupons_amount_cents,
-    :credit_notes_amount_cents,
-    :fees_amount_cents,
-    :prepaid_credit_amount_cents,
-    :progressive_billing_credit_amount_cents,
-    :sub_total_excluding_taxes_amount_cents,
-    :sub_total_including_taxes_amount_cents,
-    :total_amount_cents,
-    :total_paid_amount_cents,
-    :taxes_amount_cents,
-    with_model_currency: :currency
-
-  # NOTE: Readonly fields
-  monetize :charge_amount_cents,
-    :subscription_amount_cents,
-    :total_due_amount_cents,
-    disable_validation: true,
-    allow_nil: true,
-    with_model_currency: :currency
-
-  # NOTE: Prepaid credit breakdown - nil for historical invoices
-  monetize :prepaid_granted_credit_amount_cents,
-    :prepaid_purchased_credit_amount_cents,
-    disable_validation: true,
-    allow_nil: true,
-    with_model_currency: :currency
-
-  INVOICE_TYPES = %i[subscription add_on credit one_off advance_charges progressive_billing contract].freeze
-  PAYMENT_STATUS = %i[pending succeeded failed].freeze
-  TAX_STATUSES = {
-    pending: "pending",
-    succeeded: "succeeded",
-    failed: "failed"
-  }.freeze
-  PROGRESSIVE_BILLING_TRIGGERS = {
-    usage_threshold: "usage_threshold",
-    wallet_expiration: "wallet_expiration"
-  }.freeze
-
-  VISIBLE_STATUS = {draft: 0, finalized: 1, voided: 2, failed: 4, pending: 7}.freeze
-  INVISIBLE_STATUS = {generating: 3, open: 5, closed: 6, deleted: 8}.freeze
-  MANUALLY_PAYABLE_INVOICE_STATUS = %i[finalized open].freeze
-  STATUS = VISIBLE_STATUS.merge(INVISIBLE_STATUS).freeze
-  GENERATED_INVOICE_STATUSES = %w[finalized closed].freeze
-
-  enum :invoice_type, INVOICE_TYPES
-  enum :payment_status, PAYMENT_STATUS, prefix: :payment
-  enum :status, STATUS
-
-  attribute :tax_status, :string
-  enum :tax_status, TAX_STATUSES, prefix: :tax
-
-  attribute :progressive_billing_trigger, :string
-  enum :progressive_billing_trigger, PROGRESSIVE_BILLING_TRIGGERS, prefix: :triggered_by, validate: {allow_nil: true}
-
-  aasm column: "status", timestamps: true do
-    state :generating
-    state :draft
-    state :open
-    state :finalized
-    state :voided
-    state :failed
-    state :closed
-    state :pending
-    state :deleted
-
-    event :finalize do
-      transitions from: :draft, to: :finalized
-    end
-
-    event :mark_as_deleted do
-      transitions from: :draft, to: :deleted
-    end
-
-    event :void do
-      transitions from: :finalized, to: :voided, after: :handle_void_transition!
-    end
-  end
-
-  sequenced scope: ->(invoice) { invoice.customer.invoices.where(billing_entity_id: invoice.billing_entity_id) },
-    lock_key: ->(invoice) { "#{invoice.customer_id}-#{invoice.billing_entity_id}" }
-
   scope :visible, -> { where(status: VISIBLE_STATUS.keys) }
   scope :invisible, -> { where(status: INVISIBLE_STATUS.keys) }
   scope :with_generated_number, -> { where(status: %w[finalized voided]) }
@@ -191,12 +188,6 @@ class Invoice < ApplicationRecord
   scope :self_billed, -> { where(self_billed: true) }
   scope :non_self_billed, -> { where(self_billed: false) }
 
-  validates :issuing_date, :currency, presence: true
-  validates :timezone, timezone: true, allow_nil: true
-  validates :total_amount_cents, numericality: {greater_than_or_equal_to: 0}
-  validates :payment_dispute_lost_at, absence: true, unless: :payment_dispute_losable?
-  validate :validate_x402_connection_organization, if: :x402_connection_id_changed?
-
   preloadable_aggregation :offset_amount_cents do |ids|
     CreditNote.where(invoice_id: ids).finalized.group(:invoice_id).sum(:offset_amount_cents)
   end
@@ -221,6 +212,16 @@ class Invoice < ApplicationRecord
   end
 
   preloadable_associated_aggregation :fees, :credited_amount_cents
+
+  validates :issuing_date, :currency, presence: true
+  validates :timezone, timezone: true, allow_nil: true
+  validates :total_amount_cents, numericality: {greater_than_or_equal_to: 0}
+  validates :payment_dispute_lost_at, absence: true, unless: :payment_dispute_losable?
+  validate :validate_x402_connection_organization, if: :x402_connection_id_changed?
+
+  before_save :ensure_billing_entity_sequential_id, if: -> { billing_entity&.per_billing_entity? && !self_billed? }
+  before_save :ensure_number
+  before_save :set_finalized_at, if: -> { status_changed_to_finalized? }
 
   def self.ransackable_attributes(_ = nil)
     %w[id number]

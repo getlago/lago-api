@@ -5,14 +5,14 @@ class AppliedWalletExpiration < ApplicationRecord
   belongs_to :invoice
   belongs_to :wallet
 
-  validates :invoice_id, uniqueness: true
-
   # Invoices that can still apply the wallet credits: waiting for their taxes, or failed and retryable.
   scope :with_unsettled_invoice, -> do
     joins(:invoice).merge(
       Invoice.where(status: %i[pending failed]).or(Invoice.where(status: %i[open generating], tax_status: :pending))
     )
   end
+
+  validates :invoice_id, uniqueness: true
 end
 
 # == Schema Information

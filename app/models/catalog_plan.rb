@@ -24,20 +24,20 @@ class CatalogPlan < ApplicationRecord
   has_many :entitlements, class_name: "Entitlement::Entitlement", dependent: :destroy
   has_many :entitlement_values, through: :entitlements, source: :values, class_name: "Entitlement::EntitlementValue", dependent: :destroy
 
+  default_scope -> { kept }
+
   validates :name, presence: true
   validates :code, presence: true, uniqueness: {scope: :organization_id, conditions: -> { where(deleted_at: nil) }}
   validates :currency, presence: true, inclusion: {in: currency_list, allow_nil: true}
 
-  default_scope -> { kept }
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[name code]
+  end
 
   # A catalog plan is subscribed through contracts; any contract but a canceled one
   # freezes its pricing (its rate cards can no longer be edited).
   def attached_to_contracts?
     contracts.not_canceled.exists?
-  end
-
-  def self.ransackable_attributes(_auth_object = nil)
-    %w[name code]
   end
 end
 

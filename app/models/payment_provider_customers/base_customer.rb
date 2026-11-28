@@ -6,11 +6,6 @@ module PaymentProviderCustomers
     include SettingsStorable
     include Discard::Model
 
-    self.discard_column = :deleted_at
-    default_scope -> { kept }
-
-    self.table_name = "payment_provider_customers"
-
     MANUAL_CODE = "lago_manual"
 
     CONNECTION_STATUSES = {
@@ -18,6 +13,12 @@ module PaymentProviderCustomers
       manual: "manual",
       connected: "connected"
     }.freeze
+
+    self.discard_column = :deleted_at
+
+    self.table_name = "payment_provider_customers"
+
+    settings_accessors :provider_mandate_id, :sync_with_provider
 
     belongs_to :customer
     belongs_to :payment_provider, optional: true, class_name: "PaymentProviders::BaseProvider"
@@ -28,13 +29,7 @@ module PaymentProviderCustomers
     has_many :refunds, foreign_key: :payment_provider_customer_id
     has_many :billing_object_connections, foreign_key: :payment_provider_customer_id, dependent: :destroy
 
-    before_validation :set_code
-
-    validates :customer_id, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :type}
-    validates :code, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :customer_id}, allow_nil: true
-    validate :code_is_not_reserved
-
-    settings_accessors :provider_mandate_id, :sync_with_provider
+    default_scope -> { kept }
 
     scope :by_code, ->(code) { where(code:) }
     scope :by_provider_id_from_organization, ->(organization_id, provider_id) do
@@ -42,6 +37,12 @@ module PaymentProviderCustomers
         .where(customers: {organization_id: organization_id})
         .where(provider_customer_id: provider_id)
     end
+
+    validates :customer_id, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :type}
+    validates :code, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :customer_id}, allow_nil: true
+    validate :code_is_not_reserved
+
+    before_validation :set_code
 
     def provider_payment_methods
       nil

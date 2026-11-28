@@ -14,11 +14,11 @@ module PaymentProviders
     # Adyen's minor units differ from ISO 4217 (and Money) for these currencies: https://docs.adyen.com/development-resources/currency-codes
     ADYEN_DECIMALS_OVERRIDES = {"CLP" => 2, "HUF" => 2, "ISK" => 2, "CVE" => 0, "IDR" => 0}.freeze
 
-    validates :api_key, :merchant_account, presence: true
-    validates :success_redirect_url, adyen_url: true, allow_nil: true, length: {maximum: 1024}
-
     settings_accessors :live_prefix, :merchant_account
     secrets_accessors :api_key, :hmac_key
+
+    validates :api_key, :merchant_account, presence: true
+    validates :success_redirect_url, adyen_url: true, allow_nil: true, length: {maximum: 1024}
 
     def self.to_adyen_amount(amount_cents, currency)
       code = currency.to_s.upcase

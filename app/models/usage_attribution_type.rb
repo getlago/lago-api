@@ -3,8 +3,6 @@
 class UsageAttributionType < ApplicationRecord
   include Discard::Model
 
-  self.discard_column = :deleted_at
-
   ROLES = {
     hierarchical: "hierarchical",
     flat: "flat"
@@ -12,16 +10,20 @@ class UsageAttributionType < ApplicationRecord
 
   MAX_ATTRIBUTION_KEYS = 4
 
-  belongs_to :organization
-  belongs_to :parent, -> { with_discarded }, class_name: "UsageAttributionType", optional: true
-  has_many :children, -> { order(:code) }, class_name: "UsageAttributionType", foreign_key: :parent_id, inverse_of: :parent
-  has_many :usage_attribution_values
+  self.discard_column = :deleted_at
 
   enum :role, ROLES, validate: {allow_nil: true}
 
   normalizes :attribution_keys, with: ->(attribution_keys) do
     Array(attribution_keys).filter_map { it.to_s.strip.presence }.uniq
   end
+
+  belongs_to :organization
+  belongs_to :parent, -> { with_discarded }, class_name: "UsageAttributionType", optional: true
+  has_many :children, -> { order(:code) }, class_name: "UsageAttributionType", foreign_key: :parent_id, inverse_of: :parent
+  has_many :usage_attribution_values
+
+  default_scope -> { kept }
 
   validates :code, presence: true, length: {maximum: 255}, uniqueness: {scope: :organization_id, conditions: -> { where(deleted_at: nil) }}
   validates :name, length: {maximum: 255}
@@ -30,8 +32,6 @@ class UsageAttributionType < ApplicationRecord
 
   validate :validate_attribution_keys
   validate :validate_parent
-
-  default_scope -> { kept }
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[code name]

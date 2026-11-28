@@ -5,22 +5,6 @@ class Coupon < ApplicationRecord
   include Currencies
   include Discard::Model
 
-  self.discard_column = :deleted_at
-
-  belongs_to :organization
-
-  has_many :applied_coupons
-  has_many :customers, -> { kept }, through: :applied_coupons
-  has_many :coupon_targets
-  has_many :plans, through: :coupon_targets
-  has_many :catalog_plans, through: :coupon_targets
-  has_many :billable_metrics, through: :coupon_targets
-
-  has_many :activity_logs,
-    -> { order(logged_at: :desc) },
-    class_name: "Clickhouse::ActivityLog",
-    as: :resource
-
   STATUSES = [
     :active,
     :terminated
@@ -42,6 +26,8 @@ class Coupon < ApplicationRecord
     :forever
   ].freeze
 
+  self.discard_column = :deleted_at
+
   enum :status, STATUSES, validate: true
   enum :expiration, EXPIRATION_TYPES, validate: true
   enum :coupon_type, COUPON_TYPES, validate: true
@@ -49,20 +35,19 @@ class Coupon < ApplicationRecord
 
   monetize :amount_cents, disable_validation: true, allow_nil: true
 
-  validates :name, presence: true
-  validates :code, presence: true, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id}
+  belongs_to :organization
 
-  validates :amount_cents, presence: true, if: :fixed_amount?
-  validates :amount_cents, numericality: {greater_than: 0}, allow_nil: true
+  has_many :applied_coupons
+  has_many :customers, -> { kept }, through: :applied_coupons
+  has_many :coupon_targets
+  has_many :plans, through: :coupon_targets
+  has_many :catalog_plans, through: :coupon_targets
+  has_many :billable_metrics, through: :coupon_targets
 
-  validates :amount_currency, presence: true, if: :fixed_amount?
-  validates :amount_currency, inclusion: {in: currency_list}, allow_nil: true
-
-  validates :percentage_rate, presence: true, if: :percentage?
-
-  validates :frequency_duration, presence: true, numericality: {greater_than: 0}, if: :recurring?
-
-  validates :reusable, exclusion: [nil]
+  has_many :activity_logs,
+    -> { order(logged_at: :desc) },
+    class_name: "Clickhouse::ActivityLog",
+    as: :resource
 
   default_scope -> { kept }
   scope :order_by_status_and_expiration,
@@ -79,6 +64,21 @@ class Coupon < ApplicationRecord
     }
 
   scope :expired, -> { where("coupons.expiration_at::timestamp(0) < ?", Time.current) }
+
+  validates :name, presence: true
+  validates :code, presence: true, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id}
+
+  validates :amount_cents, presence: true, if: :fixed_amount?
+  validates :amount_cents, numericality: {greater_than: 0}, allow_nil: true
+
+  validates :amount_currency, presence: true, if: :fixed_amount?
+  validates :amount_currency, inclusion: {in: currency_list}, allow_nil: true
+
+  validates :percentage_rate, presence: true, if: :percentage?
+
+  validates :frequency_duration, presence: true, numericality: {greater_than: 0}, if: :recurring?
+
+  validates :reusable, exclusion: [nil]
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]

@@ -8,12 +8,12 @@ module PaymentProviderCustomers
 
     EXCLUSIVE_PAYMENT_METHODS = %w[customer_balance shared_payment_token].freeze
 
+    settings_accessors :payment_method_id
+
     validates :provider_payment_methods, presence: true
     validate :allowed_provider_payment_methods
     validate :link_payment_method_can_exist_only_with_card
     validate :exclusive_payment_methods_cannot_be_combined
-
-    settings_accessors :payment_method_id
 
     def provider_payment_methods
       get_from_settings("provider_payment_methods")

@@ -5,23 +5,22 @@ module X402
     include Discard::Model
     include SecretsStorable
 
-    self.discard_column = :deleted_at
-
     FACILITATORS = {coinbase_cdp: "coinbase_cdp"}.freeze
     ASSETS = {usdc: "usdc"}.freeze
     PAYOUT_FAMILIES = {"evm" => :evm, "svm" => :svm}.freeze
     MAX_ALLOWED_ORIGINS = 10
 
-    belongs_to :organization
-    has_many :settlements, class_name: "X402::Settlement", foreign_key: :x402_connection_id, inverse_of: :x402_connection
+    self.discard_column = :deleted_at
 
     enum :facilitator, FACILITATORS, validate: true
     enum :asset, ASSETS, validate: true
 
     secrets_accessors :cdp_api_key_id, :cdp_api_key_secret
 
-    before_validation :normalize_payout_addresses
-    before_validation :normalize_allowed_origins
+    belongs_to :organization
+    has_many :settlements, class_name: "X402::Settlement", foreign_key: :x402_connection_id, inverse_of: :x402_connection
+
+    default_scope -> { kept }
 
     validates :code, presence: true, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id}
     validates :name, :networks, :cdp_api_key_id, :cdp_api_key_secret, presence: true
@@ -30,7 +29,8 @@ module X402
     validate :validate_payout_addresses
     validate :validate_allowed_origins
 
-    default_scope -> { kept }
+    before_validation :normalize_payout_addresses
+    before_validation :normalize_allowed_origins
 
     def validation_error_messages
       family_errors = errors.where(:payout_addresses).select { |error| error.options.key?(:family) }

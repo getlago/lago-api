@@ -5,9 +5,6 @@ module UsageMonitoring
     include Discard::Model
     include ThresholdEvaluation
 
-    self.discard_column = :deleted_at
-    self.inheritance_column = :alert_type
-
     STI_MAPPING = {
       "current_usage_amount" => "UsageMonitoring::CurrentUsageAmountAlert",
       "billable_metric_current_usage_amount" => "UsageMonitoring::BillableMetricCurrentUsageAmountAlert",
@@ -28,7 +25,10 @@ module UsageMonitoring
 
     DIRECTIONS = {increasing: "increasing", decreasing: "decreasing"}.freeze
 
-    default_scope -> { kept }
+    self.discard_column = :deleted_at
+    self.inheritance_column = :alert_type
+
+    enum :direction, DIRECTIONS, validate: true
 
     belongs_to :organization
     belongs_to :billable_metric, -> { with_discarded }, optional: true
@@ -50,12 +50,7 @@ module UsageMonitoring
       class_name: "UsageMonitoring::TriggeredAlert",
       inverse_of: :alert
 
-    validates :alert_type, presence: true, inclusion: {in: STI_MAPPING.keys}
-    validates :code, presence: true
-    validates :billable_metric, presence: true, if: :need_billable_metric?
-    validates :billable_metric, absence: true, unless: :need_billable_metric?
-    validates :subscription_external_id, presence: true, if: :need_subscription?
-    validates :wallet, presence: true, if: :need_wallet?
+    default_scope -> { kept }
 
     scope :using_current_usage, -> { where(alert_type: CURRENT_USAGE_TYPES) }
     scope :using_lifetime_usage, -> { where(alert_type: "lifetime_usage_amount") }
@@ -63,7 +58,12 @@ module UsageMonitoring
     scope :using_subscription, -> { where(alert_type: SUBSCRIPTION_TYPES) }
     scope :using_wallet, -> { where(alert_type: WALLET_TYPES) }
 
-    enum :direction, DIRECTIONS, validate: true
+    validates :alert_type, presence: true, inclusion: {in: STI_MAPPING.keys}
+    validates :code, presence: true
+    validates :billable_metric, presence: true, if: :need_billable_metric?
+    validates :billable_metric, absence: true, unless: :need_billable_metric?
+    validates :subscription_external_id, presence: true, if: :need_subscription?
+    validates :wallet, presence: true, if: :need_wallet?
 
     def self.find_sti_class(type_name)
       STI_MAPPING.fetch(type_name).constantize

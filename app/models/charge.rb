@@ -6,7 +6,28 @@ class Charge < ApplicationRecord
   include ChargePropertiesValidation
   include Discard::Model
 
+  EVENT_TARGET_WALLET_CODE = "target_wallet_code"
+
+  CHARGE_MODELS = %i[
+    standard
+    graduated
+    package
+    percentage
+    volume
+    graduated_percentage
+    custom
+    dynamic
+  ].freeze
+
+  REGROUPING_PAID_FEES_OPTIONS = %i[invoice].freeze
+
   self.discard_column = :deleted_at
+
+  attribute :regroup_paid_fees, :integer
+
+  enum :charge_model, CHARGE_MODELS, validate: true
+
+  enum :regroup_paid_fees, REGROUPING_PAID_FEES_OPTIONS
 
   belongs_to :organization
   belongs_to :plan, -> { with_discarded }, touch: true
@@ -24,25 +45,10 @@ class Charge < ApplicationRecord
   has_many :applied_taxes, class_name: "Charge::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
-  EVENT_TARGET_WALLET_CODE = "target_wallet_code"
+  default_scope -> { kept }
 
-  CHARGE_MODELS = %i[
-    standard
-    graduated
-    package
-    percentage
-    volume
-    graduated_percentage
-    custom
-    dynamic
-  ].freeze
-
-  REGROUPING_PAID_FEES_OPTIONS = %i[invoice].freeze
-
-  enum :charge_model, CHARGE_MODELS, validate: true
-
-  attribute :regroup_paid_fees, :integer
-  enum :regroup_paid_fees, REGROUPING_PAID_FEES_OPTIONS
+  scope :pay_in_advance, -> { where(pay_in_advance: true) }
+  scope :parents, -> { where(parent_id: nil) }
 
   validate :validate_properties
   validate :validate_dynamic, if: -> { dynamic? }
@@ -58,11 +64,6 @@ class Charge < ApplicationRecord
   validate :validate_custom_model
   validate :validate_invoiceable_unless_pay_in_advance
   validate :validate_accepts_target_wallet, if: -> { accepts_target_wallet_changed? }
-
-  default_scope -> { kept }
-
-  scope :pay_in_advance, -> { where(pay_in_advance: true) }
-  scope :parents, -> { where(parent_id: nil) }
 
   def pricing_group_keys
     properties["pricing_group_keys"].presence || properties["grouped_by"]

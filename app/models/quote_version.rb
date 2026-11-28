@@ -25,17 +25,24 @@ class QuoteVersion < ApplicationRecord
   # (its now-unused unique index has been dropped).
   self.ignored_columns += %w[share_token]
 
-  belongs_to :organization
-  belongs_to :quote
-  belongs_to :billing_entity, optional: true
-  has_one :order_form
-
   enum :status, STATUSES,
     default: :draft,
     validate: true
   enum :void_reason, VOID_REASONS,
     instance_methods: false,
     validate: {allow_nil: true}
+
+  sequenced(
+    scope: ->(quote_version) { quote_version.quote.versions },
+    lock_key: ->(quote_version) { quote_version.quote_id }
+  )
+
+  delegate :customer, to: :quote
+
+  belongs_to :organization
+  belongs_to :quote
+  belongs_to :billing_entity, optional: true
+  has_one :order_form
 
   validates :currency, inclusion: {in: currency_list}, allow_nil: true
 
@@ -46,13 +53,6 @@ class QuoteVersion < ApplicationRecord
   validates :approved_at,
     presence: true,
     if: -> { approved? }
-
-  sequenced(
-    scope: ->(quote_version) { quote_version.quote.versions },
-    lock_key: ->(quote_version) { quote_version.quote_id }
-  )
-
-  delegate :customer, to: :quote
 
   def version = sequential_id
 

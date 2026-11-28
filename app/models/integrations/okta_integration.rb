@@ -2,17 +2,17 @@
 
 module Integrations
   class OktaIntegration < BaseIntegration
-    validates :client_secret, :client_id, :domain, :organization_name, presence: true
-    validate :domain_uniqueness
-    validate :validate_host_format, if: -> { setting_changed?("host") }
-    validate :validate_organization_name_format, if: :default_host_changed?
+    # A bare hostname: the token and userinfo URLs are built by appending a path to it. Also checks
+    # `organization_name`, from which the default host is built.
+    HOST_FORMAT = /\A[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?\z/i
 
     settings_accessors :client_id, :domain, :organization_name, :host
     secrets_accessors :client_secret
 
-    # A bare hostname: the token and userinfo URLs are built by appending a path to it. Also checks
-    # `organization_name`, from which the default host is built.
-    HOST_FORMAT = /\A[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?\z/i
+    validates :client_secret, :client_id, :domain, :organization_name, presence: true
+    validate :domain_uniqueness
+    validate :validate_host_format, if: -> { setting_changed?("host") }
+    validate :validate_organization_name_format, if: :default_host_changed?
 
     def host
       get_from_settings("host").presence || "#{organization_name.downcase}.okta.com"

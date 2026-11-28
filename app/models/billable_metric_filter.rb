@@ -13,10 +13,10 @@ class BillableMetricFilter < ApplicationRecord
   has_many :charge_filters, through: :filter_values
   has_many :product_filter_values
 
+  default_scope -> { kept }
+
   validates :key, presence: true
   validates :values, presence: true
-
-  default_scope -> { kept }
 end
 
 # == Schema Information

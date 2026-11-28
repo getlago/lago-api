@@ -5,7 +5,30 @@ class BillableMetric < ApplicationRecord
   include Discard::Model
   include IntegrationMappable
 
+  AGGREGATION_TYPES = {
+    count_agg: 0,
+    sum_agg: 1,
+    max_agg: 2,
+    unique_count_agg: 3,
+    # NOTE: deleted aggregation type, recurring_count_agg: 4,
+    weighted_sum_agg: 5,
+    latest_agg: 6,
+    # NOTE: deprecated aggregation type, only kept for legacy metrics. It must not be documented in the public API.
+    custom_agg: 7
+  }.freeze
+  AGGREGATION_TYPES_PAYABLE_IN_ADVANCE = %i[count_agg sum_agg unique_count_agg custom_agg].freeze
+
+  ROUNDING_FUNCTIONS = {round: "round", ceil: "ceil", floor: "floor"}.freeze
+
+  UNIQUE_COUNT_OPERATION_TYPES = %w[add remove].freeze
+
+  WEIGHTED_INTERVAL = {seconds: "seconds"}.freeze
+
   self.discard_column = :deleted_at
+
+  enum :aggregation_type, AGGREGATION_TYPES
+  enum :rounding_function, ROUNDING_FUNCTIONS
+  enum :weighted_interval, WEIGHTED_INTERVAL
 
   belongs_to :organization
 
@@ -26,30 +49,9 @@ class BillableMetric < ApplicationRecord
     class_name: "Clickhouse::ActivityLog",
     as: :resource
 
-  AGGREGATION_TYPES = {
-    count_agg: 0,
-    sum_agg: 1,
-    max_agg: 2,
-    unique_count_agg: 3,
-    # NOTE: deleted aggregation type, recurring_count_agg: 4,
-    weighted_sum_agg: 5,
-    latest_agg: 6,
-    # NOTE: deprecated aggregation type, only kept for legacy metrics. It must not be documented in the public API.
-    custom_agg: 7
-  }.freeze
-  AGGREGATION_TYPES_PAYABLE_IN_ADVANCE = %i[count_agg sum_agg unique_count_agg custom_agg].freeze
+  default_scope -> { kept }
 
-  ROUNDING_FUNCTIONS = {round: "round", ceil: "ceil", floor: "floor"}.freeze
-
-  UNIQUE_COUNT_OPERATION_TYPES = %w[add remove].freeze
-
-  WEIGHTED_INTERVAL = {seconds: "seconds"}.freeze
-
-  enum :aggregation_type, AGGREGATION_TYPES
-  enum :rounding_function, ROUNDING_FUNCTIONS
-  enum :weighted_interval, WEIGHTED_INTERVAL
-
-  before_validation :reset_field_name_for_count_agg
+  scope :with_expression, -> { where("expression IS NOT NULL AND expression <> ''") }
 
   validate :validate_recurring
   validate :validate_expression
@@ -66,9 +68,7 @@ class BillableMetric < ApplicationRecord
   validates :custom_aggregator, presence: true, if: :custom_agg?
   validates :rounding_function, inclusion: {in: ROUNDING_FUNCTIONS.values}, allow_nil: true
 
-  default_scope -> { kept }
-
-  scope :with_expression, -> { where("expression IS NOT NULL AND expression <> ''") }
+  before_validation :reset_field_name_for_count_agg
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]

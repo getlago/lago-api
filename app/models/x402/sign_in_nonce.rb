@@ -4,9 +4,9 @@ module X402
   class SignInNonce < ApplicationRecord
     belongs_to :organization
 
-    before_validation :normalize_agent_address
-
     validates :agent_address, :nonce, presence: true
+
+    before_validation :normalize_agent_address
 
     private
 

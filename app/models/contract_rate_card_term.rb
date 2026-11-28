@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
 class ContractRateCardTerm < ApplicationRecord
-  self.table_name = "contract_rate_cards_terms"
-
   APPLICATION_TIMINGS = {
     current_billing_cycle: "current_billing_cycle",
     next_billing_cycle: "next_billing_cycle"
   }.freeze
+
+  self.table_name = "contract_rate_cards_terms"
 
   enum :application_timing, APPLICATION_TIMINGS, default: :current_billing_cycle, validate: true
 

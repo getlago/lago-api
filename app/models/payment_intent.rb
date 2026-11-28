@@ -3,18 +3,18 @@
 class PaymentIntent < ApplicationRecord
   STATUSES = [:active, :expired].freeze
 
-  belongs_to :invoice
-  belongs_to :organization
+  attribute :expires_at, default: -> { 24.hours.from_now }
 
   enum :status, STATUSES
 
-  attribute :expires_at, default: -> { 24.hours.from_now }
-
-  validates :status, :expires_at, presence: true
-  validates :status, uniqueness: {scope: :invoice_id}, if: :active?
+  belongs_to :invoice
+  belongs_to :organization
 
   scope :awaiting_expiration, -> { active.where("expires_at <= ?", Time.current) }
   scope :non_expired, -> { where("expires_at > ?", Time.current) }
+
+  validates :status, :expires_at, presence: true
+  validates :status, uniqueness: {scope: :invoice_id}, if: :active?
 end
 
 # == Schema Information

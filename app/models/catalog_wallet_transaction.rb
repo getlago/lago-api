@@ -22,6 +22,11 @@ class CatalogWalletTransaction < ApplicationRecord
     void: "void"
   }.freeze
 
+  enum :direction, DIRECTIONS, validate: true
+  enum :status, STATUSES, validate: true
+  enum :reason, REASONS, validate: true
+  enum :allocation_type, CreditAllocationRule::TRIGGERS, validate: {allow_nil: true}, prefix: true
+
   belongs_to :organization
   belongs_to :catalog_wallet, -> { with_discarded }
   belongs_to :credit_allocation, -> { with_discarded }, class_name: "CatalogWalletCreditAllocation", optional: true
@@ -36,10 +41,8 @@ class CatalogWalletTransaction < ApplicationRecord
     foreign_key: :outbound_transaction_id,
     inverse_of: :outbound_transaction
 
-  enum :direction, DIRECTIONS, validate: true
-  enum :status, STATUSES, validate: true
-  enum :reason, REASONS, validate: true
-  enum :allocation_type, CreditAllocationRule::TRIGGERS, validate: {allow_nil: true}, prefix: true
+  scope :spendable, -> { inbound.settled.where(arel_table[:remaining_credit_amount_cents].gt(0)) }
+  scope :in_spending_order, -> { order(:priority, arel_table[:purchase_amount_cents].gt(0), :created_at, :id) }
 
   validates :priority, inclusion: {in: 1..CatalogWalletSettings::LOWEST_PRIORITY}
   validates :credit_amount_cents, numericality: {only_integer: true, greater_than: 0}
@@ -47,9 +50,6 @@ class CatalogWalletTransaction < ApplicationRecord
   validates :remaining_credit_amount_cents,
     numericality: {only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: :credit_amount_cents},
     allow_nil: true
-
-  scope :spendable, -> { inbound.settled.where(arel_table[:remaining_credit_amount_cents].gt(0)) }
-  scope :in_spending_order, -> { order(:priority, arel_table[:purchase_amount_cents].gt(0), :created_at, :id) }
 end
 
 # == Schema Information

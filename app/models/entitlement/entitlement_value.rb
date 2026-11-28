@@ -4,16 +4,16 @@ module Entitlement
   class EntitlementValue < ApplicationRecord
     include Discard::Model
 
-    self.discard_column = :deleted_at
-
-    default_scope -> { kept }
-
     # Booleans were stored as "t" or "f" before they were stored as words: rows not backfilled yet read as words.
     LEGACY_BOOLEANS = {"t" => "true", "f" => "false"}.freeze
+
+    self.discard_column = :deleted_at
 
     belongs_to :organization
     belongs_to :privilege, class_name: "Entitlement::Privilege", foreign_key: :entitlement_privilege_id
     belongs_to :entitlement, class_name: "Entitlement::Entitlement", foreign_key: :entitlement_entitlement_id
+
+    default_scope -> { kept }
 
     validates :entitlement_privilege_id, presence: true
     validates :entitlement_entitlement_id, presence: true

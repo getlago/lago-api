@@ -4,6 +4,36 @@ class WalletTransaction < ApplicationRecord
   include HasPurchaseOrderNumber
   include PaperTrailTraceable
 
+  STATUSES = [
+    :pending,
+    :settled,
+    :failed
+  ].freeze
+
+  TRANSACTION_STATUSES = [
+    :purchased,
+    :granted,
+    :voided,
+    :invoiced
+  ].freeze
+
+  TRANSACTION_TYPES = [
+    :inbound,
+    :outbound
+  ].freeze
+
+  SOURCES = [
+    :manual,
+    :interval,
+    :threshold,
+    :x402
+  ].freeze
+
+  enum :status, STATUSES
+  enum :transaction_status, TRANSACTION_STATUSES
+  enum :transaction_type, TRANSACTION_TYPES
+  enum :source, SOURCES
+
   belongs_to :wallet
   belongs_to :organization
   belongs_to :billing_entity, optional: true
@@ -35,35 +65,16 @@ class WalletTransaction < ApplicationRecord
     through: :applied_invoice_custom_sections,
     source: :invoice_custom_section
 
-  STATUSES = [
-    :pending,
-    :settled,
-    :failed
-  ].freeze
-
-  TRANSACTION_STATUSES = [
-    :purchased,
-    :granted,
-    :voided,
-    :invoiced
-  ].freeze
-
-  TRANSACTION_TYPES = [
-    :inbound,
-    :outbound
-  ].freeze
-
-  SOURCES = [
-    :manual,
-    :interval,
-    :threshold,
-    :x402
-  ].freeze
-
-  enum :status, STATUSES
-  enum :transaction_status, TRANSACTION_STATUSES
-  enum :transaction_type, TRANSACTION_TYPES
-  enum :source, SOURCES
+  scope :pending, -> { where(status: :pending) }
+  scope :available_inbound, -> { inbound.settled.where("remaining_amount_cents > 0") }
+  scope :in_consumption_order, -> {
+    granted_status = transaction_statuses[:granted]
+    order(
+      :priority,
+      Arel.sql("CASE WHEN transaction_status = #{granted_status} THEN 0 ELSE 1 END") => :asc,
+      :created_at => :asc
+    )
+  }
 
   validates :status, :transaction_type, :source, :transaction_status, presence: true
   validates :priority, presence: true, inclusion: {in: 1..50}
@@ -76,17 +87,6 @@ class WalletTransaction < ApplicationRecord
   validates :remaining_amount_cents, absence: true, if: :outbound?
 
   delegate :customer, to: :wallet
-
-  scope :pending, -> { where(status: :pending) }
-  scope :available_inbound, -> { inbound.settled.where("remaining_amount_cents > 0") }
-  scope :in_consumption_order, -> {
-    granted_status = transaction_statuses[:granted]
-    order(
-      :priority,
-      Arel.sql("CASE WHEN transaction_status = #{granted_status} THEN 0 ELSE 1 END") => :asc,
-      :created_at => :asc
-    )
-  }
 
   def self.order_by_priority
     order(:priority)

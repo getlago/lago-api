@@ -2,9 +2,9 @@
 
 class Fee
   class AppliedTax < ApplicationRecord
-    self.table_name = "fees_taxes"
-
     include PaperTrailTraceable
+
+    self.table_name = "fees_taxes"
 
     belongs_to :organization
     belongs_to :fee

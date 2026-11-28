@@ -7,12 +7,14 @@ class Product < ApplicationRecord
   include CatalogCodeFormat
   include IntegrationMappable
 
-  self.discard_column = :deleted_at
-
   PRODUCT_TYPES = {
     metered: "metered",
     fixed: "fixed"
   }.freeze
+
+  self.discard_column = :deleted_at
+
+  enum :product_type, PRODUCT_TYPES, validate: true
 
   belongs_to :organization
   belongs_to :product_category, -> { with_discarded }, optional: true, inverse_of: :products
@@ -28,16 +30,6 @@ class Product < ApplicationRecord
     ->(product) { where(organization_id: product.organization_id) },
     class_name: "UsageMonitoring::ContractAlert"
 
-  enum :product_type, PRODUCT_TYPES, validate: true
-
-  validates :name, presence: true
-  validates :code,
-    presence: true,
-    uniqueness: {scope: :organization_id, conditions: -> { where(deleted_at: nil) }}
-
-  validate :validate_billable_metric_presence
-  validate :validate_add_on_charge_exclusivity
-
   default_scope -> { kept }
 
   # Filters by product_category, treating "no category" as a selectable value:
@@ -52,6 +44,14 @@ class Product < ApplicationRecord
       where(product_category_id: category_ids)
     end
   }
+
+  validates :name, presence: true
+  validates :code,
+    presence: true,
+    uniqueness: {scope: :organization_id, conditions: -> { where(deleted_at: nil) }}
+
+  validate :validate_billable_metric_presence
+  validate :validate_add_on_charge_exclusivity
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]

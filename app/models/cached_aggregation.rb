@@ -11,14 +11,14 @@ class CachedAggregation < ApplicationRecord
   belongs_to :group, optional: true
   belongs_to :charge_filter, optional: true
 
+  scope :from_datetime, ->(from_datetime) { where("cached_aggregations.timestamp >= ?", from_datetime&.change(usec: 0)) }
+  scope :to_datetime, ->(to_datetime) { where("cached_aggregations.timestamp <= ?", to_datetime&.change(usec: 0)) }
+
   validates :external_subscription_id, presence: true
   validates :timestamp, presence: true
   validates :charge, presence: true, unless: :contract
   validates :product, presence: true, if: :contract
   validates :contract, presence: true, if: :product
-
-  scope :from_datetime, ->(from_datetime) { where("cached_aggregations.timestamp >= ?", from_datetime&.change(usec: 0)) }
-  scope :to_datetime, ->(to_datetime) { where("cached_aggregations.timestamp <= ?", to_datetime&.change(usec: 0)) }
 end
 
 # == Schema Information

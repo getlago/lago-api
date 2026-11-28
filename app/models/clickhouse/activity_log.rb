@@ -2,26 +2,6 @@
 
 module Clickhouse
   class ActivityLog < BaseRecord
-    self.table_name = "activity_logs"
-    self.primary_key = nil
-
-    belongs_to :organization
-    belongs_to :resource, polymorphic: true
-
-    belongs_to :customer,
-      -> { with_discarded },
-      primary_key: :external_id,
-      foreign_key: :external_customer_id,
-      optional: true
-
-    belongs_to :subscription,
-      primary_key: :external_id,
-      foreign_key: :external_subscription_id,
-      optional: true
-
-    belongs_to :user, optional: true
-    belongs_to :api_key, optional: true
-
     RESOURCE_TYPES_WITH_DISCARDED = %w[
       BillableMetric Plan CatalogPlan Customer BillingEntity Coupon ProductCategory Product ProductFilter RateCard
       RateCardRate PlanRateCard ContractRateCard PlanWallet CatalogWallet
@@ -165,6 +145,26 @@ module Clickhouse
       order_created: "order.created",
       order_executed: "order.executed"
     }
+
+    self.table_name = "activity_logs"
+    self.primary_key = nil
+
+    belongs_to :organization
+    belongs_to :resource, polymorphic: true
+
+    belongs_to :customer,
+      -> { with_discarded },
+      primary_key: :external_id,
+      foreign_key: :external_customer_id,
+      optional: true
+
+    belongs_to :subscription,
+      primary_key: :external_id,
+      foreign_key: :external_subscription_id,
+      optional: true
+
+    belongs_to :user, optional: true
+    belongs_to :api_key, optional: true
 
     before_save :ensure_activity_id
 

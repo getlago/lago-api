@@ -4,16 +4,13 @@ class ChargeFilterValue < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
 
-  self.discard_column = :deleted_at
-
   ALL_FILTER_VALUES = "__ALL_FILTER_VALUES__"
+
+  self.discard_column = :deleted_at
 
   belongs_to :charge_filter, -> { with_discarded }
   belongs_to :billable_metric_filter, -> { with_discarded }
   belongs_to :organization
-
-  validates :values, presence: true
-  validate :validate_values
 
   # NOTE: Ensure filters are keeping the initial ordering
   default_scope -> { kept.order(updated_at: :asc) }
@@ -21,6 +18,9 @@ class ChargeFilterValue < ApplicationRecord
   delegate :key, to: :billable_metric_filter
 
   private
+
+  validates :values, presence: true
+  validate :validate_values
 
   def validate_values
     unless values.nil?

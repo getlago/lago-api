@@ -2,15 +2,6 @@
 
 module Clickhouse
   class SecurityLog < BaseRecord
-    self.table_name = "security_logs"
-    self.primary_key = nil
-
-    belongs_to :organization
-    belongs_to :user, optional: true
-    belongs_to :api_key, optional: true
-
-    default_scope -> { where(logged_at: Organization::SECURITY_LOGS_RETENTION_DAYS.days.ago..) }
-
     LOG_TYPES = %w[
       api_key
       billing_entity
@@ -49,6 +40,15 @@ module Clickhouse
       webhook_endpoint.deleted
       webhook_endpoint.updated
     ].freeze
+
+    self.table_name = "security_logs"
+    self.primary_key = nil
+
+    belongs_to :organization
+    belongs_to :user, optional: true
+    belongs_to :api_key, optional: true
+
+    default_scope -> { where(logged_at: Organization::SECURITY_LOGS_RETENTION_DAYS.days.ago..) }
 
     before_save :ensure_log_id
 

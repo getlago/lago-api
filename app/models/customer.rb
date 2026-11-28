@@ -10,8 +10,6 @@ class Customer < ApplicationRecord
   include Discard::Model
   include NullByteSanitizable
 
-  self.discard_column = :deleted_at
-
   FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS = [
     :inherit,
     :skip,
@@ -47,11 +45,27 @@ class Customer < ApplicationRecord
     email
   ].freeze
 
+  PAYMENT_PROVIDERS = %w[stripe gocardless cashfree adyen flutterwave moneyhash].freeze
+
+  BILLING_ADDRESS_FIELDS = %i[
+    address_line1 address_line2 city zipcode state country
+  ].freeze
+
+  SHIPPING_ADDRESS_FIELDS = %i[
+    shipping_address_line1 shipping_address_line2 shipping_city
+    shipping_zipcode shipping_state shipping_country
+  ].freeze
+
+  ADDRESS_FIELDS = (BILLING_ADDRESS_FIELDS + SHIPPING_ADDRESS_FIELDS).freeze
+
+  self.discard_column = :deleted_at
+
   attribute :finalize_zero_amount_invoice, :integer
-  enum :finalize_zero_amount_invoice, FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS, prefix: :finalize_zero_amount_invoice
   attribute :customer_type, :string
-  enum :customer_type, CUSTOMER_TYPES, prefix: :customer_type, validate: {allow_nil: true}
   attribute :account_type, :string
+
+  enum :finalize_zero_amount_invoice, FINALIZE_ZERO_AMOUNT_INVOICE_OPTIONS, prefix: :finalize_zero_amount_invoice
+  enum :customer_type, CUSTOMER_TYPES, prefix: :customer_type, validate: {allow_nil: true}
   enum :account_type, ACCOUNT_TYPES, suffix: :account, validate: true
 
   enum :subscription_invoice_issuing_date_anchor, SUBSCRIPTION_INVOICE_ISSUING_DATE_ANCHORS, prefix: true, validate: {allow_nil: true}
@@ -59,8 +73,17 @@ class Customer < ApplicationRecord
 
   attr_readonly :x402_agent_address
 
-  before_validation :normalize_x402_agent_address, on: :create
-  before_save :ensure_slug
+  sequenced scope: ->(customer) { customer.organization.customers.with_discarded },
+    lock_key: ->(customer) { customer.organization_id }
+
+  # NOTE: Null byte injection. Prevent 500 errors (ArgumentError: string contains null byte).
+  # Address fields keep the historical blank -> nil behavior; identity/free-text
+  # fields are only stripped so existing empty-string values are preserved.
+  sanitize_null_bytes(*ADDRESS_FIELDS, blank_to_nil: true)
+  sanitize_null_bytes :name, :firstname, :lastname, :legal_name, :legal_number,
+    :phone, :url, :logo_url, :tax_identification_number
+
+  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
   belongs_to :organization
   belongs_to :billing_entity, optional: true
@@ -137,12 +160,7 @@ class Customer < ApplicationRecord
 
   delegate :default_currency, to: :organization, prefix: true
 
-  PAYMENT_PROVIDERS = %w[stripe gocardless cashfree adyen flutterwave moneyhash].freeze
-
   default_scope -> { kept }
-  sequenced scope: ->(customer) { customer.organization.customers.with_discarded },
-    lock_key: ->(customer) { customer.organization_id }
-
   scope :awaiting_wallet_refresh, -> { where(awaiting_wallet_refresh: true) }
   scope :by_x402_agent_address, ->(address) {
     family = X402::Network.family_of_address(address)
@@ -202,25 +220,8 @@ class Customer < ApplicationRecord
   validates :email, email: true, if: -> { email? && will_save_change_to_email? }
   validate :validate_x402_agent_address, on: :create, if: :x402_agent_address
 
-  BILLING_ADDRESS_FIELDS = %i[
-    address_line1 address_line2 city zipcode state country
-  ].freeze
-
-  SHIPPING_ADDRESS_FIELDS = %i[
-    shipping_address_line1 shipping_address_line2 shipping_city
-    shipping_zipcode shipping_state shipping_country
-  ].freeze
-
-  ADDRESS_FIELDS = (BILLING_ADDRESS_FIELDS + SHIPPING_ADDRESS_FIELDS).freeze
-
-  # NOTE: Null byte injection. Prevent 500 errors (ArgumentError: string contains null byte).
-  # Address fields keep the historical blank -> nil behavior; identity/free-text
-  # fields are only stripped so existing empty-string values are preserved.
-  sanitize_null_bytes(*ADDRESS_FIELDS, blank_to_nil: true)
-  sanitize_null_bytes :name, :firstname, :lastname, :legal_name, :legal_number,
-    :phone, :url, :logo_url, :tax_identification_number
-
-  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
+  before_validation :normalize_x402_agent_address, on: :create
+  before_save :ensure_slug
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[id name firstname lastname legal_name external_id email]

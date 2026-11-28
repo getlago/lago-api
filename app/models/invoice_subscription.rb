@@ -3,18 +3,6 @@
 class InvoiceSubscription < ApplicationRecord
   include CustomerTimezone
 
-  belongs_to :invoice
-  belongs_to :subscription
-  belongs_to :organization
-
-  has_one :customer, through: :subscription
-
-  # NOTE: Readonly fields
-  monetize :charge_amount_cents, disable_validation: true, allow_nil: true
-  monetize :fixed_charge_amount_cents, disable_validation: true, allow_nil: true
-  monetize :subscription_amount_cents, disable_validation: true, allow_nil: true
-  monetize :total_amount_cents, disable_validation: true, allow_nil: true
-
   INVOICING_REASONS = {
     subscription_starting: "subscription_starting",
     subscription_periodic: "subscription_periodic",
@@ -25,6 +13,18 @@ class InvoiceSubscription < ApplicationRecord
   }.freeze
 
   enum :invoicing_reason, INVOICING_REASONS
+
+  # NOTE: Readonly fields
+  monetize :charge_amount_cents, disable_validation: true, allow_nil: true
+  monetize :fixed_charge_amount_cents, disable_validation: true, allow_nil: true
+  monetize :subscription_amount_cents, disable_validation: true, allow_nil: true
+  monetize :total_amount_cents, disable_validation: true, allow_nil: true
+
+  belongs_to :invoice
+  belongs_to :subscription
+  belongs_to :organization
+
+  has_one :customer, through: :subscription
 
   scope :order_by_charges_to_datetime,
     lambda {

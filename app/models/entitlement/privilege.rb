@@ -4,24 +4,24 @@ module Entitlement
   class Privilege < ApplicationRecord
     include Discard::Model
 
-    self.discard_column = :deleted_at
-
-    default_scope -> { kept }
-
     VALUE_TYPES = %w[integer string boolean select].freeze
+
+    self.discard_column = :deleted_at
 
     belongs_to :organization
     belongs_to :feature, class_name: "Entitlement::Feature", foreign_key: :entitlement_feature_id
     has_many :values, class_name: "Entitlement::EntitlementValue", foreign_key: :entitlement_privilege_id, dependent: :destroy
     has_many :entitlements, through: :values, class_name: "Entitlement::Entitlement"
 
+    default_scope -> { kept }
+
+    private
+
     validates :code, presence: true, string: true, length: {maximum: 255}
     validates :name, string: true, length: {maximum: 255}
     validates :value_type, presence: true, inclusion: {in: VALUE_TYPES}
 
     validate :validate_config
-
-    private
 
     def validate_config
       errors.add(:config, :invalid_format) unless config_valid?

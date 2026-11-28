@@ -4,8 +4,6 @@ module Agents
   # A person claiming an agent: a code the agent hands to its owner, then the e-mail the owner verifies. Only digests
   # of the code and of the verification code are stored; the e-mail is kept encrypted until it reaches the customer.
   class Claim < ApplicationRecord
-    self.table_name = "agent_claims"
-
     STATUSES = {issued: "issued", started: "started", verified: "verified"}.freeze
     PUBLIC_STATUSES = {"issued" => "unclaimed", "started" => "pending", "verified" => "claimed"}.freeze
     # No 0, O, 1 or I: the owner types the code.
@@ -16,16 +14,18 @@ module Agents
     VERIFICATION_TTL = 10.minutes
     GMAIL_DOMAINS = %w[gmail.com googlemail.com].freeze
 
-    belongs_to :organization
-    belongs_to :registration, class_name: "Agents::Registration"
-
-    encrypts :email
+    self.table_name = "agent_claims"
 
     enum :status, STATUSES, validate: true
 
-    validates :code_hash, presence: true
+    encrypts :email
+
+    belongs_to :organization
+    belongs_to :registration, class_name: "Agents::Registration"
 
     scope :live, -> { where(status: %w[issued started]) }
+
+    validates :code_hash, presence: true
 
     def self.digest(value)
       OpenSSL::Digest::SHA256.hexdigest(value)

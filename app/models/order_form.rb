@@ -20,7 +20,19 @@ class OrderForm < ApplicationRecord
   SIGNED_DOCUMENT_CONTENT_TYPES = %w[application/pdf image/jpeg image/png].freeze
   SIGNED_DOCUMENT_MAX_SIZE = 10.megabytes
 
-  before_save :ensure_number
+  enum :status, STATUSES,
+    default: :generated,
+    validate: true
+  enum :void_reason, VOID_REASONS,
+    instance_methods: false,
+    validate: {allow_nil: true}
+
+  expiring_document_urls :signed_document
+
+  sequenced(
+    scope: ->(order_form) { order_form.organization.order_forms },
+    lock_key: ->(order_form) { order_form.organization_id }
+  )
 
   belongs_to :organization
   belongs_to :customer
@@ -35,20 +47,6 @@ class OrderForm < ApplicationRecord
 
   has_one_attached :signed_document
 
-  expiring_document_urls :signed_document
-
-  enum :status, STATUSES,
-    default: :generated,
-    validate: true
-  enum :void_reason, VOID_REASONS,
-    instance_methods: false,
-    validate: {allow_nil: true}
-
-  validates :void_reason, presence: true, if: :voided?
-  validates :signed_document,
-    content_type: SIGNED_DOCUMENT_CONTENT_TYPES,
-    size: {less_than: SIGNED_DOCUMENT_MAX_SIZE}
-
   scope :expirable, -> do
     at_time_zone = Utils::Timezone.at_time_zone_sql
 
@@ -58,10 +56,12 @@ class OrderForm < ApplicationRecord
       .where("DATE(order_forms.expires_at#{at_time_zone}) <= DATE(?#{at_time_zone})", Time.current)
   end
 
-  sequenced(
-    scope: ->(order_form) { order_form.organization.order_forms },
-    lock_key: ->(order_form) { order_form.organization_id }
-  )
+  validates :void_reason, presence: true, if: :voided?
+  validates :signed_document,
+    content_type: SIGNED_DOCUMENT_CONTENT_TYPES,
+    size: {less_than: SIGNED_DOCUMENT_MAX_SIZE}
+
+  before_save :ensure_number
 
   def self.ransackable_attributes(_ = nil)
     %w[number]

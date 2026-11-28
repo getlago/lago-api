@@ -4,10 +4,9 @@ class Tax < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
 
-  self.discard_column = :deleted_at
-  default_scope -> { kept }
-
   ORDERS = %w[name rate].freeze
+
+  self.discard_column = :deleted_at
 
   has_many :applied_taxes, class_name: "Customer::AppliedTax", dependent: :destroy
   has_many :customers, through: :applied_taxes
@@ -39,13 +38,15 @@ class Tax < ApplicationRecord
 
   belongs_to :organization
 
-  validates :name, :rate, presence: true
-  validates :code, presence: true, uniqueness: {scope: :organization_id, conditions: -> { where(deleted_at: nil) }}
+  default_scope -> { kept }
 
   scope :applied_to_organization, -> { where(applied_to_organization: true) }
   scope :applied_to_billing_entity, ->(billing_entity) {
     joins(:billing_entities_taxes).where(billing_entities_taxes: {billing_entity_id: billing_entity.id})
   }
+
+  validates :name, :rate, presence: true
+  validates :code, presence: true, uniqueness: {scope: :organization_id, conditions: -> { where(deleted_at: nil) }}
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]

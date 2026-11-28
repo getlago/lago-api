@@ -3,20 +3,20 @@
 class Event < EventsRecord
   include Discard::Model
 
-  self.discard_column = :deleted_at
-
   include CustomerTimezone
   include OrganizationTimezone
+
+  self.discard_column = :deleted_at
 
   belongs_to :organization
   has_many :enriched_events
 
-  validates :transaction_id, presence: true
-  validates :code, presence: true
-
   default_scope -> { kept }
   scope :from_datetime, ->(from_datetime) { where("events.timestamp >= ?", from_datetime) }
   scope :to_datetime, ->(to_datetime) { where("events.timestamp <= ?", to_datetime) }
+
+  validates :transaction_id, presence: true
+  validates :code, presence: true
 
   def api_client
     metadata["user_agent"]

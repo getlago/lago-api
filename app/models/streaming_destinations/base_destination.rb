@@ -6,27 +6,27 @@ module StreamingDestinations
     include SecretsStorable
     include SettingsStorable
 
-    self.table_name = "streaming_destinations"
-
     CURRENT_USAGE_EVENT_TYPE = "customer_usage.refreshed.v1"
     FULL_USAGE_EVENT_TYPE = "customer_full_usage.refreshed.v1"
     EVENT_TYPES = [CURRENT_USAGE_EVENT_TYPE, FULL_USAGE_EVENT_TYPE].freeze
 
-    belongs_to :organization
+    self.table_name = "streaming_destinations"
 
-    validates :event_types, presence: true
-    validate :event_types_are_known
-    validate :event_types_not_already_claimed
+    settings_accessors :customer_full_usage_excluded_plan_codes, default: []
+
+    belongs_to :organization
 
     scope :for_event, lambda { |organization, event_type|
       where(organization:, active: true).where("event_types @> ARRAY[?]::varchar[]", event_type)
     }
 
+    validates :event_types, presence: true
+    validate :event_types_are_known
+    validate :event_types_not_already_claimed
+
     def self.streams_event?(organization, event_type)
       for_event(organization, event_type).exists?
     end
-
-    settings_accessors :customer_full_usage_excluded_plan_codes, default: []
 
     def event_types_for(subscription)
       return event_types unless customer_full_usage_excluded_plan_codes.include?(subscription.plan.code)

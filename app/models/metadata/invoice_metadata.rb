@@ -2,15 +2,15 @@
 
 module Metadata
   class InvoiceMetadata < ApplicationRecord
-    COUNT_PER_INVOICE = 5
-
-    belongs_to :invoice, touch: true
-    belongs_to :organization
-
     include NullByteSanitizable
+
+    COUNT_PER_INVOICE = 5
 
     # NOTE: Null byte injection. Prevent 500 errors (ArgumentError: string contains null byte).
     sanitize_null_bytes :key, :value
+
+    belongs_to :invoice, touch: true
+    belongs_to :organization
 
     validates :key, presence: true, uniqueness: {scope: :invoice_id}, length: {maximum: 20}
     validates :value, presence: true

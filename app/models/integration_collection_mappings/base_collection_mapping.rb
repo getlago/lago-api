@@ -5,12 +5,6 @@ module IntegrationCollectionMappings
     include PaperTrailTraceable
     include SettingsStorable
 
-    self.table_name = "integration_collection_mappings"
-
-    belongs_to :integration, class_name: "Integrations::BaseIntegration"
-    belongs_to :organization
-    belongs_to :billing_entity, optional: true
-
     MAPPING_TYPES = %i[
       fallback_item
       coupon
@@ -23,15 +17,21 @@ module IntegrationCollectionMappings
       currencies
     ].freeze
 
+    self.table_name = "integration_collection_mappings"
+
     enum :mapping_type, MAPPING_TYPES, validate: true
+
+    settings_accessors :external_id, :external_account_code, :external_name
+
+    belongs_to :integration, class_name: "Integrations::BaseIntegration"
+    belongs_to :organization
+    belongs_to :billing_entity, optional: true
 
     validates :mapping_type, presence: true
     validates :mapping_type,
       uniqueness: {scope: [:integration_id, :organization_id, :billing_entity_id]}
 
     validate :validate_billing_entity_organization
-
-    settings_accessors :external_id, :external_account_code, :external_name
 
     private
 

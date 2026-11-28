@@ -8,9 +8,10 @@ module PaymentProviders
     include Discard::Model
 
     self.discard_column = :deleted_at
-    default_scope -> { kept }
 
     self.table_name = "payment_providers"
+
+    settings_accessors :webhook_secret, :success_redirect_url
 
     belongs_to :organization
 
@@ -24,10 +25,10 @@ module PaymentProviders
     has_many :payment_methods, dependent: :nullify, foreign_key: :payment_provider_id
     has_many :refunds, dependent: :nullify, foreign_key: :payment_provider_id
 
+    default_scope -> { kept }
+
     validates :code, uniqueness: {conditions: -> { kept }, scope: :organization_id}
     validates :name, presence: true
-
-    settings_accessors :webhook_secret, :success_redirect_url
 
     def determine_payment_status(payment_status)
       return :processing if self.class::PROCESSING_STATUSES.include?(payment_status)

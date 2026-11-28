@@ -7,8 +7,6 @@ class RateCard < ApplicationRecord
   include CatalogAttachable
   include CatalogCodeFormat
 
-  self.discard_column = :deleted_at
-
   BILLING_TIMINGS = {
     arrears: "arrears",
     advance: "advance"
@@ -20,6 +18,13 @@ class RateCard < ApplicationRecord
     invoice: "invoice"
   }.freeze
 
+  self.discard_column = :deleted_at
+
+  enum :billing_timing, BILLING_TIMINGS, validate: true
+  # nil is a valid value (fee stays standalone); prefix keeps the predicate
+  # explicit (regroup_paid_fees_invoice?).
+  enum :regroup_paid_fees, REGROUP_PAID_FEES, validate: {allow_nil: true}, prefix: true
+
   belongs_to :organization
   belongs_to :product, -> { with_discarded }
   belongs_to :product_filter, -> { with_discarded }, optional: true
@@ -30,10 +35,7 @@ class RateCard < ApplicationRecord
   has_many :applied_taxes, class_name: "RateCard::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
-  enum :billing_timing, BILLING_TIMINGS, validate: true
-  # nil is a valid value (fee stays standalone); prefix keeps the predicate
-  # explicit (regroup_paid_fees_invoice?).
-  enum :regroup_paid_fees, REGROUP_PAID_FEES, validate: {allow_nil: true}, prefix: true
+  default_scope -> { kept }
 
   validates :name, presence: true
   validates :code,
@@ -47,7 +49,9 @@ class RateCard < ApplicationRecord
   validate :validate_proration
   validate :validate_regroup_paid_fees
 
-  default_scope -> { kept }
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[name code]
+  end
 
   # A card scoped to a filter must price a slice of its own item.
   def validate_filter_belongs_to_item
@@ -92,10 +96,6 @@ class RateCard < ApplicationRecord
 
     errors.add(:regroup_paid_fees, :not_allowed_for_billing_timing) unless advance?
     errors.add(:regroup_paid_fees, :not_allowed_with_display_on_invoice) if display_on_invoice?
-  end
-
-  def self.ransackable_attributes(_auth_object = nil)
-    %w[name code]
   end
 
   # The card bills someone once it belongs to a catalog plan that has contracts

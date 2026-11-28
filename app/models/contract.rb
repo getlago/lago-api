@@ -10,8 +10,6 @@ class Contract < ApplicationRecord
   include PaperTrailTraceable
   include Terminatable
 
-  self.ignored_columns += %w[billing_time]
-
   STATUSES = {
     draft: "draft",
     pending: "pending",
@@ -21,6 +19,19 @@ class Contract < ApplicationRecord
   }.freeze
 
   PAYMENT_METHOD_TYPES = {provider: "provider", manual: "manual"}.freeze
+
+  # A draft is live (it holds its external id, stays editable and can be
+  # canceled) but never billable.
+  LIVE_STATUSES = %w[draft pending active].freeze
+
+  # Live contracts accepting rate changes and usage billing. Terminated cards with owed
+  # coverage remain discoverable separately through their billing cursors.
+  BILLABLE_STATUSES = %w[active].freeze
+
+  self.ignored_columns += %w[billing_time]
+
+  enum :status, STATUSES, validate: true
+  enum :payment_method_type, PAYMENT_METHOD_TYPES, validate: true, prefix: true
 
   belongs_to :organization
   # with_discarded: a terminated contract must still resolve its customer and
@@ -48,17 +59,6 @@ class Contract < ApplicationRecord
     foreign_key: :contract_external_id,
     primary_key: :external_id
   has_one :contract_activity, class_name: "UsageMonitoring::ContractActivity"
-
-  enum :status, STATUSES, validate: true
-  enum :payment_method_type, PAYMENT_METHOD_TYPES, validate: true, prefix: true
-
-  # A draft is live (it holds its external id, stays editable and can be
-  # canceled) but never billable.
-  LIVE_STATUSES = %w[draft pending active].freeze
-
-  # Live contracts accepting rate changes and usage billing. Terminated cards with owed
-  # coverage remain discoverable separately through their billing cursors.
-  BILLABLE_STATUSES = %w[active].freeze
 
   # The live contracts for an external id: at most one per status (the partial
   # unique index is per status), so a pending replacement can coexist with the

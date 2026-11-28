@@ -19,7 +19,12 @@ class ApiKey < ApplicationRecord
   # Set on the short-lived keys minted for the AI agent, which act with the member's permissions.
   belongs_to :membership, optional: true
 
-  before_create :set_value
+  default_scope { active }
+
+  # Arel, not a SQL string: a raw string makes the query non-retryable on a dropped connection.
+  scope :active, -> { where(arel_table[:expires_at].eq(nil).or(arel_table[:expires_at].gt(Time.current))) }
+  scope :non_expiring, -> { where(expires_at: nil) }
+  scope :with_most_permissions, -> { order(Arel.sql("(SELECT SUM(jsonb_array_length(value)) FROM jsonb_each(permissions))")).last }
 
   validates :value, uniqueness: true
   validates :value, presence: true, on: :update
@@ -27,12 +32,11 @@ class ApiKey < ApplicationRecord
   validate :permissions_keys_compliance
   validate :permissions_values_allowed
 
-  default_scope { active }
+  before_create :set_value
 
-  # Arel, not a SQL string: a raw string makes the query non-retryable on a dropped connection.
-  scope :active, -> { where(arel_table[:expires_at].eq(nil).or(arel_table[:expires_at].gt(Time.current))) }
-  scope :non_expiring, -> { where(expires_at: nil) }
-  scope :with_most_permissions, -> { order(Arel.sql("(SELECT SUM(jsonb_array_length(value)) FROM jsonb_each(permissions))")).last }
+  def self.default_permissions
+    RESOURCES.index_with { MODES.dup }
+  end
 
   def flat_permissions
     permissions.flat_map { |resource, modes| Array(modes).map { |mode| "#{resource}:#{mode}" } }.sort
@@ -43,10 +47,6 @@ class ApiKey < ApplicationRecord
     return true unless member_key? || organization.api_permissions_enabled?
 
     Array(permissions[resource]).include?(mode)
-  end
-
-  def self.default_permissions
-    RESOURCES.index_with { MODES.dup }
   end
 
   def member_key?

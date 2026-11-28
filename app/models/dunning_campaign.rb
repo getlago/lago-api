@@ -4,10 +4,10 @@ class DunningCampaign < ApplicationRecord
   include PaperTrailTraceable
   include Discard::Model
 
+  ORDERS = %w[name code].freeze
+
   self.discard_column = :deleted_at
   self.ignored_columns += %w[applied_to_organization]
-
-  ORDERS = %w[name code].freeze
 
   belongs_to :organization
 
@@ -18,14 +18,6 @@ class DunningCampaign < ApplicationRecord
 
   accepts_nested_attributes_for :thresholds
 
-  validates :name, presence: true
-  validates :bcc_emails, email_array: true
-  validates :days_between_attempts, numericality: {greater_than: 0}
-  validates :max_attempts, numericality: {greater_than: 0}
-  validates :code,
-    uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id},
-    unless: :deleted_at
-
   default_scope -> { kept }
   scope :applied_to_organization, -> { where(applied_to_organization: true) }
   scope :with_currency_threshold, ->(currencies) {
@@ -33,6 +25,14 @@ class DunningCampaign < ApplicationRecord
       .where(dunning_campaign_thresholds: {currency: currencies})
       .distinct
   }
+
+  validates :name, presence: true
+  validates :bcc_emails, email_array: true
+  validates :days_between_attempts, numericality: {greater_than: 0}
+  validates :max_attempts, numericality: {greater_than: 0}
+  validates :code,
+    uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id},
+    unless: :deleted_at
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]

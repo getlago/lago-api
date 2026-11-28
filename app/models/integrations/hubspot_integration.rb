@@ -2,14 +2,14 @@
 
 module Integrations
   class HubspotIntegration < BaseIntegration
-    validates :connection_id, :default_targeted_object, presence: true
+    TARGETED_OBJECTS = %w[companies contacts].freeze
 
     settings_accessors :default_targeted_object, :sync_subscriptions, :sync_invoices, :subscriptions_object_type_id,
       :invoices_object_type_id, :companies_properties_version, :contacts_properties_version,
       :subscriptions_properties_version, :invoices_properties_version, :portal_id
     secrets_accessors :connection_id
 
-    TARGETED_OBJECTS = %w[companies contacts].freeze
+    validates :connection_id, :default_targeted_object, presence: true
 
     def companies_object_type_id
       "0-2"

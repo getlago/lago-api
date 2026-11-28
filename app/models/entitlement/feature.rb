@@ -6,14 +6,14 @@ module Entitlement
 
     self.discard_column = :deleted_at
 
-    default_scope -> { kept }
-
     belongs_to :organization
     has_many :privileges, class_name: "Entitlement::Privilege", foreign_key: "entitlement_feature_id", inverse_of: :feature, dependent: :destroy
     has_many :entitlements, class_name: "Entitlement::Entitlement", foreign_key: "entitlement_feature_id", dependent: :destroy
     has_many :entitlement_values, through: :entitlements, source: :values, class_name: "Entitlement::EntitlementValue", dependent: :destroy
     has_many :plans, through: :entitlements
     has_many :catalog_plans, through: :entitlements
+
+    default_scope -> { kept }
 
     validates :code, presence: true, string: true, length: {maximum: 255}
     validates :name, length: {maximum: 255}
@@ -23,19 +23,6 @@ module Entitlement
 
     def self.ransackable_attributes(_auth_object = nil)
       %w[code name description]
-    end
-
-    # Newest first, then by id, as the association has none. The v2 privileges list uses it, and the
-    # feature expansion sorts the same way in memory.
-    def ordered_privileges
-      privileges.reorder(created_at: :desc, id: :asc)
-    end
-
-    def subscriptions_count
-      return @subscriptions_count if defined?(@subscriptions_count)
-
-      base_scope = Subscription.joins(:plan).where(status: [:active, :pending])
-      base_scope.where(plan: plans).or(base_scope.where(plan: {parent: plans})).count
     end
 
     def self.preload_subscriptions_count(organization, features)
@@ -51,6 +38,19 @@ module Entitlement
       end
 
       features
+    end
+
+    # Newest first, then by id, as the association has none. The v2 privileges list uses it, and the
+    # feature expansion sorts the same way in memory.
+    def ordered_privileges
+      privileges.reorder(created_at: :desc, id: :asc)
+    end
+
+    def subscriptions_count
+      return @subscriptions_count if defined?(@subscriptions_count)
+
+      base_scope = Subscription.joins(:plan).where(status: [:active, :pending])
+      base_scope.where(plan: plans).or(base_scope.where(plan: {parent: plans})).count
     end
   end
 end

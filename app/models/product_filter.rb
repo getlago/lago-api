@@ -20,20 +20,20 @@ class ProductFilter < ApplicationRecord
 
   delegate :attached_to_plan_or_subscription?, to: :product
 
-  def attached_to_subscriptions?
-    ContractRateCard.joins(:rate_card, :contract).where(rate_cards: {product_filter_id: id})
-      .merge(Contract.not_canceled).exists?
-  end
+  default_scope -> { kept.order(created_at: :asc) }
 
   validates :name, presence: true
   validates :code,
     presence: true,
     uniqueness: {scope: :product_id, conditions: -> { where(deleted_at: nil) }}
 
-  default_scope -> { kept.order(created_at: :asc) }
-
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]
+  end
+
+  def attached_to_subscriptions?
+    ContractRateCard.joins(:rate_card, :contract).where(rate_cards: {product_filter_id: id})
+      .merge(Contract.not_canceled).exists?
   end
 
   def invoice_name

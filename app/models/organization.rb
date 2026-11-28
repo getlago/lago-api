@@ -8,8 +8,6 @@ class Organization < ApplicationRecord
   include HasFeatureFlags
   include Organizations::Sluggable
 
-  self.ignored_columns += [:clickhouse_aggregation, :pre_filter_events, :clickhouse_deduplication_enabled]
-
   EMAIL_SETTINGS = [
     "invoice.finalized",
     "credit_note.created",
@@ -45,6 +43,85 @@ class Organization < ApplicationRecord
     pro: 2,
     enterprise: Float::INFINITY
   }.freeze
+
+  ENVIRONMENTS = {
+    production: "production",
+    sandbox: "sandbox"
+  }.freeze
+
+  # A self-serve production organization can wait for a payment method before it opens; every other one is active.
+  # The API key cache keeps the organization's attributes, so a change of status calls
+  # `ApiKeys::CacheService.expire_all_cache(organization)` in an `after_commit` block, or REST reads the old one.
+  ACTIVATION_STATUSES = {
+    pending_payment_method: "pending_payment_method",
+    active: "active"
+  }.freeze
+
+  EVENTS_STORES = {
+    clickhouse: "clickhouse",
+    postgres: "postgres"
+  }.freeze
+
+  DOCUMENT_NUMBERINGS = [
+    :per_customer,
+    :per_organization
+  ].freeze
+
+  NON_PREMIUM_INTEGRATIONS = %w[
+    anrok
+  ].freeze
+
+  PREMIUM_INTEGRATIONS = %w[
+    beta_payment_authorization
+    netsuite
+    okta
+    entra_id
+    avalara
+    xero
+    quickbooks
+    progressive_billing
+    lifetime_usage
+    hubspot
+    auto_dunning
+    revenue_analytics
+    salesforce
+    api_permissions
+    revenue_share
+    remove_branding_watermark
+    manual_payments
+    from_email
+    issue_receipts
+    preview
+    multi_entities_pro
+    multi_entities_enterprise
+    analytics_dashboards
+    forecasted_usage
+    projected_usage
+    custom_roles
+    events_targeting_wallets
+    security_logs
+    granular_lifetime_usage
+    order_forms
+    revenue_recognition
+    agent_storefront
+  ].freeze
+
+  SECURITY_LOGS_RETENTION_DAYS = 90
+
+  INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
+
+  self.ignored_columns += [:clickhouse_aggregation, :pre_filter_events, :clickhouse_deduplication_enabled]
+
+  # Declared, so the model loads in older migrations that run before the columns exist. Saving still fails there:
+  # the validations read `self_serve` and `production_organization_id`, which do not exist yet either.
+  attribute :environment, :string
+  attribute :activation_status, :string
+
+  enum :document_numbering, DOCUMENT_NUMBERINGS, validate: true
+  enum :environment, ENVIRONMENTS, validate: true
+  enum :activation_status, ACTIVATION_STATUSES, prefix: true, validate: true
+
+  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
 
   has_many :activity_logs, class_name: "Clickhouse::ActivityLog"
   has_many :ai_conversations
@@ -164,79 +241,15 @@ class Organization < ApplicationRecord
 
   has_one_attached :logo
 
-  ENVIRONMENTS = {
-    production: "production",
-    sandbox: "sandbox"
-  }.freeze
+  scope :with_any_premium_integrations, ->(names) { where("premium_integrations && ARRAY[?]::varchar[]", Array.wrap(names)) }
 
-  # A self-serve production organization can wait for a payment method before it opens; every other one is active.
-  # The API key cache keeps the organization's attributes, so a change of status calls
-  # `ApiKeys::CacheService.expire_all_cache(organization)` in an `after_commit` block, or REST reads the old one.
-  ACTIVATION_STATUSES = {
-    pending_payment_method: "pending_payment_method",
-    active: "active"
-  }.freeze
+  PREMIUM_INTEGRATIONS.each do |premium_integration|
+    scope "with_#{premium_integration}_support", -> { where("? = ANY(premium_integrations)", premium_integration) }
 
-  EVENTS_STORES = {
-    clickhouse: "clickhouse",
-    postgres: "postgres"
-  }.freeze
-
-  DOCUMENT_NUMBERINGS = [
-    :per_customer,
-    :per_organization
-  ].freeze
-
-  NON_PREMIUM_INTEGRATIONS = %w[
-    anrok
-  ].freeze
-
-  PREMIUM_INTEGRATIONS = %w[
-    beta_payment_authorization
-    netsuite
-    okta
-    entra_id
-    avalara
-    xero
-    quickbooks
-    progressive_billing
-    lifetime_usage
-    hubspot
-    auto_dunning
-    revenue_analytics
-    salesforce
-    api_permissions
-    revenue_share
-    remove_branding_watermark
-    manual_payments
-    from_email
-    issue_receipts
-    preview
-    multi_entities_pro
-    multi_entities_enterprise
-    analytics_dashboards
-    forecasted_usage
-    projected_usage
-    custom_roles
-    events_targeting_wallets
-    security_logs
-    granular_lifetime_usage
-    order_forms
-    revenue_recognition
-    agent_storefront
-  ].freeze
-
-  SECURITY_LOGS_RETENTION_DAYS = 90
-
-  INTEGRATIONS = (NON_PREMIUM_INTEGRATIONS + PREMIUM_INTEGRATIONS).freeze
-
-  enum :document_numbering, DOCUMENT_NUMBERINGS, validate: true
-  # Declared, so the model loads in older migrations that run before the columns exist. Saving still fails there:
-  # the validations read `self_serve` and `production_organization_id`, which do not exist yet either.
-  attribute :environment, :string
-  enum :environment, ENVIRONMENTS, validate: true
-  attribute :activation_status, :string
-  enum :activation_status, ACTIVATION_STATUSES, prefix: true, validate: true
+    define_method("#{premium_integration}_enabled?") do
+      License.premium? && premium_integrations.include?(premium_integration)
+    end
+  end
 
   validates :country, country_code: true, unless: -> { country.nil? }
   validates :default_currency, inclusion: {in: currency_list}
@@ -273,20 +286,8 @@ class Organization < ApplicationRecord
     if: -> { will_save_change_to_production_organization_id? || will_save_change_to_environment? }
   validate :validate_activation_status, if: :activation_status_pending_payment_method?
 
-  normalizes :email, with: ->(email) { EmailSanitizer.call(email) }
-
   before_create :set_hmac_key
   after_create :generate_document_number_prefix
-
-  scope :with_any_premium_integrations, ->(names) { where("premium_integrations && ARRAY[?]::varchar[]", Array.wrap(names)) }
-
-  PREMIUM_INTEGRATIONS.each do |premium_integration|
-    scope "with_#{premium_integration}_support", -> { where("? = ANY(premium_integrations)", premium_integration) }
-
-    define_method("#{premium_integration}_enabled?") do
-      License.premium? && premium_integrations.include?(premium_integration)
-    end
-  end
 
   # Shared with the billing entities. Spaces are left out ("ab Sandbox" gives "AB-4321", not "AB -4321"), and the cut
   # comes after the upcase, which can lengthen a name ("ßßß" gives "SSS", not "SSSSSS").

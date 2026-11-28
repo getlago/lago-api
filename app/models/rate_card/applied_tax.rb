@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
 class RateCard::AppliedTax < ApplicationRecord
-  self.table_name = "rate_cards_taxes"
-
   include PaperTrailTraceable
+
+  self.table_name = "rate_cards_taxes"
 
   belongs_to :rate_card
   belongs_to :tax

@@ -39,10 +39,6 @@ class BillingSegment
     new(attributes)
   end
 
-  def proration_ratio=(value)
-    @proration_ratio = PRORATION_RATIO_TYPE.cast(value)
-  end
-
   def initialize(attributes = {})
     values = attributes.to_h.symbolize_keys
     ATTRIBUTES.each do |name|
@@ -58,6 +54,10 @@ class BillingSegment
     define_method("#{association}_id") do
       instance_variable_get("@#{association}_id") || public_send(association)&.id
     end
+  end
+
+  def proration_ratio=(value)
+    @proration_ratio = PRORATION_RATIO_TYPE.cast(value)
   end
 
   def attributes

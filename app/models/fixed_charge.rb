@@ -5,8 +5,15 @@ class FixedCharge < ApplicationRecord
   include ChargePropertiesValidation
   include Discard::Model
 
+  CHARGE_MODELS = {
+    standard: "standard",
+    graduated: "graduated",
+    volume: "volume"
+  }.freeze
+
   self.discard_column = :deleted_at
-  default_scope -> { kept }
+
+  enum :charge_model, CHARGE_MODELS
 
   belongs_to :organization
   belongs_to :plan, -> { with_discarded }, touch: true
@@ -22,17 +29,11 @@ class FixedCharge < ApplicationRecord
   has_many :applied_taxes, class_name: "FixedCharge::AppliedTax", dependent: :destroy
   has_many :taxes, through: :applied_taxes
 
+  default_scope -> { kept }
+
   scope :pay_in_advance, -> { where(pay_in_advance: true) }
   scope :pay_in_arrears, -> { where(pay_in_advance: false) }
   scope :parents, -> { where(parent_id: nil) }
-
-  CHARGE_MODELS = {
-    standard: "standard",
-    graduated: "graduated",
-    volume: "volume"
-  }.freeze
-
-  enum :charge_model, CHARGE_MODELS
 
   validates :units, numericality: {greater_than_or_equal_to: 0}
   validates :charge_model, :code, presence: true

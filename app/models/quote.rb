@@ -14,7 +14,14 @@ class Quote < ApplicationRecord
   IMAGE_CONTENT_TYPES = %w[image/png image/jpeg image/webp image/gif].freeze
   IMAGE_MAX_SIZE = 5.megabytes
 
-  before_save :ensure_number
+  enum :order_type, ORDER_TYPES,
+    instance_methods: false,
+    validate: true
+
+  sequenced(
+    scope: ->(quote) { quote.organization.quotes },
+    lock_key: ->(quote) { quote.organization_id }
+  )
 
   belongs_to :organization
   belongs_to :customer
@@ -36,10 +43,6 @@ class Quote < ApplicationRecord
 
   has_many_attached :images
 
-  enum :order_type, ORDER_TYPES,
-    instance_methods: false,
-    validate: true
-
   validates :subscription_id,
     presence: true,
     if: -> { order_type == "subscription_amendment" }
@@ -48,10 +51,7 @@ class Quote < ApplicationRecord
     content_type: IMAGE_CONTENT_TYPES,
     size: {less_than: IMAGE_MAX_SIZE}
 
-  sequenced(
-    scope: ->(quote) { quote.organization.quotes },
-    lock_key: ->(quote) { quote.organization_id }
-  )
+  before_save :ensure_number
 
   private
 

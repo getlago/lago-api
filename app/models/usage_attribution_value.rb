@@ -3,10 +3,10 @@
 class UsageAttributionValue < ApplicationRecord
   include Discard::Model
 
-  self.discard_column = :deleted_at
-
   MAX_PER_CUSTOMER_AND_TYPE = 100_000
   LIMIT_REACHED_CACHE_TTL = 1.hour
+
+  self.discard_column = :deleted_at
 
   belongs_to :organization
   belongs_to :usage_attribution_type, -> { with_discarded }
@@ -14,9 +14,9 @@ class UsageAttributionValue < ApplicationRecord
   belongs_to :parent, -> { with_discarded }, class_name: "UsageAttributionValue", optional: true
   has_many :children, class_name: "UsageAttributionValue", foreign_key: :parent_id, inverse_of: :parent
 
-  validates :value, presence: true, length: {maximum: 255}, uniqueness: {scope: %i[customer_id usage_attribution_type_id]}
-
   default_scope -> { kept }
+
+  validates :value, presence: true, length: {maximum: 255}, uniqueness: {scope: %i[customer_id usage_attribution_type_id]}
 
   def self.remaining_capacity(customer_id:, usage_attribution_type_id:)
     cache_key = "usage_attribution_values/limit_reached/#{customer_id}/#{usage_attribution_type_id}"

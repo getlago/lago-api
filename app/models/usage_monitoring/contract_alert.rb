@@ -5,15 +5,15 @@ module UsageMonitoring
     include Discard::Model
     include ThresholdEvaluation
 
-    self.discard_column = :deleted_at
-    self.inheritance_column = :alert_type
-
     STI_MAPPING = {
       "usage_amount" => "UsageMonitoring::ContractUsageAmountAlert",
       "usage_units" => "UsageMonitoring::ContractUsageUnitsAlert"
     }.freeze
 
-    default_scope -> { kept }
+    self.discard_column = :deleted_at
+    self.inheritance_column = :alert_type
+
+    enum :direction, Alert::DIRECTIONS, validate: true
 
     belongs_to :organization
     belongs_to :product, -> { with_discarded }, optional: true
@@ -32,7 +32,7 @@ module UsageMonitoring
       class_name: "UsageMonitoring::ContractTriggeredAlert",
       inverse_of: :alert
 
-    enum :direction, Alert::DIRECTIONS, validate: true
+    default_scope -> { kept }
 
     validates :alert_type, presence: true, inclusion: {in: STI_MAPPING.keys}
     validates :code, presence: true

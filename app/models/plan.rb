@@ -5,7 +5,19 @@ class Plan < ApplicationRecord
   include Currencies
   include Discard::Model
 
+  INTERVALS = %i[
+    weekly
+    monthly
+    yearly
+    quarterly
+    semiannual
+  ].freeze
+
   self.discard_column = :deleted_at
+
+  enum :interval, INTERVALS, validate: {allow_nil: true}
+
+  monetize :amount_cents, allow_nil: true
 
   belongs_to :organization
   belongs_to :parent, class_name: "Plan", optional: true
@@ -39,17 +51,8 @@ class Plan < ApplicationRecord
     class_name: "Clickhouse::ActivityLog",
     as: :resource
 
-  INTERVALS = %i[
-    weekly
-    monthly
-    yearly
-    quarterly
-    semiannual
-  ].freeze
-
-  enum :interval, INTERVALS, validate: {allow_nil: true}
-
-  monetize :amount_cents, allow_nil: true
+  default_scope -> { kept }
+  scope :parents, -> { where(parent_id: nil) }
 
   validates :name, :code, presence: true
   validates :amount_currency, inclusion: {in: currency_list}
@@ -59,9 +62,6 @@ class Plan < ApplicationRecord
   validates :amount_cents, presence: true
   validates :pay_in_advance, inclusion: {in: [true, false]}
   validate :validate_code_unique
-
-  default_scope -> { kept }
-  scope :parents, -> { where(parent_id: nil) }
 
   def self.ransackable_attributes(_auth_object = nil)
     %w[name code]

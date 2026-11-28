@@ -3,7 +3,11 @@
 class InvoiceCustomSection < ApplicationRecord
   include Discard::Model
 
+  SECTION_TYPES = {manual: "manual", system_generated: "system_generated"}.freeze
+
   self.discard_column = :deleted_at
+
+  enum :section_type, SECTION_TYPES, default: :manual, prefix: :section_type
 
   belongs_to :organization
   has_many :customer_applied_invoice_custom_sections,
@@ -19,15 +23,12 @@ class InvoiceCustomSection < ApplicationRecord
     class_name: "Contract::AppliedInvoiceCustomSection",
     dependent: :destroy
 
-  SECTION_TYPES = {manual: "manual", system_generated: "system_generated"}.freeze
-  enum :section_type, SECTION_TYPES, default: :manual, prefix: :section_type
+  default_scope -> { kept }
 
   validates :name, presence: true
   validates :code,
     presence: true,
     uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :organization_id}
-
-  default_scope -> { kept }
 end
 
 # == Schema Information

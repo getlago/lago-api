@@ -2,14 +2,6 @@
 
 module Clickhouse
   class ApiLog < BaseRecord
-    self.table_name = "api_logs"
-    self.primary_key = nil
-
-    belongs_to :organization
-    belongs_to :api_key
-
-    before_save :ensure_request_id
-
     HTTP_METHODS = {
       get: 1,
       post: 2,
@@ -17,6 +9,14 @@ module Clickhouse
       delete: 4,
       patch: 5
     }.freeze
+
+    self.table_name = "api_logs"
+    self.primary_key = nil
+
+    belongs_to :organization
+    belongs_to :api_key
+
+    before_save :ensure_request_id
 
     private
 

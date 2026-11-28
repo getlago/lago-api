@@ -5,6 +5,9 @@ class DataExport < ApplicationRecord
   STATUSES = %w[pending processing completed failed].freeze
   EXPIRATION_PERIOD = 7.days
 
+  enum :format, EXPORT_FORMATS, validate: true
+  enum :status, STATUSES, validate: true
+
   belongs_to :organization
   belongs_to :membership
   has_one :user, through: :membership
@@ -12,9 +15,6 @@ class DataExport < ApplicationRecord
   has_one_attached :file
 
   has_many :data_export_parts
-
-  enum :format, EXPORT_FORMATS, validate: true
-  enum :status, STATUSES, validate: true
 
   validates :resource_type, presence: true
   validates :file, attached: true, if: :completed?
