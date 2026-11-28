@@ -233,5 +233,46 @@ RSpec.describe RateCard do
 
       expect(rate_card.attached_to_subscriptions?).to be(true)
     end
+
+    context "when its only contracts are canceled" do
+      before do
+        catalog_plan = create(:catalog_plan, organization: rate_card.organization)
+        create(:plan_rate_card, organization: rate_card.organization, catalog_plan:, rate_card:)
+        customer = create(:customer, organization: rate_card.organization)
+        contract = create(:contract, :canceled, catalog_plan:, organization: rate_card.organization, customer:)
+        create(:contract_rate_card, organization: rate_card.organization, contract:, rate_card:)
+      end
+
+      it "is false, as a canceled contract never took effect" do
+        expect(rate_card.attached_to_subscriptions?).to be(false)
+      end
+    end
+
+    %i[draft pending terminated].each do |status|
+      context "when on a plan with a #{status} contract" do
+        before do
+          catalog_plan = create(:catalog_plan, organization: rate_card.organization)
+          create(:plan_rate_card, organization: rate_card.organization, catalog_plan:, rate_card:)
+          customer = create(:customer, organization: rate_card.organization)
+          create(:contract, status, catalog_plan:, organization: rate_card.organization, customer:)
+        end
+
+        it "is true" do
+          expect(rate_card.attached_to_subscriptions?).to be(true)
+        end
+      end
+
+      context "when attached directly to a #{status} contract" do
+        before do
+          customer = create(:customer, organization: rate_card.organization)
+          contract = create(:contract, status, organization: rate_card.organization, customer:)
+          create(:contract_rate_card, organization: rate_card.organization, contract:, rate_card:)
+        end
+
+        it "is true" do
+          expect(rate_card.attached_to_subscriptions?).to be(true)
+        end
+      end
+    end
   end
 end

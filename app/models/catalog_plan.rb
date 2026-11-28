@@ -34,10 +34,10 @@ class CatalogPlan < ApplicationRecord
     %w[name code]
   end
 
-  # A catalog plan is subscribed through contracts; any attachment freezes its
-  # pricing (its rate cards can no longer be edited).
+  # A catalog plan is subscribed through contracts; any contract but a canceled one
+  # freezes its pricing (its rate cards can no longer be edited).
   def attached_to_contracts?
-    contracts.exists?
+    contracts.not_canceled.exists?
   end
 end
 

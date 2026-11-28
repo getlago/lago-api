@@ -119,6 +119,15 @@ RSpec.describe PlanRateCards::DestroyService, :capture_kafka_messages do
     end
   end
 
+  context "when the plan's only contract was canceled" do
+    before { create(:contract, :canceled, catalog_plan:, organization:, customer: create(:customer, organization:)) }
+
+    it "deletes the entry" do
+      expect(result).to be_success
+      expect(plan_rate_card.reload).to be_discarded
+    end
+  end
+
   context "when the entry is missing" do
     let(:plan_rate_card) { nil }
 

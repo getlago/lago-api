@@ -198,6 +198,15 @@ RSpec.describe CatalogPlans::DestroyService, :capture_kafka_messages do
     end
   end
 
+  context "when the plan's only contracts are canceled" do
+    before { create(:contract, :canceled, organization:, customer: create(:customer, organization:), catalog_plan:) }
+
+    it "deletes the plan" do
+      expect(result).to be_success
+      expect(catalog_plan.reload).to be_discarded
+    end
+  end
+
   context "when the surrounding transaction rolls back" do
     before do
       allow(Utils::ActivityLog).to receive(:produce).and_call_original

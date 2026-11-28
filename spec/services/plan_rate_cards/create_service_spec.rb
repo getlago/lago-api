@@ -190,4 +190,13 @@ RSpec.describe PlanRateCards::CreateService do
       expect(result.error.messages[:plan]).to eq(["plan_locked"])
     end
   end
+
+  context "when the plan's only contract was canceled" do
+    before { create(:contract, :canceled, catalog_plan:, organization:, customer: create(:customer, organization:)) }
+
+    it "adds the rate card" do
+      expect(result).to be_success
+      expect(catalog_plan.applied_rate_cards).to eq([result.plan_rate_card])
+    end
+  end
 end

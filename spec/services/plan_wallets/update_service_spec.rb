@@ -129,6 +129,15 @@ describe PlanWallets::UpdateService do
     end
   end
 
+  context "when the plan's only contract was canceled" do
+    before { create(:contract, :canceled, organization:, customer: create(:customer, organization:), catalog_plan:) }
+
+    it "changes the code" do
+      expect(result).to be_success
+      expect(plan_wallet.reload.code).to eq("credits")
+    end
+  end
+
   context "when the plan has contracts" do
     before { create(:contract, organization:, catalog_plan:) }
 
