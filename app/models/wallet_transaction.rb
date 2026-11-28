@@ -3,6 +3,7 @@
 class WalletTransaction < ApplicationRecord
   include HasPurchaseOrderNumber
   include PaperTrailTraceable
+  include ConnectionResolvable
 
   belongs_to :wallet
   belongs_to :organization
@@ -28,6 +29,7 @@ class WalletTransaction < ApplicationRecord
     inverse_of: :outbound_wallet_transaction,
     dependent: :destroy
 
+  has_many :billing_object_connections, as: :owner, dependent: :destroy
   has_many :applied_invoice_custom_sections,
     class_name: "WalletTransaction::AppliedInvoiceCustomSection",
     dependent: :destroy
@@ -136,6 +138,10 @@ class WalletTransaction < ApplicationRecord
     return if failed?
 
     update!(status: :failed, failed_at: timestamp)
+  end
+
+  def fallback_record
+    wallet
   end
 end
 

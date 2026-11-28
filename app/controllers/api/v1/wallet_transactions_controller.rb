@@ -6,7 +6,7 @@ module Api
       def create
         result = WalletTransactions::CreateFromParamsService.call(
           organization: current_organization,
-          params: input_params
+          params: input_params.to_h.deep_symbolize_keys
         )
 
         if result.success?
@@ -43,7 +43,14 @@ module Api
 
         render(
           json: ::CollectionSerializer.new(
-            result.wallet_transactions.includes(:billing_entity, wallet: {customer: :billing_entity}),
+            result.wallet_transactions.includes(
+              :billing_entity,
+              billing_object_connections: [:payment_provider_customer, :integration_customer],
+              wallet: [
+                :billing_object_connections,
+                {customer: [:billing_entity, :payment_provider_customers, :integration_customers]}
+              ]
+            ),
             ::V1::WalletTransactionSerializer,
             collection_name: "wallet_transactions",
             meta: pagination_metadata(result.wallet_transactions)
@@ -107,7 +114,19 @@ module Api
         return render_error_response(result) unless result.success?
 
         wallet_transaction_direction = (direction == :consumptions) ? :outbound_wallet_transaction : :inbound_wallet_transaction
-        preloads = {wallet_transaction_direction => [:billing_entity, {wallet: [:billing_entity, {customer: :billing_entity}]}]}
+        preloads = {
+          wallet_transaction_direction => [
+            :billing_entity,
+            {
+              billing_object_connections: [:payment_provider_customer, :integration_customer],
+              wallet: [
+                :billing_entity,
+                :billing_object_connections,
+                {customer: [:billing_entity, :payment_provider_customers, :integration_customers]}
+              ]
+            }
+          ]
+        }
         collection_name = (direction == :consumptions) ? "wallet_transaction_consumptions" : "wallet_transaction_fundings"
 
         render(
@@ -144,6 +163,12 @@ module Api
           invoice_custom_section: [
             :skip_invoice_custom_sections,
             {invoice_custom_section_codes: []}
+          ],
+          connections: [
+            payment: [:behavior, :code],
+            tax: [:behavior, :code],
+            accounting: [:behavior, :code],
+            crm: [:behavior, :code]
           ]
         )
       end

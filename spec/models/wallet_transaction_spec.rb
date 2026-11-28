@@ -8,6 +8,10 @@ RSpec.describe WalletTransaction do
 
   it_behaves_like "a model with a purchase order number"
 
+  it_behaves_like "a connection-resolvable billing object", fallback: true do
+    let(:resolvable) { create(:wallet_transaction) }
+  end
+
   describe "validations" do
     it { is_expected.to validate_presence_of(:priority) }
     it { is_expected.to validate_inclusion_of(:priority).in_range(1..50) }
@@ -52,6 +56,7 @@ RSpec.describe WalletTransaction do
     it { is_expected.to belong_to(:billing_entity).optional }
     it { is_expected.to have_many(:consumptions).class_name("WalletTransactionConsumption").with_foreign_key(:inbound_wallet_transaction_id).inverse_of(:inbound_wallet_transaction).dependent(:destroy) }
     it { is_expected.to have_many(:fundings).class_name("WalletTransactionConsumption").with_foreign_key(:outbound_wallet_transaction_id).inverse_of(:outbound_wallet_transaction).dependent(:destroy) }
+    it { is_expected.to have_many(:billing_object_connections).dependent(:destroy) }
     it { is_expected.to have_many(:applied_invoice_custom_sections).class_name("WalletTransaction::AppliedInvoiceCustomSection").dependent(:destroy) }
     it { is_expected.to have_many(:selected_invoice_custom_sections).through(:applied_invoice_custom_sections).source(:invoice_custom_section) }
   end

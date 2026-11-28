@@ -3,7 +3,7 @@
 require "rails_helper"
 
 RSpec.describe WalletTransactions::CreateFromParamsService do
-  let_it_be(:organization) { create_default(:organization) }
+  let_it_be(:organization, refind: true) { create_default(:organization) }
   let(:currency) { "EUR" }
   let(:subscription) { create(:subscription, customer:) }
   let(:wallet) do
@@ -532,6 +532,76 @@ RSpec.describe WalletTransactions::CreateFromParamsService do
       it "creates wallet transaction with rounded value" do
         expect(result.wallet_transactions.first.credit_amount).to eq(4)
         expect(result.wallet_transactions.first.amount).to eq(4)
+      end
+    end
+
+    context "when connections param exists" do
+      let(:params) do
+        {
+          wallet_id: wallet.id,
+          paid_credits:,
+          granted_credits:,
+          connections: {payment: {code: "stripe_us"}, tax: {behavior: "skip"}}
+        }
+      end
+
+      context "when the multi_connection flag is disabled" do
+        it "returns a forbidden failure and creates no transaction" do
+          expect { result }.not_to change(WalletTransaction, :count)
+
+          expect(result).not_to be_success
+          expect(result.error).to be_a(BaseService::ForbiddenFailure)
+        end
+      end
+
+      context "when the multi_connection flag is enabled" do
+        before { organization.enable_feature_flag!(:multi_connection) }
+
+        context "when the code does not resolve" do
+          it "fails without creating a transaction or billing the top-up" do
+            expect { result }.not_to change(WalletTransaction, :count)
+
+            expect(result).not_to be_success
+            expect(result.error.messages[:connections]).to eq(["connection_not_found"])
+            expect(BillPaidCreditJob).not_to have_been_enqueued
+          end
+        end
+
+        context "when the code resolves" do
+          let(:stripe_connection) { create(:stripe_customer, customer:, organization:, code: "stripe_us") }
+
+          before { stripe_connection }
+
+          it "pins the connections on all transactions" do
+            paid_transaction = result.wallet_transactions.find(&:purchased?)
+            granted_transaction = result.wallet_transactions.find(&:granted?)
+
+            expect(paid_transaction.billing_object_connections.pluck(:category, :behavior))
+              .to match_array([%w[payment specific], %w[tax skip]])
+            expect(paid_transaction.effective_payment_connection).to eq(stripe_connection)
+            expect(paid_transaction.effective_tax_connection).to be_nil
+
+            expect(granted_transaction.billing_object_connections.pluck(:category, :behavior))
+              .to match_array([%w[payment specific], %w[tax skip]])
+            expect(granted_transaction.effective_payment_connection).to eq(stripe_connection)
+            expect(granted_transaction.effective_tax_connection).to be_nil
+          end
+        end
+
+        context "when a connections param is invalid" do
+          let(:params) do
+            {
+              wallet_id: wallet.id,
+              paid_credits:,
+              connections: {unknown: {behavior: "skip"}}
+            }
+          end
+
+          it "returns a validation failure" do
+            expect(result).not_to be_success
+            expect(result.error.messages[:connections]).to eq(["invalid_connection_category"])
+          end
+        end
       end
     end
 
