@@ -9,9 +9,9 @@ module PaymentProviderCustomers
     EXCLUSIVE_PAYMENT_METHODS = %w[customer_balance shared_payment_token].freeze
 
     validates :provider_payment_methods, presence: true
-    validate :allowed_provider_payment_methods
-    validate :link_payment_method_can_exist_only_with_card
-    validate :exclusive_payment_methods_cannot_be_combined
+    validate :validate_allowed_provider_payment_methods
+    validate :validate_link_payment_method_can_exist_only_with_card
+    validate :validate_exclusive_payment_methods_cannot_be_combined
 
     settings_accessors :payment_method_id
 
@@ -37,19 +37,19 @@ module PaymentProviderCustomers
 
     private
 
-    def allowed_provider_payment_methods
+    def validate_allowed_provider_payment_methods
       return if (provider_payment_methods - PAYMENT_METHODS).blank?
 
       errors.add(:provider_payment_methods, :invalid)
     end
 
-    def link_payment_method_can_exist_only_with_card
+    def validate_link_payment_method_can_exist_only_with_card
       return if provider_payment_methods.exclude?("link") || provider_payment_methods.include?("card")
 
       errors.add(:provider_payment_methods, :invalid)
     end
 
-    def exclusive_payment_methods_cannot_be_combined
+    def validate_exclusive_payment_methods_cannot_be_combined
       EXCLUSIVE_PAYMENT_METHODS.each do |method|
         next unless provider_payment_methods.include?(method)
         next if provider_payment_methods == [method]

@@ -59,7 +59,7 @@ module Organizations
 
     def handle_webhook_url
       webhook_url = params[:webhook_url]
-      # Read from the database: `WebhookEndpoint#max_webhook_endpoints` loads the association
+      # Read from the database: `WebhookEndpoint#validate_max_webhook_endpoints` loads the association
       # before an endpoint is inserted, so a loaded one can miss the last endpoint.
       organization.webhook_endpoints.reset
       webhook_endpoint = organization.default_webhook_endpoint

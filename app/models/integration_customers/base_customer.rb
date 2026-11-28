@@ -54,7 +54,7 @@ module IntegrationCustomers
 
     validates :customer_id, uniqueness: {scope: :type}
     validates :code, uniqueness: {scope: %i[customer_id category]}, allow_nil: true
-    validate :only_one_tax_integration_per_customer, if: :tax_kind?
+    validate :validate_only_one_tax_integration_per_customer, if: :tax_kind?
 
     scope :accounting_kind, -> do
       where(type: CATEGORY_BY_TYPE.select { |_, category| category == CATEGORIES[:accounting] }.keys)
@@ -96,7 +96,7 @@ module IntegrationCustomers
       self.code ||= integration&.code
     end
 
-    def only_one_tax_integration_per_customer
+    def validate_only_one_tax_integration_per_customer
       conflict = IntegrationCustomers::BaseCustomer.tax_kind.where(customer_id:)
       conflict = conflict.where.not(id:) if persisted?
 

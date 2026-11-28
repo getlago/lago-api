@@ -17,7 +17,7 @@ RSpec.describe WalletTransactionConsumption do
   describe "validations" do
     it { is_expected.to validate_numericality_of(:consumed_amount_cents).is_greater_than(0) }
 
-    describe "inbound_transaction_must_be_inbound" do
+    describe "validate_inbound_transaction_must_be_inbound" do
       let(:wallet) { create(:wallet) }
       let(:inbound_transaction) { create(:wallet_transaction, wallet:, transaction_type: :inbound, remaining_amount_cents: 10000) }
       let(:outbound_transaction) { create(:wallet_transaction, wallet:, transaction_type: :outbound) }
@@ -40,7 +40,7 @@ RSpec.describe WalletTransactionConsumption do
       end
     end
 
-    describe "outbound_transaction_must_be_outbound" do
+    describe "validate_outbound_transaction_must_be_outbound" do
       let(:wallet) { create(:wallet) }
       let(:inbound_transaction) { create(:wallet_transaction, wallet:, transaction_type: :inbound, remaining_amount_cents: 10000) }
       let(:outbound_transaction) { create(:wallet_transaction, wallet:, transaction_type: :outbound) }

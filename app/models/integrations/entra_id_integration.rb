@@ -7,9 +7,9 @@ module Integrations
     DOMAIN_FORMAT = /\A(?=.{1,253}\z)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}\z/
 
     validates :client_secret, :client_id, :domain, :tenant_id, presence: true
-    validate :domain_uniqueness
-    validate :additional_domains_format
-    validate :tenant_id_and_host_format
+    validate :validate_domain_uniqueness
+    validate :validate_additional_domains_format
+    validate :validate_tenant_id_and_host_format
 
     settings_accessors :client_id, :domain, :tenant_id, :host
     secrets_accessors :client_secret
@@ -55,7 +55,7 @@ module Integrations
     # NOTE: Only domains this save newly claims are checked. Primary domains used to be unique
     #       case-sensitively, so legacy integrations whose domains differ only by casing must
     #       keep saving unrelated changes (credentials, host).
-    def domain_uniqueness
+    def validate_domain_uniqueness
       return if domain.blank?
 
       claimed_before = persisted? ? claimed_domains(settings_in_database) : []
@@ -81,13 +81,13 @@ module Integrations
       ::Integrations::EntraIdIntegration.with_domain(email_domain).where.not(id:).exists?
     end
 
-    def additional_domains_format
+    def validate_additional_domains_format
       return if additional_domains.all? { it.match?(DOMAIN_FORMAT) }
 
       errors.add(:additional_domains, "invalid_format")
     end
 
-    def tenant_id_and_host_format
+    def validate_tenant_id_and_host_format
       # tenant_id and host are interpolated into the Entra authorize/token URLs
       # (host + path); reject anything but a safe URL segment so a user-provided
       # value cannot inject into the URL.

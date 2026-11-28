@@ -3,8 +3,8 @@
 module Integrations
   class AgentStorefrontIntegration < BaseIntegration
     validates :code, :payment_provider_code, :scope, presence: true
-    validate :https_urls
-    validate :stripe_provider_exists
+    validate :validate_https_urls
+    validate :validate_stripe_provider_exists
     validate :validate_plans, if: :plans_changed?
 
     has_many :agent_registrations, class_name: "Agents::Registration", foreign_key: :integration_id, dependent: :delete_all
@@ -95,7 +95,7 @@ module Integrations
       amount.nil? || (amount.is_a?(Integer) && amount.between?(0, MAX_TOPUP_CENTS))
     end
 
-    def https_urls
+    def validate_https_urls
       %i[resource_endpoint resource_instructions].each do |attribute|
         value = public_send(attribute)
         next if value.blank?
@@ -107,7 +107,7 @@ module Integrations
       end
     end
 
-    def stripe_provider_exists
+    def validate_stripe_provider_exists
       return if payment_provider_code.blank?
 
       errors.add(:payment_provider_code, "payment_provider_not_found") unless stripe_provider

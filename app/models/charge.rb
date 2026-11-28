@@ -50,7 +50,7 @@ class Charge < ApplicationRecord
   validates :charge_model, :code, presence: true
 
   validate :validate_code_unique
-  validate :charge_model_allowance
+  validate :validate_charge_model_allowance
   validate :validate_pay_in_advance
   validate :validate_regroup_paid_fees
   validate :validate_prorated
@@ -177,7 +177,7 @@ class Charge < ApplicationRecord
     errors.add(:charge_model, :invalid_aggregation_type_or_charge_model)
   end
 
-  def charge_model_allowance
+  def validate_charge_model_allowance
     if graduated_percentage? && !License.premium?
       errors.add(:charge_model, :graduated_percentage_requires_premium_license)
     end

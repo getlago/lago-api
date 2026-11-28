@@ -50,7 +50,7 @@ class WebhookEndpoint < ApplicationRecord
 
   validates :webhook_url, presence: true, url: {block_private_addresses: true}
   validates :webhook_url, uniqueness: {scope: :organization_id}
-  validate :max_webhook_endpoints, on: :create
+  validate :validate_max_webhook_endpoints, on: :create
   validate :validate_event_types, if: :event_types_changed?
 
   before_validation :normalize_event_types, if: :event_types_changed?
@@ -80,7 +80,7 @@ class WebhookEndpoint < ApplicationRecord
 
   private
 
-  def max_webhook_endpoints
+  def validate_max_webhook_endpoints
     errors.add(:base, :exceeded_limit) if organization &&
       organization.webhook_endpoints.reload.count >= LIMIT
   end

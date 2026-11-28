@@ -12,7 +12,7 @@ RSpec.describe PaymentProviderCustomers::BaseCustomer do
 
     it { is_expected.to validate_uniqueness_of(:code).scoped_to(:customer_id).allow_nil }
 
-    describe "code_is_not_reserved" do
+    describe "validate_code_is_not_reserved" do
       it "rejects a provider-backed connection using the reserved manual code" do
         customer = create(:customer)
         provider = create(:stripe_provider, organization: customer.organization)

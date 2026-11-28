@@ -32,7 +32,7 @@ module PaymentProviderCustomers
 
     validates :customer_id, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :type}
     validates :code, uniqueness: {conditions: -> { where(deleted_at: nil) }, scope: :customer_id}, allow_nil: true
-    validate :code_is_not_reserved
+    validate :validate_code_is_not_reserved
 
     settings_accessors :provider_mandate_id, :sync_with_provider
 
@@ -69,7 +69,7 @@ module PaymentProviderCustomers
 
     # The "lago_manual" code is reserved for the null-provider manual connection; a provider-backed
     # connection cannot use it.
-    def code_is_not_reserved
+    def validate_code_is_not_reserved
       return unless code == MANUAL_CODE
       return if manual?
 

@@ -10,7 +10,7 @@ class WebhookEndpointSigningKey < ApplicationRecord
   encrypts :secret
 
   validates :secret, presence: true
-  validate :organization_matches_endpoint
+  validate :validate_organization_matches_endpoint
 
   before_validation :generate_secret, on: :create
 
@@ -25,7 +25,7 @@ class WebhookEndpointSigningKey < ApplicationRecord
     self.secret ||= SECRET_PREFIX + Base64.strict_encode64(SecureRandom.random_bytes(SECRET_BYTES))
   end
 
-  def organization_matches_endpoint
+  def validate_organization_matches_endpoint
     if webhook_endpoint && organization_id != webhook_endpoint.organization_id
       errors.add(:organization, :must_belong_to_same_organization)
     end

@@ -54,8 +54,8 @@ class Wallet < ApplicationRecord
   validates :paid_top_up_max_amount_cents, numericality: {greater_than: 0}, allow_nil: true
   validates :priority, inclusion: {in: 1..LOWEST_PRIORITY}
   validates :balance_cents, numericality: {greater_than_or_equal_to: 0}, if: :traceable?
-  validate :paid_top_up_max_greater_than_or_equal_min
-  validate :unique_code_per_customer, if: :code_changed?
+  validate :validate_paid_top_up_max_greater_than_or_equal_min
+  validate :validate_unique_code_per_customer, if: :code_changed?
 
   STATUSES = [
     :active,
@@ -127,7 +127,7 @@ class Wallet < ApplicationRecord
 
   private
 
-  def paid_top_up_max_greater_than_or_equal_min
+  def validate_paid_top_up_max_greater_than_or_equal_min
     return if paid_top_up_min_amount_cents.nil?
     return if paid_top_up_max_amount_cents.nil?
 
@@ -136,7 +136,7 @@ class Wallet < ApplicationRecord
     end
   end
 
-  def unique_code_per_customer
+  def validate_unique_code_per_customer
     return unless active?
 
     if code && Wallet.where(customer_id: customer_id, code: code, status: "active").where.not(id: id).exists?

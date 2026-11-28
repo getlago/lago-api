@@ -15,8 +15,8 @@ module StreamingDestinations
     belongs_to :organization
 
     validates :event_types, presence: true
-    validate :event_types_are_known
-    validate :event_types_not_already_claimed
+    validate :validate_event_types_are_known
+    validate :validate_event_types_not_already_claimed
 
     scope :for_event, lambda { |organization, event_type|
       where(organization:, active: true).where("event_types @> ARRAY[?]::varchar[]", event_type)
@@ -44,14 +44,14 @@ module StreamingDestinations
 
     private
 
-    def event_types_are_known
+    def validate_event_types_are_known
       return if event_types.blank?
       return if (event_types - EVENT_TYPES).empty?
 
       errors.add(:event_types, :inclusion)
     end
 
-    def event_types_not_already_claimed
+    def validate_event_types_not_already_claimed
       return if organization_id.nil? || event_types.blank?
 
       claimed = BaseDestination.where(organization_id:)
