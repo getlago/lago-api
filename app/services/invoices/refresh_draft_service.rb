@@ -60,7 +60,7 @@ module Invoices
         return result if tax_error?(calculate_result.error) # rubocop:disable Rails/TransactionExitStatement
 
         if invoice.should_update_hubspot_invoice?
-          Integrations::Aggregator::Invoices::Hubspot::UpdateJob.perform_later(invoice: invoice.reload)
+          Integrations::Aggregator::Invoices::Hubspot::UpdateJob.perform_after_commit(invoice: invoice.reload)
         end
       end
 

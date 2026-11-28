@@ -15,9 +15,8 @@ RSpec.describe Plans::PrepareDestroyService do
         .from(false).to(true)
     end
 
-    it "enqueues a Plans::DestroyJob" do
-      prepare_destroy_service.call
-      expect(Plans::DestroyJob).to have_been_enqueued.with(plan)
+    it "enqueues a Plans::DestroyJob after the commit" do
+      expect { prepare_destroy_service.call }.to have_enqueued_job_after_commit(Plans::DestroyJob).with(plan)
       expect(SendWebhookJob).to have_been_enqueued.with("plan.deleted", plan)
     end
 
