@@ -31,6 +31,7 @@ module Events
         SCALE = 12
         CHECK_MAX_EXECUTION_TIME = 2
         ORDERS = {"amount" => "amount", "units" => "units", "events_count" => "events"}.freeze
+        DROPPED_CONNECTION_ERRORS = [EOFError, Errno::ECONNRESET].freeze
 
         def initialize(organization_id:, external_subscription_id:, from_datetime:, to_datetime:, group_key:, label_filters:,
           charge_columns:, order_by:, search:, limit:, offset:, deduplicate:, max_groups:, max_execution_time:)
@@ -64,10 +65,21 @@ module Events
         end
 
         def rows
-          ::Clickhouse::BaseRecord.with_connection do |connection|
-            connection.with_settings(**Events::Stores::Utils::ClickhouseConnection::QUERY_SETTINGS) do
-              connection.select_all(query).to_a
+          retried = false
+
+          begin
+            ::Clickhouse::BaseRecord.with_connection do |connection|
+              connection.with_settings(**Events::Stores::Utils::ClickhouseConnection::QUERY_SETTINGS) do
+                connection.select_all(query).to_a
+              end
             end
+          rescue ActiveRecord::ActiveRecordError => e
+            # ClickHouse may close a keep-alive socket the adapter still reuses, and Net::HTTP does
+            # not replay a POST. The socket is closed by then, so the retry opens a new one.
+            raise if retried || DROPPED_CONNECTION_ERRORS.none? { e.cause.is_a?(it) }
+
+            retried = true
+            retry
           end
         end
 
