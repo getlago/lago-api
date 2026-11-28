@@ -163,6 +163,42 @@ RSpec.describe DailyUsages::RecomputeDiffsService do
     end
   end
 
+  context "when the affected row ends at the termination of the subscription" do
+    let!(:edited_day) do
+      create_daily_usage(
+        Date.new(2025, 3, 3),
+        usage_payload(filters_after_edit, 1100),
+        usage_diff: buggy_usage_diff,
+        period: [from_datetime, Time.zone.parse("2025-03-03T12:00:00Z")]
+      )
+    end
+
+    it "recomputes it against the row written before the termination" do
+      expect(recompute_service.call.daily_usages).to eq([edited_day])
+      # 1100 at the termination - 1000 on Mar 2, at 100 cents and 1 event per unit
+      expect(filter_diff(edited_day)).to include("amount_cents" => 100, "units" => "1.0", "events_count" => 1)
+    end
+
+    context "when the customer is ahead of UTC and from_date is the termination day" do
+      # Terminated on Mar 3 at 05:00 in Tokyo: the row of Mar 3 ends on Mar 2 in UTC
+      let(:from_date) { Date.new(2025, 3, 3) }
+
+      let!(:edited_day) do
+        create_daily_usage(
+          Date.new(2025, 3, 3),
+          usage_payload(filters_after_edit, 1100),
+          usage_diff: buggy_usage_diff,
+          period: [from_datetime, Time.zone.parse("2025-03-02T20:00:00Z")]
+        )
+      end
+
+      it "still recomputes it" do
+        expect(recompute_service.call.daily_usages).to eq([edited_day])
+        expect(filter_diff(edited_day)).to include("amount_cents" => 100) # 1100 at the termination - 1000 on Mar 2
+      end
+    end
+  end
+
   context "when the filters of a grouped usage are edited" do
     let(:filters_before_edit) { [] }
     let(:filters_after_edit) { [] }

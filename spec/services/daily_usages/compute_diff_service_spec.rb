@@ -801,6 +801,28 @@ RSpec.describe DailyUsages::ComputeDiffService do
       end
     end
 
+    context "when the subscription is terminated during the billing period" do
+      # The termination row ends at the termination, the rows written before it at the end of the period
+      let(:daily_usage) do
+        create(
+          :daily_usage,
+          subscription:,
+          from_datetime:,
+          to_datetime: Time.zone.parse("2022-07-15T10:00:00Z"),
+          usage_date: Date.new(2022, 7, 15),
+          usage:
+        )
+      end
+
+      it "diffs against the latest prior daily usage of the billing period" do
+        diff = diff_service.call.usage_diff
+
+        expect(diff["amount_cents"]).to eq(50) # 150 at the termination - 100 on 2022-07-14
+        # 1.5 units and 8 events at the termination - 1.0 unit and 5 events on 2022-07-14
+        expect(diff["charges_usage"].sole).to include("amount_cents" => 50, "units" => "0.5", "events_count" => 3)
+      end
+    end
+
     context "when a prior daily usage exists in a different billing period" do
       # The prior daily_usage belongs to the previous billing period (different from_datetime /
       # to_datetime); it must NOT be used as the diff baseline for the current period's first

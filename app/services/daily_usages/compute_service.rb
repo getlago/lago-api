@@ -37,7 +37,10 @@ module DailyUsages
         )
 
         daily_usage.usage_diff = diff_usage(daily_usage)
-        daily_usage.save!
+        ActiveRecord::Base.transaction do
+          daily_usage.save!
+          rediff_next_daily_usage(daily_usage)
+        end
 
         result.daily_usage = daily_usage
       end
@@ -76,6 +79,18 @@ module DailyUsages
 
     def diff_usage(daily_usage)
       DailyUsages::ComputeDiffService.call!(daily_usage:).usage_diff
+    end
+
+    # A job that runs late, after the termination, writes its day after the termination row, which was diffed
+    # without it: that row is diffed again so the period's diffs still add up to its usage.
+    def rediff_next_daily_usage(daily_usage)
+      next_daily_usage = subscription.daily_usages
+        .where(from_datetime: daily_usage.from_datetime)
+        .where("usage_date > ?", daily_usage.usage_date)
+        .order(:usage_date, :id)
+        .first
+
+      next_daily_usage&.update!(usage_diff: diff_usage(next_daily_usage))
     end
 
     def subscription_billing_day?

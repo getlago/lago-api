@@ -79,14 +79,14 @@ module DailyUsages
         .first
     end
 
-    # A contract window is matched on its start only: its end moves earlier when the contract is
-    # terminated or a rate is added inside the window, while its usage keeps accumulating from
-    # the same start. The contract_id condition lets Postgres use the partial index on contract rows.
+    # A period is matched on its start only: its end moves earlier when the subscription or the contract
+    # is terminated, or when a rate is added inside a contract window, while its usage keeps accumulating
+    # from the same start. The contract_id condition lets Postgres use the partial index on contract rows.
     def previous_daily_usages
       if contract_rate_card
         contract_rate_card.daily_usages.where.not(contract_id: nil).where(from_datetime:)
       else
-        subscription.daily_usages.where(from_datetime:, to_datetime:)
+        subscription.daily_usages.where(from_datetime:)
       end
     end
 

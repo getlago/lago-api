@@ -30,12 +30,14 @@ module DailyUsages
     attr_reader :subscription, :from_date, :dry_run
 
     def affected_daily_usages
-      # The row preceding from_date in the same period is the reference of the first row in range
+      # The row preceding from_date in the same period is the reference of the first row in range. A day earlier, as
+      # a row ending at a termination ends in UTC up to 14 hours before midnight of its usage_date ahead of UTC.
       daily_usages = subscription.daily_usages
-        .where("to_datetime >= ?", from_date)
+        .where("to_datetime >= ?", from_date - 1.day)
         .order(:from_datetime, :usage_date)
 
-      daily_usages.group_by { |du| [du.from_datetime, du.to_datetime] }.values.flat_map do |period_usages|
+      # Rows chain on the period start, as in ComputeDiffService: a termination moves the end only
+      daily_usages.group_by(&:from_datetime).values.flat_map do |period_usages|
         period_usages.each_cons(2).filter_map do |previous, current|
           current if current.usage_date >= from_date && filters_changed?(previous.usage, current.usage)
         end
