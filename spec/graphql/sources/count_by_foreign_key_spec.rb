@@ -19,6 +19,22 @@ RSpec.describe Sources::CountByForeignKey do
       expect(result).to eq([2, 0])
     end
 
+    context "with a scope" do
+      subject(:source) { described_class.new(Contract, :catalog_plan_id, :not_canceled) }
+
+      let(:catalog_plan) { create(:catalog_plan, organization:) }
+
+      before do
+        customer = create(:customer, organization:)
+        create(:contract, organization:, customer:, catalog_plan:)
+        create(:contract, :canceled, organization:, customer:, catalog_plan:)
+      end
+
+      it "counts only the rows the scope keeps" do
+        expect(source.fetch([catalog_plan.id])).to eq([1])
+      end
+    end
+
     it "does not count discarded rows" do
       kept = create(:product_filter, organization:, product:)
       create(:product_filter, organization:, product:).discard!

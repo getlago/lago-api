@@ -99,12 +99,12 @@ class RateCard < ApplicationRecord
   end
 
   # The card bills someone once it belongs to a catalog plan that has contracts
-  # or is attached directly to a contract. From that point the billed timeline
+  # or is attached directly to a contract, canceled ones aside. From that point the billed timeline
   # freezes — card fields, active and past rates — and price changes go
   # through appended rates.
   def attached_to_subscriptions?
-    contract_applied_rate_cards.exists? ||
-      Contract.where(catalog_plan_id: plan_applied_rate_cards.select(:catalog_plan_id)).exists?
+    contract_applied_rate_cards.joins(:contract).merge(Contract.not_canceled).exists? ||
+      Contract.not_canceled.where(catalog_plan_id: plan_applied_rate_cards.select(:catalog_plan_id)).exists?
   end
 
   def ordered_rates

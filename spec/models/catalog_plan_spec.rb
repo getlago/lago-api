@@ -66,6 +66,30 @@ RSpec.describe CatalogPlan do
       create(:contract, organization: catalog_plan.organization, catalog_plan:)
       expect(catalog_plan.attached_to_contracts?).to be(true)
     end
+
+    context "with a single contract" do
+      let(:plan) { create(:catalog_plan) }
+      let(:status) { :canceled }
+
+      before do
+        customer = create(:customer, organization: plan.organization)
+        create(:contract, status, organization: plan.organization, customer:, catalog_plan: plan)
+      end
+
+      it "ignores a canceled contract, which never took effect" do
+        expect(plan.attached_to_contracts?).to be(false)
+      end
+
+      %i[draft pending terminated].each do |contract_status|
+        context "when it is #{contract_status}" do
+          let(:status) { contract_status }
+
+          it "counts it" do
+            expect(plan.attached_to_contracts?).to be(true)
+          end
+        end
+      end
+    end
   end
 
   describe "soft deletion" do

@@ -31,7 +31,7 @@ module PlanWallets
         return result.not_found_failure!(resource: "plan_wallet") if plan_wallet.discarded?
 
         # Each contract copies the template with its code. Freezing it with the first contract keeps one
-        # code across the plan's contracts.
+        # code across the plan's contracts; a canceled contract keeps the code it was given.
         if code_change_requested? && catalog_plan.attached_to_contracts?
           return result.single_validation_failure!(field: :code, error_code: "plan_locked")
         end

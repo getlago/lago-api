@@ -181,6 +181,17 @@ RSpec.describe RatePhases::CreateService do
     end
   end
 
+  context "when the plan's only contract was canceled" do
+    before do
+      organization = plan_rate_card.organization
+      create(:contract, :canceled, catalog_plan: plan_rate_card.catalog_plan, organization:, customer: create(:customer, organization:))
+    end
+
+    it "creates the phase" do
+      expect(result).to be_success
+    end
+  end
+
   context "when no parent is provided" do
     subject(:result) { described_class.call(params:) }
 

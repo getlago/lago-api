@@ -449,6 +449,19 @@ RSpec.describe Contract do
       end
     end
 
+    describe ".not_canceled" do
+      let(:kept) { %i[draft pending active terminated].map { create(:contract, status: it) } }
+
+      before do
+        kept
+        create(:contract, :canceled)
+      end
+
+      it "returns every contract but a canceled one" do
+        expect(described_class.not_canceled).to match_array(kept)
+      end
+    end
+
     describe ".terminatable_by_external_id" do
       let(:organization) { create(:organization) }
 
