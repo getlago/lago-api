@@ -3,7 +3,9 @@
 require "rails_helper"
 
 RSpec.describe Invoices::CreateInvoiceSubscriptionService do
-  subject(:create_service) { described_class.new(invoice:, subscriptions:, timestamp:, invoicing_reason:) }
+  subject(:create_service) do
+    described_class.new(invoice:, subscriptions:, timestamp:, invoicing_reason:, invoicing_reasons_by_subscription_id:)
+  end
 
   let(:organization) { create(:organization) }
   let(:customer) { create(:customer, organization:) }
@@ -12,6 +14,7 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
   let(:subscriptions) { [subscription] }
   let(:timestamp) { Time.zone.parse("2022-03-07T00:00:00") }
   let(:invoicing_reason) { :subscription_periodic }
+  let(:invoicing_reasons_by_subscription_id) { {} }
 
   let(:subscription) do
     create(
@@ -279,6 +282,17 @@ RSpec.describe Invoices::CreateInvoiceSubscriptionService do
           recurring: false,
           invoicing_reason: "subscription_terminating"
         )
+      end
+
+      context "with a persisted invoicing reason for the subscription" do
+        let(:invoicing_reasons_by_subscription_id) { {subscription.id => "subscription_starting"} }
+
+        it "keeps the persisted invoicing reason" do
+          result = create_service.call
+
+          expect(result).to be_success
+          expect(result.invoice_subscriptions.map(&:invoicing_reason)).to eq(["subscription_starting"])
+        end
       end
     end
 

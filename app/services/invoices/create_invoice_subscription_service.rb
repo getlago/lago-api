@@ -4,11 +4,12 @@ module Invoices
   class CreateInvoiceSubscriptionService < BaseService
     Result = BaseResult[:invoice_subscriptions]
 
-    def initialize(invoice:, subscriptions:, timestamp:, invoicing_reason:, refresh: false)
+    def initialize(invoice:, subscriptions:, timestamp:, invoicing_reason:, invoicing_reasons_by_subscription_id: {}, refresh: false)
       @invoice = invoice
       @subscriptions = subscriptions
       @timestamp = timestamp
       @invoicing_reason = invoicing_reason
+      @invoicing_reasons_by_subscription_id = invoicing_reasons_by_subscription_id
       @recurring = invoicing_reason.to_sym == :subscription_periodic
       @refresh = refresh
 
@@ -50,7 +51,7 @@ module Invoices
 
     private
 
-    attr_accessor :invoice, :subscriptions, :timestamp, :invoicing_reason, :recurring, :refresh
+    attr_accessor :invoice, :subscriptions, :timestamp, :invoicing_reason, :invoicing_reasons_by_subscription_id, :recurring, :refresh
 
     def datetime
       @datetime ||= Time.zone.at(timestamp)
@@ -147,6 +148,7 @@ module Invoices
       # NOTE: upgrading is used as a not persisted reason as it means
       #       one subscription starting and a second one terminating
       return invoicing_reason if invoicing_reason.to_sym != :upgrading
+      return invoicing_reasons_by_subscription_id[subscription.id] if invoicing_reasons_by_subscription_id.key?(subscription.id)
       return :subscription_terminating if subscription.terminated_at?(timestamp)
 
       :subscription_starting

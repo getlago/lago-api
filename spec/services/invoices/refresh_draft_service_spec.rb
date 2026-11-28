@@ -138,9 +138,11 @@ RSpec.describe Invoices::RefreshDraftService do
           subscription_at: started_at,
           started_at:,
           created_at: started_at,
+          terminated_at: subscription2_terminated_at,
           previous_subscription_id: subscription.id
         )
       end
+      let(:subscription2_terminated_at) { nil }
 
       before do
         invoice_subscription2
@@ -158,6 +160,22 @@ RSpec.describe Invoices::RefreshDraftService do
 
         expect(invoice.reload.invoice_subscriptions.pluck(:invoicing_reason))
           .to match_array(%w[subscription_terminating subscription_starting])
+      end
+
+      context "when the new subscription is terminated within the second of the upgrade" do
+        let(:subscription2_terminated_at) { started_at + 1.2.seconds }
+
+        it "keeps the persisted invoicing reason of each subscription" do
+          result = refresh_service.call
+
+          expect(result).to be_success
+          expect(invoice.reload.invoice_subscriptions.pluck(:subscription_id, :invoicing_reason)).to match_array(
+            [
+              [subscription.id, "subscription_terminating"],
+              [subscription2.id, "subscription_starting"]
+            ]
+          )
+        end
       end
     end
 
