@@ -243,6 +243,7 @@ RSpec.describe Contracts::TerminateService do
     end
     let(:original_cursor) { Time.utc(2026, 2, 1) }
     let(:amount_due_now) { 10_000 }
+    let(:operation_dates_due_now) { [Time.utc(2026, 2, 1)] }
 
     before do
       travel_to(Time.utc(2026, 2, 10))
@@ -263,7 +264,7 @@ RSpec.describe Contracts::TerminateService do
 
         bill(Time.current)
         expect(Invoice.where(customer:).sum(:total_amount_cents)).to eq(amount_due_now)
-        expect(contract_rate_card.billing_operations.count).to eq(1)
+        expect(contract_rate_card.billing_operations.order(:billing_at).pluck(:billing_at)).to eq(operation_dates_due_now)
 
         travel_to(timestamp) do
           3.times { bill(timestamp) }
@@ -289,6 +290,7 @@ RSpec.describe Contracts::TerminateService do
       let(:billing_timing) { "advance" }
       let(:original_cursor) { Time.utc(2026, 1, 1) }
       let(:amount_due_now) { 10_000 }
+      let(:operation_dates_due_now) { [Time.utc(2026, 1, 1), Time.utc(2026, 2, 1)] }
 
       it_behaves_like "complete termination coverage"
 

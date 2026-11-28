@@ -27,9 +27,7 @@ RSpec.describe BillingOperations::CreateService do
   let(:terms) { Billing::Terms.new(timing: :advance, prorated: true) }
   let(:obligation) { Billing::Obligation.new(cycle:, segments:, billing_at: started_at, terms:) }
   let(:planned_operation) do
-    BillingOperations::Schedule::BuildPlannedOperation::PlannedOperation.new(
-      obligation:, billing_at: started_at
-    )
+    BillingOperations::Schedule::PlannedOperation.from_obligation(obligation)
   end
   let(:attributes) do
     {

@@ -199,6 +199,42 @@ RSpec.describe ContractRateCard do
     end
   end
 
+  describe "#effective_date_in_customer_timezone" do
+    subject(:effective_at) { card.effective_date_in_customer_timezone }
+
+    let(:billing_entity) { build_stubbed(:billing_entity, timezone: "America/Los_Angeles") }
+    let(:customer) { build_stubbed(:customer, timezone:, billing_entity:) }
+    let(:contract) { build_stubbed(:contract, customer:) }
+    let(:card) { build(:contract_rate_card, contract:, effective_date:) }
+    let(:timezone) { "America/Los_Angeles" }
+    let(:effective_date) { Date.new(2026, 11, 1) }
+
+    around do |example|
+      Time.use_zone("Asia/Tokyo") { example.run }
+    end
+
+    it "uses local midnight independently of the application timezone" do
+      expect(effective_at).to eq(Time.utc(2026, 11, 1, 7))
+      expect(effective_at.time_zone.name).to eq("America/Los_Angeles")
+    end
+
+    context "when daylight saving has ended" do
+      let(:effective_date) { Date.new(2026, 11, 2) }
+
+      it "uses the new UTC offset" do
+        expect(effective_at).to eq(Time.utc(2026, 11, 2, 8))
+      end
+    end
+
+    context "when the customer has no timezone" do
+      let(:timezone) { nil }
+
+      it "uses the billing entity's timezone" do
+        expect(effective_at).to eq(Time.utc(2026, 11, 1, 7))
+      end
+    end
+  end
+
   describe "#inherited_billing_anchor?" do
     let(:card) { build(:contract_rate_card, effective_date: Date.new(2026, 10, 15), billing_anchor_date:) }
 

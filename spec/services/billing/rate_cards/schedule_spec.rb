@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe Billing::RateCards::Schedule do
   subject(:schedule) do
-    described_class.new(anchor_date:, phases:, rates:, terms:, timezone:, starts_at:, ends_at:)
+    described_class.new(anchor_date:, phases:, rates:, terms:, timezone:, starts_at:, ends_at:, termination_billing_at:)
   end
 
   let(:anchor_date) { Date.new(2022, 1, 1) }
@@ -16,6 +16,7 @@ RSpec.describe Billing::RateCards::Schedule do
   let(:starts_at) { Time.utc(2022, 1, 15) }
   let(:timing) { :arrears }
   let(:ends_at) { nil }
+  let(:termination_billing_at) { nil }
   let(:terms) { Billing::Terms.new(timing:, prorated:, billing_scope:, due_on_coverage_end:) }
   let(:billing_scope) { "segment" }
   let(:due_on_coverage_end) { false }
@@ -630,6 +631,109 @@ RSpec.describe Billing::RateCards::Schedule do
     end
   end
 
+  describe "#obligations_due_by" do
+    let(:rates) { [card_rate(Time.utc(2021, 1, 1)), card_rate(Time.utc(2022, 2, 15))] }
+    let(:cycle_start) { Time.utc(2022, 2, 1) }
+    let(:cut) { Time.utc(2022, 2, 15) }
+    let(:cycle_end) { Time.utc(2022, 3, 1) }
+
+    context "with a later termination billing instant" do
+      let(:ends_at) { Time.utc(2022, 2, 20) }
+      let(:termination_billing_at) { Time.utc(2022, 2, 25) }
+
+      it "marks only the final natural obligation" do
+        due = schedule.obligations_due_by(termination_billing_at, from: cycle_start)
+
+        expect(due.map(&:billing_at)).to eq([cut, ends_at])
+        expect(due.map(&:termination_billing_at)).to eq([nil, termination_billing_at])
+        expect(due.last.segments.sole).to have_attributes(started_at: cut, ended_at: ends_at, rate: rates.last)
+        expect(due.last.terms).to be(terms)
+      end
+
+      it "defers the final obligation in a continuation, but not when it is selected first" do
+        expect(schedule.obligations_due_by(ends_at, from: cycle_start).map(&:billing_at)).to eq([cut])
+        expect(schedule.obligations_due_by(ends_at, from: cut + 1.day).map(&:billing_at)).to eq([ends_at])
+        expect(schedule.obligations_due_by(termination_billing_at, from: cycle_start, after: cut).map(&:billing_at)).to eq([ends_at])
+        expect(schedule.obligations_due_by(termination_billing_at, from: cycle_start, after: ends_at)).to eq([])
+      end
+
+      it "selects the final obligation naturally first and by its termination instant after a prior date" do
+        first = schedule.next_obligation(from: cut + 1.day)
+        continued = schedule.next_obligation(from: cycle_start, after: cut)
+
+        expect(first.billing_at).to eq(ends_at)
+        expect(continued.billing_at).to eq(ends_at)
+        expect(continued.operation_billing_at(after: cut)).to eq(termination_billing_at)
+        expect(schedule.next_obligation(from: cycle_start, after: ends_at)).to be_nil
+        expect(schedule.obligation_for_operation(cycle_started_at: cycle_start, billing_at: ends_at).termination_billing_at)
+          .to eq(termination_billing_at)
+      end
+    end
+
+    it "returns ordered obligations through the inclusive cutoff" do
+      due = schedule.obligations_due_by(cycle_end, from: starts_at)
+
+      expect(due.map(&:billing_at)).to eq([cycle_start, cut, cycle_end])
+      expect(due.map { it.segments.sole.rate }).to eq([rates.first, rates.first, rates.last])
+    end
+
+    it "excludes the lower billing date while retaining the cycle named by from" do
+      due = schedule.obligations_due_by(cycle_end, from: cycle_start, after: cut)
+
+      expect(due.map(&:billing_at)).to eq([cycle_end])
+      expect(due.sole.cycle.started_at).to eq(cycle_start)
+    end
+
+    it "starts with the covered segment rather than a completed earlier segment" do
+      due = schedule.obligations_due_by(cycle_end, from: cut + 1.day)
+
+      expect(due.map(&:billing_at)).to eq([cycle_end])
+      expect(due.sole.segments.sole.started_at).to eq(cut)
+    end
+
+    it "includes a segment billed exactly at the coverage selection instant" do
+      expect(schedule.obligations_due_by(cut, from: cut).map(&:billing_at)).to eq([cut])
+    end
+
+    context "with cycle scope" do
+      let(:billing_scope) { "cycle" }
+
+      it "returns both rate segments together at the cycle billing date" do
+        expect(schedule.obligations_due_by(cut, from: cycle_start)).to be_empty
+        due = schedule.obligations_due_by(cycle_end, from: cycle_start)
+
+        expect(due.map(&:billing_at)).to eq([cycle_end])
+        expect(due.sole.segments.map(&:rate)).to eq(rates)
+      end
+    end
+
+    context "with daily cycles across a daylight saving transition" do
+      let(:timezone) { "America/New_York" }
+      let(:anchor_date) { Date.new(2022, 3, 12) }
+      let(:starts_at) { Time.utc(2022, 3, 12, 5) }
+      let(:phases) { [phase(cycle_count: nil, every: 1, unit: :day)] }
+      let(:rates) { [card_rate(Time.utc(2021, 1, 1), 1, :day)] }
+
+      it "uses customer-local boundaries on both sides of the clock change" do
+        due = schedule.obligations_due_by(Time.utc(2022, 3, 15, 4), from: starts_at)
+
+        expect(due.map(&:billing_at)).to eq([
+          Time.utc(2022, 3, 13, 5), Time.utc(2022, 3, 14, 4), Time.utc(2022, 3, 15, 4)
+        ])
+      end
+    end
+
+    context "when the schedule has ended before pricing starts" do
+      let(:ends_at) { Time.utc(2022, 3, 1) }
+      let(:rates) { [card_rate(Time.utc(2022, 5, 1))] }
+
+      it "returns no obligations, including when starting after the end" do
+        expect(schedule.obligations_due_by(Time.utc(2023, 1, 1), from: starts_at)).to eq([])
+        expect(schedule.obligations_due_by(Time.utc(2023, 1, 1), from: ends_at)).to eq([])
+      end
+    end
+  end
+
   describe "cycle selection" do
     it "returns the cycle containing the timestamp" do
       cycle = schedule.obligation_at(Time.utc(2022, 2, 10)).cycle
@@ -748,20 +852,6 @@ RSpec.describe Billing::RateCards::Schedule do
       expect(schedule.next_obligation(from: Time.utc(2022, 2, 1), after: Time.utc(2022, 2, 1)).segments.sole.started_at).to eq(Time.utc(2022, 2, 1))
       expect(schedule.next_obligation(after: Time.utc(2022, 2, 15), from: Time.utc(2022, 2, 1)).segments.sole.started_at)
         .to eq(Time.utc(2022, 2, 15))
-    end
-
-    it "selects using an adjusted instant without changing the obligation date" do
-      original_dates = []
-      mapped_dates = []
-      moved = schedule.next_obligation(after: Time.utc(2022, 2, 15), from: Time.utc(2022, 2, 1)) do |obligation|
-        original_dates << obligation.billing_at
-        (obligation.billing_at + 1.day).tap { mapped_dates << it }
-      end
-
-      expect(moved.segments.sole.started_at).to eq(Time.utc(2022, 2, 1))
-      expect(original_dates).to eq([Time.utc(2022, 2, 15)])
-      expect(mapped_dates).to eq([Time.utc(2022, 2, 16)])
-      expect(moved.billing_at).to eq(Time.utc(2022, 2, 15))
     end
 
     context "when slices fall due as the terms say" do

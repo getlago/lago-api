@@ -79,6 +79,39 @@ RSpec.describe BillingOperations::ScheduleJob, job: true do
     end
   end
 
+  context "with an overdue daily backlog" do
+    let(:customer) { create(:customer, organization:, timezone: "UTC") }
+    let(:started_at) { Time.utc(2026, 10, 31) }
+    let(:contract) { create(:contract, organization:, customer:, started_at:) }
+    let(:product) { create(:product, :fixed, organization:) }
+    let(:rate_card) { create(:rate_card, organization:, product:, billing_timing: "arrears", currency: "USD") }
+    let(:contract_rate_card) do
+      create(:contract_rate_card, organization:, contract:, rate_card:, next_billing_at: Time.utc(2026, 11, 2),
+        effective_date: Date.new(2026, 10, 31), billing_anchor_date: Date.new(2026, 10, 31))
+    end
+    let(:completed_operation) do
+      create(:billing_operation, organization:, customer:, contract_rate_card:, action_type: "close_fixed_arrears",
+        billing_at: Time.utc(2026, 11, 1), target_cycle_started_at: started_at, processed_at: Time.utc(2026, 11, 1))
+    end
+
+    before do
+      travel_to(Time.utc(2026, 11, 19))
+      create(:rate_card_rate, organization:, rate_card:, effective_from: started_at,
+        billing_interval_count: 1, billing_interval_unit: "day", rate_properties: {"amount" => "31"})
+      completed_operation
+    end
+
+    it "persists every due close and dispatches processing once" do
+      expect { perform_job }.to have_enqueued_job(BillingOperations::ProcessJob).with(customer.id).once
+      expect(contract_rate_card.billing_operations.pending.order(:billing_at).pluck(:billing_at))
+        .to eq((2..19).map { Time.utc(2026, 11, it) })
+      expect(completed_operation.reload).to have_attributes(
+        billing_at: Time.utc(2026, 11, 1), target_cycle_started_at: started_at, processed_at: Time.utc(2026, 11, 1)
+      )
+      expect(contract_rate_card.billing_operations.where(billing_at: Time.utc(2026, 11, 20)..)).to be_empty
+    end
+  end
+
   context "when a cycle-scoped rate changes within a billing cycle" do
     let(:contract) { create(:contract, organization:, customer:, started_at: Time.utc(2026, 11, 1)) }
     let(:product) { create(:product, :fixed, organization:) }
