@@ -5,13 +5,40 @@ require "rails_helper"
 RSpec.describe ConnectionResolvable do
   let(:organization) { create(:organization) }
 
-  describe "#connection_routing query count" do
-    def resolve_all
-      Wallet
+  describe "#connection_routing" do
+    def connection_routings
+      RecurringTransactionRule
         .where(organization:)
-        .includes(:billing_object_connections, customer: %i[payment_provider_customers integration_customers])
-        .to_a
-        .each(&:connection_routing)
+        .includes(
+          billing_object_connections: %i[payment_provider_customer integration_customer],
+          wallet: [
+            billing_object_connections: %i[payment_provider_customer integration_customer],
+            customer: %i[payment_provider_customers integration_customers]
+          ]
+        ).map(&:connection_routing)
+    end
+
+    def seed_data(count)
+      count.times do
+        customer = create(:customer, organization:)
+        wallet = create(:wallet, customer:, organization:)
+        rule = create(:recurring_transaction_rule, wallet:, organization:)
+
+        create(:stripe_customer, customer:, organization:, is_default: true)
+        create(:netsuite_customer, customer:, organization:, is_default: true)
+        create(:hubspot_customer, customer:, organization:, is_default: true)
+
+        gocardless = create(:gocardless_customer, customer:, organization:)
+        xero = create(:xero_customer, customer:, organization:)
+
+        create(:billing_object_connection, owner: wallet, organization:, category: :payment,
+          behavior: :specific, payment_provider_customer: gocardless)
+
+        create(:billing_object_connection, owner: rule, organization:, category: :accounting,
+          behavior: :specific, integration_customer: xero)
+
+        create(:billing_object_connection, owner: wallet, organization:, category: :tax, behavior: :skip)
+      end
     end
 
     def count_queries
@@ -25,25 +52,14 @@ RSpec.describe ConnectionResolvable do
       count
     end
 
-    def seed_wallets(count)
-      Wallet.where(organization:).delete_all
+    it "does not trigger N+1 queries" do
+      seed_data(1)
+      one = count_queries { connection_routings }
 
-      count.times do
-        customer = create(:customer, organization:)
-        create(:stripe_customer, customer:, organization:, is_default: true)
-        create(:netsuite_customer, customer:, organization:, is_default: true)
-        create(:wallet, customer:, organization:)
-      end
-    end
+      seed_data(3)
+      three = count_queries { connection_routings }
 
-    it "does not grow with the size of the collection" do
-      seed_wallets(1)
-      one = count_queries { resolve_all }
-
-      seed_wallets(5)
-      five = count_queries { resolve_all }
-
-      expect(five).to eq(one)
+      expect(one).to eq(three)
     end
   end
 end

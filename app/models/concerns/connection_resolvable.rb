@@ -5,7 +5,8 @@
 #
 #   * an override row (billing_object_connections) with behavior "specific" pins its connection
 #   * an override row with behavior "skip" resolves to nil (no connection for that category)
-#   * no override row means "inherit": fall back to the customer's default connection
+#   * no override row means "inherit": fall back to fallback_record connection if defined,
+#     otherwise use the customer's default connection.
 #
 # For a single-connection customer with no overrides this returns that connection, so behaviour
 # is unchanged.
@@ -42,46 +43,57 @@ module ConnectionResolvable
   # loaded once rather than per category, so `includes(:billing_object_connections)` on a
   # collection keeps this to one query.
   def connection_routing
-    overrides = billing_object_connections.index_by(&:category)
-
     CATEGORIES.each_value.map do |category|
-      override = overrides[category]
+      override = billing_object_connection(category, cache: true)
 
-      connection = if override.nil?
-        customer_default_connection(category)
-      elsif override.skip?
-        nil
-      else
-        override_connection(override, category)
-      end
+      behavior = routing_behavior(override, category)
+      connection = routing_connection(override, category)
 
-      Routing.new(
-        category: category,
-        behavior: override&.behavior || INHERIT_BEHAVIOR,
-        code: connection&.code
-      )
+      Routing.new(category:, behavior:, code: connection&.code)
     end
+  end
+
+  def effective_connection(category, cache: false)
+    override = billing_object_connection(category, cache:)
+
+    if override
+      return nil if override.skip?
+      return override_connection(override, category, cache:)
+    end
+
+    fallback_connection(category, cache:)
+  end
+
+  def fallback_record
+    nil
   end
 
   private
 
-  def effective_connection(category)
-    override = billing_object_connections.find_by(category:)
-
-    if override
-      return nil if override.skip?
-
-      return override_connection(override, category)
+  def billing_object_connection(category, cache:)
+    if cache
+      billing_object_connections.detect { it.category == category.to_s }
+    else
+      billing_object_connections.find_by(category:)
     end
-
-    customer_default_connection(category)
   end
 
-  def override_connection(override, category)
+  # PaymentProviders::DestroyService soft-deletes provider customers with update_all
+  # and leaves their billing_object_connections, which results in payment_provider_customer
+  # resolving to nil here. In this case we return fallback_connection.
+  def override_connection(override, category, cache:)
     if category == CATEGORIES[:payment]
-      override.payment_provider_customer
+      override.payment_provider_customer || fallback_connection(category, cache:)
     else
       override.integration_customer
+    end
+  end
+
+  def fallback_connection(category, cache:)
+    if fallback_record
+      fallback_record.effective_connection(category, cache:)
+    else
+      customer_default_connection(category)
     end
   end
 
@@ -99,5 +111,31 @@ module ConnectionResolvable
     return connections.first if connections.one?
 
     connections.detect(&:is_default?)
+  end
+
+  def routing_behavior(override, category)
+    if override.nil?
+      INHERIT_BEHAVIOR
+    elsif soft_deleted_payment_provider_customer?(override, category)
+      INHERIT_BEHAVIOR
+    else
+      override.behavior
+    end
+  end
+
+  # If PaymentProviderCustomer is soft-deleted but the billing_object_connection
+  # is still there, we return "inherit" instead of "specific".
+  def soft_deleted_payment_provider_customer?(override, category)
+    override.specific? && category == CATEGORIES[:payment] && override.payment_provider_customer.nil?
+  end
+
+  def routing_connection(override, category)
+    if override.nil?
+      fallback_connection(category, cache: true)
+    elsif override.skip?
+      nil
+    else
+      override_connection(override, category, cache: true)
+    end
   end
 end

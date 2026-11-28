@@ -197,12 +197,12 @@ RSpec.describe Resolvers::WalletResolver do
       expect(connections["crm"]).to eq({"category" => "crm", "behavior" => "inherit", "code" => nil})
     end
 
-    it "returns the rule's own routing, inherited from the customer" do
+    it "returns the rule's own routing, inherited from its wallet and customer" do
       rule_connections = wallet_connections["recurringTransactionRules"].first["connections"].index_by { it["category"] }
 
-      expect(rule_connections["payment"]).to eq(
-        {"category" => "payment", "behavior" => "inherit", "code" => "stripe_default"}
-      )
+      expect(rule_connections["payment"]).to eq({"category" => "payment", "behavior" => "inherit", "code" => "gocardless_eu"})
+      expect(rule_connections["tax"]).to eq({"category" => "tax", "behavior" => "inherit", "code" => nil})
+      expect(rule_connections["crm"]).to eq({"category" => "crm", "behavior" => "inherit", "code" => nil})
     end
   end
 end
