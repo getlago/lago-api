@@ -2,7 +2,7 @@
 
 module DunningCampaigns
   class ProcessCustomerJob < ApplicationJob
-    queue_as :default
+    queue_as :low_priority
 
     unique :until_executed, on_conflict: :log
 

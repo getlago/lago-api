@@ -38,12 +38,80 @@ RSpec.describe DunningCampaigns::BulkProcessService do
       )
     end
 
-    it "enqueues a ProcessCustomerJob for an eligible customer" do
-      invoice_1
+    describe "eligibility" do
+      subject(:call) { described_class.call }
 
-      expect { described_class.call }
-        .to have_enqueued_job(DunningCampaigns::ProcessCustomerJob)
-        .with(customer)
+      let(:dunning_campaign) { create :dunning_campaign, organization:, days_between_attempts: 4 }
+
+      before { invoice_1 }
+
+      context "when the customer has an applied dunning campaign" do
+        let(:customer) { create :customer, organization:, billing_entity:, currency:, applied_dunning_campaign: dunning_campaign }
+
+        it "enqueues a ProcessCustomerJob" do
+          expect { call }.to have_enqueued_job(DunningCampaigns::ProcessCustomerJob).with(customer)
+        end
+      end
+
+      context "when the billing entity has an applied dunning campaign" do
+        before { billing_entity.update!(applied_dunning_campaign: dunning_campaign) }
+
+        it "enqueues a ProcessCustomerJob" do
+          expect { call }.to have_enqueued_job(DunningCampaigns::ProcessCustomerJob).with(customer)
+        end
+      end
+
+      context "when no dunning campaign is applied" do
+        it "does not enqueue a ProcessCustomerJob" do
+          expect { call }.not_to have_enqueued_job(DunningCampaigns::ProcessCustomerJob)
+        end
+      end
+
+      context "when the applied dunning campaign is discarded" do
+        let(:customer) { create :customer, organization:, billing_entity:, currency:, applied_dunning_campaign: dunning_campaign }
+
+        before { dunning_campaign.discard! }
+
+        it "does not enqueue a ProcessCustomerJob" do
+          expect { call }.not_to have_enqueued_job(DunningCampaigns::ProcessCustomerJob)
+        end
+      end
+
+      context "when the next attempt is not due yet" do
+        let(:customer) do
+          create :customer, organization:, billing_entity:, currency:,
+            applied_dunning_campaign: dunning_campaign, last_dunning_campaign_attempt_at: 3.days.ago
+        end
+
+        it "does not enqueue a ProcessCustomerJob" do
+          expect { call }.not_to have_enqueued_job(DunningCampaigns::ProcessCustomerJob)
+        end
+      end
+
+      context "when the next attempt is due" do
+        let(:customer) do
+          create :customer, organization:, billing_entity:, currency:,
+            applied_dunning_campaign: dunning_campaign, last_dunning_campaign_attempt_at: 4.days.ago - 1.second
+        end
+
+        it "enqueues a ProcessCustomerJob" do
+          expect { call }.to have_enqueued_job(DunningCampaigns::ProcessCustomerJob).with(customer)
+        end
+      end
+
+      context "when the customer campaign is not due but the billing entity campaign would be" do
+        let(:customer_campaign) { create :dunning_campaign, organization:, days_between_attempts: 10 }
+        let(:customer) do
+          create :customer, organization:, billing_entity:, currency:,
+            applied_dunning_campaign: customer_campaign, last_dunning_campaign_attempt_at: 5.days.ago
+        end
+
+        before { billing_entity.update!(applied_dunning_campaign: dunning_campaign) }
+
+        it "uses the customer campaign and does not enqueue a ProcessCustomerJob" do
+          expect { call }.not_to have_enqueued_job(DunningCampaigns::ProcessCustomerJob)
+        end
+      end
     end
 
     context "when customer eligibility changes after dispatch" do
